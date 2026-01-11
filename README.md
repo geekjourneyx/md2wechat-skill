@@ -414,10 +414,22 @@ md2wechat travel-diary.md --mode ai --theme spring-fresh --preview
 
 ---
 
+## 👨‍💻 作者
+
+**geekjourney** — 极客/创作者/AI 探索者
+
+- 🌐 个人主页: [geekjourney.dev](https://geekjourney.dev)
+- 🐦 X/Twitter: [@seekjourney](https://x.com/seekjourney/)
+- 📱 公众号: **极客杰尼**
+
+---
+
 <div align="center">
 
 **让公众号写作更简单** ⭐
 
 [主页](https://github.com/geekjourneyx/md2wechat-skill) • [文档](docs) • [反馈](https://github.com/geekjourneyx/md2wechat-skill/issues)
+
+Made with ❤️ by [geekjourney](https://geekjourney.dev)
 
 </div>
