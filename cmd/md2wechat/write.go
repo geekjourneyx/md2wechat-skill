@@ -108,7 +108,7 @@ func runListStyles() error {
 	result := asst.ListStyles()
 
 	if !result.Success {
-		return fmt.Errorf(result.Error)
+		return fmt.Errorf("%s", result.Error)
 	}
 
 	if writeStyleDetail {
@@ -191,7 +191,7 @@ func runInteractiveWrite() error {
 	}
 
 	if !result.Success {
-		return fmt.Errorf(result.Error)
+		return fmt.Errorf("%s", result.Error)
 	}
 
 	// 输出结果
@@ -201,7 +201,7 @@ func runInteractiveWrite() error {
 		}
 		log.Info("article saved", zap.String("file", writeOutput))
 	} else {
-		fmt.Println("\n=== 生成文章 ===\n")
+		fmt.Println("\n=== 生成文章 ===")
 		fmt.Println(result.Article)
 		fmt.Println("\n=== 金句 ===")
 		for i, quote := range result.Quotes {
@@ -254,7 +254,7 @@ func executeWrite(input string) error {
 	}
 
 	if !result.Success {
-		return fmt.Errorf(result.Error)
+		return fmt.Errorf("%s", result.Error)
 	}
 
 	// 只生成封面
@@ -269,7 +269,7 @@ func executeWrite(input string) error {
 		}
 		log.Info("article saved", zap.String("file", writeOutput))
 	} else {
-		fmt.Println("\n=== 生成文章 ===\n")
+		fmt.Println("\n=== 生成文章 ===")
 		fmt.Println(result.Article)
 		fmt.Println("\n=== 金句 ===")
 		for i, quote := range result.Quotes {
@@ -300,11 +300,11 @@ func generateCover(asst *writer.Assistant, req *writer.WriteRequest) error {
 		return fmt.Errorf("生成封面提示词: %w", err)
 	}
 
-	fmt.Println("\n=== 封面提示词 ===\n")
+	fmt.Println("\n=== 封面提示词 ===")
 	fmt.Println(result.Prompt)
 
 	if result.Explanation != "" {
-		fmt.Println("\n---\n")
+		fmt.Println("\n---")
 		fmt.Println("📖 隐喻说明:", result.Explanation)
 	}
 
