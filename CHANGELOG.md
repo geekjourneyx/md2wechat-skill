@@ -20,6 +20,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added comment settings fields
   - Added image_info structure for newspic
   - Added cover cropping fields
+- **v2 API Themes (38 total)**: Massive theme expansion with new series system
+  - **Minimal Series (8)**: minimal-gold, minimal-green, minimal-blue, minimal-orange, minimal-red, minimal-navy, minimal-gray, minimal-sky
+  - **Focus Series (8)**: focus-gold, focus-green, focus-blue, focus-orange, focus-red, focus-navy, focus-gray, focus-sky
+  - **Elegant Series (8)**: elegant-gold, elegant-green, elegant-blue, elegant-orange, elegant-red, elegant-navy, elegant-gray, elegant-sky
+  - **Bold Series (8)**: bold-gold, bold-green, bold-blue, bold-orange, bold-red, bold-navy, bold-gray, bold-sky
+  - Theme version tracking: v1.0 (6 basic) vs v2.0 (32 new)
+  - Theme preview gallery: https://md2wechat.app/theme-gallery
+- **Background Type Control**: New `--background-type` parameter for API mode
+  - Options: `default` (default background), `grid` (grid texture), `none` (transparent)
+  - Configuration file support: `api.background_type`
+  - Environment variable: `DEFAULT_BACKGROUND_TYPE`
+- **Google Gemini Image Provider**: Native Google SDK integration
+  - Official `google.golang.org/genai` SDK
+  - Direct API calls without third-party wrappers
+  - Supports official Gemini image models: gemini-3-pro-image-preview, gemini-2.0-flash-exp-image-generation
+  - Full aspect ratio support with official size mappings
+- **OpenRouter Image Provider**: Multi-model provider access
+  - Support for various AI models through OpenRouter API
+  - OpenRouter format with image_size and aspect_ratio parameters
+  - Configuration: `image_provider: openrouter`
 
 ### Changed
 - **Article Structure**: Extended with newspic support fields (backward compatible with `omitempty`)
@@ -27,6 +47,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `need_open_comment`: comment settings
   - `only_fans_can_comment`: fan-only comment settings
   - `image_info`: image list for newspic
+- **API Base URL Configuration**: New `md2wechat_base_url` parameter
+  - Support for v2 API endpoint: https://md2wechat.app (internal testing)
+  - Configuration file: `api.md2wechat_base_url`
+  - Environment variable: `MD2WECHAT_BASE_URL`
+- **Theme File Structure**: Reorganized with version tracking
+  - v1.0 themes: 6 basic themes (default, bytedance, apple, sports, chinese, cyber)
+  - v2.0 themes: 32 new series themes (minimal/focus/elegant/bold series)
+  - New `themes/api.yaml`: Complete theme catalog for reference
+
+### Technical Details
+- **New Files**:
+  - `cmd/md2wechat/create_image_post.go` - CLI command implementation
+  - `internal/image/gemini.go` - Google Gemini provider with official SDK
+  - `internal/image/gemini_test.go` - Gemini provider tests
+  - `internal/image/openrouter.go` - OpenRouter provider implementation
+  - `internal/image/openrouter_test.go` - OpenRouter provider tests
+  - `themes/api.yaml` - Complete v2 theme catalog
+  - `themes/elegant-gold.yaml`, `themes/focus-green.yaml`, `themes/minimal-blue.yaml`, `themes/bold-red.yaml` - Series examples
+- **Modified Files**:
+  - `internal/draft/service.go` - Added `CreateImagePost`, `GetImagePostPreview`, `extractImagesFromMarkdown`
+  - `internal/wechat/service.go` - Added `CreateNewspicDraft` for direct API call
+  - `cmd/md2wechat/main.go` - Registered `createImagePostCmd`
+  - `cmd/md2wechat/convert.go` - Added background_type flag, updated help text
+  - `internal/config/config.go` - Added DefaultBackgroundType, MD2WechatBaseURL fields
+  - `internal/converter/api.go` - Added BackgroundType to APIRequest, added base URL support
+  - `internal/converter/converter.go` - Added BackgroundType to ConvertRequest
+  - `internal/image/provider.go` - Added gemini, openrouter providers
+  - `skills/md2wechat/references/themes.md` - Updated with v2 themes and background type
+  - `themes/*.yaml` - Reorganized with version markers (v1.0 vs v2.0)
+  - `docs/CONFIG.md` - Added md2wechat_base_url, background_type documentation
+  - `docs/IMAGE_PROVISIONERS.md` - Added Gemini and OpenRouter provider guides
+  - `README.md` - Updated with v2 API themes, background type, upgraded API announcement
+
+### Migration Guide
+No migration required. All new features are additive:
+- `create_image_post` is a new command
+- New v2.0 themes are opt-in via `--theme` parameter
+- `background_type` defaults to "default" (existing behavior)
+- Image providers are configurable, no breaking changes
 
 ### Technical Details
 - **New Files**:
