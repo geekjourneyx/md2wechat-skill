@@ -1,0 +1,15 @@
+# Bold 系列 - 红色系 (v2.0 新增)
+name: bold-red
+type: api
+version: "2.0"
+description: "视觉冲击，标题满底色 + 圆角投影"
+api_theme: "bold-red"
+
+# v2.0 主题特性
+style:
+  series: "bold"
+  color: "red"
+  layout: "标题满底色 + 圆角投影"
+  mood: "视觉冲击"
+  best_for: "标题党、热点文章"
+  api_required: "https://md2wechat.app"

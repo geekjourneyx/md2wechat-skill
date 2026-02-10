@@ -22,6 +22,24 @@
 
 ---
 
+> ### 🎉 API 服务重磅升级 - 内测招募
+> **YouMind 内置主题，全新分类系统，重塑内容创作体验**
+>
+> md2wechat API 服务即将迎来重大升级，带来 **YouMind 内置主题库**和**全新主题分类**：
+> - 🎨 **丰富主题库**：精选 YouMind 内置主题，覆盖科技、生活、商业等多元场景
+> - 📂 **全新分类**：智能分类系统，快速定位最匹配的主题风格
+> - ⚡ **一键应用**：API 模式下直接调用主题，创作更高效
+>
+> 📚 **主题预览**: [https://md2wechat.app/theme-gallery](https://md2wechat.app/theme-gallery)
+>
+> 🔥 **目前处于内测阶段，诚邀自动化 Agent 创作者参与测试！**
+>
+> - 🎯 **适合对象**：Agent 开发者、自动化内容创作者、API 集成者
+> - 🎁 **内测福利**：优先体验新功能，影响产品方向
+> - 📩 **参与方式**：扫描底部公众号二维码联系，备注「API内测」
+
+---
+
 [快速开始](#-5分钟快速上手) • [Claude Code](#-claude-code-集成) • [OpenClaw](#-openclaw-支持) • [功能介绍](#-核心功能) • [使用说明](#-使用方法) • [常见问题](#-常见问题)
 
 ---
@@ -632,16 +650,137 @@ md2wechat convert article.md --draft --cover cover.jpg
 | 🟢 **春日清新** | `--theme spring-fresh` | 清新绿色调 | 旅行日记、自然主题 |
 | 🔵 **深海静谧** | `--theme ocean-calm` | 专业蓝色调 | 技术文章、商业分析 |
 
-### API 模式主题选择
+### API 模式主题选择 🆕
 
-| 主题名 | 命令 | 风格 | 适合内容 |
-|--------|------|------|----------|
-| **默认** | `--mode api` 或默认 | 简洁专业 | 通用内容 |
-| **bytedance** | `--theme bytedance` | 字节跳动风格 | 科技资讯 |
-| **apple** | `--theme apple` | Apple 极简风格 | 产品评测 |
-| **sports** | `--theme sports` | 运动活力风格 | 体育内容 |
-| **chinese** | `--theme chinese` | 中国传统文化风格 | 文化文章 |
-| **cyber** | `--theme cyber` | 赛博朋克风格 | 前沿科技 |
+**v2 API 现已支持 38 个精美主题！**
+
+#### 主题预览
+📚 **完整主题预览**: [https://md2wechat.app/theme-gallery](https://md2wechat.app/theme-gallery)
+
+#### 主题分类
+
+**基础主题（6 个）** - v1.0 内置
+
+| 主题 | 风格 | 适合 |
+|------|------|------|
+| `default` | 微信经典，温暖舒适 | 通用内容 |
+| `bytedance` | 科技现代，简洁利落 | 科技资讯 |
+| `apple` | 视觉渐变，精致优雅 | 产品评测 |
+| `sports` | 活力动感，充满能量 | 体育健康 |
+| `chinese` | 古典雅致，书卷气息 | 文化文章 |
+| `cyber` | 未来科技，霓虹光影 | 前沿科技 |
+
+**Minimal 系列（8 个）** - 干净克制，纯色文字无装饰
+
+| 颜色 | 主题 | 命令 |
+|------|------|------|
+| 🟡 金色 | minimal-gold | `--theme minimal-gold` |
+| 🟢 绿色 | minimal-green | `--theme minimal-green` |
+| 🔵 蓝色 | minimal-blue | `--theme minimal-blue` |
+| 🟠 橙色 | minimal-orange | `--theme minimal-orange` |
+| 🔴 红色 | minimal-red | `--theme minimal-red` |
+| 🎓 藏青 | minimal-navy | `--theme minimal-navy` |
+| ⚫ 灰色 | minimal-gray | `--theme minimal-gray` |
+| 🌤 天蓝 | minimal-sky | `--theme minimal-sky` |
+
+**Focus 系列（8 个）** - 居中对称，标题上下双横线
+
+| 颜色 | 主题 | 命令 |
+|------|------|------|
+| 🟡 金色 | focus-gold | `--theme focus-gold` |
+| 🟢 绿色 | focus-green | `--theme focus-green` |
+| 🔵 蓝色 | focus-blue | `--theme focus-blue` |
+| 🟠 橙色 | focus-orange | `--theme focus-orange` |
+| 🔴 红色 | focus-red | `--theme focus-red` |
+| 🎓 藏青 | focus-navy | `--theme focus-navy` |
+| ⚫ 灰色 | focus-gray | `--theme focus-gray` |
+| 🌤 天蓝 | focus-sky | `--theme focus-sky` |
+
+**Elegant 系列（8 个）** - 层次丰富，左边框递减 + 渐变背景
+
+| 颜色 | 主题 | 命令 |
+|------|------|------|
+| 🟡 金色 | elegant-gold | `--theme elegant-gold` |
+| 🟢 绿色 | elegant-green | `--theme elegant-green` |
+| 🔵 蓝色 | elegant-blue | `--theme elegant-blue` |
+| 🟠 橙色 | elegant-orange | `--theme elegant-orange` |
+| 🔴 红色 | elegant-red | `--theme elegant-red` |
+| 🎓 藏青 | elegant-navy | `--theme elegant-navy` |
+| ⚫ 灰色 | elegant-gray | `--theme elegant-gray` |
+| 🌤 天蓝 | elegant-sky | `--theme elegant-sky` |
+
+**Bold 系列（8 个）** - 视觉冲击，标题满底色 + 圆角投影
+
+| 颜色 | 主题 | 命令 |
+|------|------|------|
+| 🟡 金色 | bold-gold | `--theme bold-gold` |
+| 🟢 绿色 | bold-green | `--theme bold-green` |
+| 🔵 蓝色 | bold-blue | `--theme bold-blue` |
+| 🟠 橙色 | bold-orange | `--theme bold-orange` |
+| 🔴 红色 | bold-red | `--theme bold-red` |
+| 🎓 藏青 | bold-navy | `--theme bold-navy` |
+| ⚫ 灰色 | bold-gray | `--theme bold-gray` |
+| 🌤 天蓝 | bold-sky | `--theme bold-sky` |
+
+#### 主题命名规则
+
+```
+<系列>-<颜色>
+
+系列:
+  minimal  - 干净克制
+  focus    - 居中对称
+  elegant  - 层次丰富
+  bold     - 视觉冲击
+
+颜色: gold, green, blue, orange, red, navy, gray, sky
+```
+
+#### 使用示例
+
+```bash
+# 使用 Elegant 金色主题
+md2wechat convert article.md --theme elegant-gold --preview
+
+# 使用 Minimal 蓝色主题
+md2wechat convert article.md --theme minimal-blue --draft --cover cover.jpg
+
+# 使用 Bold 红色主题（视觉冲击强）
+md2wechat convert article.md --theme bold-red
+```
+
+> 💡 **提示**: v2.0 新主题需要配置 `md2wechat_base_url: https://md2wechat.app`
+
+#### 背景类型选择 🆕
+
+除了主题，你还可以自定义背景样式：
+
+| 背景类型 | 命令 | 效果 | 适合场景 |
+|----------|------|------|----------|
+| `default` | `--background-type default` | 默认背景（纯色或渐变） | 通用内容 |
+| `grid` | `--background-type grid` | 网格纹理背景 | 技术文档、笔记类 |
+| `none` | `--background-type none` | 无背景（透明） | 嵌入式内容 |
+
+**使用示例：**
+
+```bash
+# 使用网格背景
+md2wechat convert article.md --theme elegant-gold --background-type grid
+
+# 使用无背景（适合复制到其他编辑器）
+md2wechat convert article.md --theme minimal-blue --background-type none
+
+# 组合使用
+md2wechat convert article.md --theme focus-green --background-type grid --draft --cover cover.jpg
+```
+
+**配置文件设置：**
+
+```yaml
+# ~/.config/md2wechat/config.yaml
+api:
+  background_type: grid  # default/grid/none
+```
 
 ### 图片处理
 

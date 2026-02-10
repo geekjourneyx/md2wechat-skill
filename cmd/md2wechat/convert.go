@@ -20,11 +20,16 @@ var convertCmd = &cobra.Command{
 	Long: `Convert Markdown article to WeChat Official Account formatted HTML.
 
 Supports two conversion modes:
-  - api: Use md2wechat.cn API (stable, requires API key)
+  - api: Use md2wechat API (stable, requires API key)
   - ai:  Use Claude AI to generate HTML (flexible, requires AI)
 
-Supported themes:
-  API modes: default, bytedance, apple, sports, chinese, cyber
+Supported themes (38 total):
+  Basic (6): default, bytedance, apple, sports, chinese, cyber
+  Minimal (8): minimal-gold, minimal-green, minimal-blue, minimal-orange, minimal-red, minimal-navy, minimal-gray, minimal-sky
+  Focus (8): focus-gold, focus-green, focus-blue, focus-orange, focus-red, focus-navy, focus-gray, focus-sky
+  Elegant (8): elegant-gold, elegant-green, elegant-blue, elegant-orange, elegant-red, elegant-navy, elegant-gray, elegant-sky
+  Bold (8): bold-gold, bold-green, bold-blue, bold-orange, bold-red, bold-navy, bold-gray, bold-sky
+
   AI modes: autumn-warm, spring-fresh, ocean-calm, custom`,
 	Args: cobra.ExactArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
@@ -43,6 +48,7 @@ var (
 	convertTheme        string
 	convertAPIKey       string
 	convertFontSize     string
+	convertBackgroundType string
 	convertCustomPrompt string
 	convertOutput       string
 	convertPreview      bool
@@ -58,6 +64,7 @@ func init() {
 	convertCmd.Flags().StringVar(&convertTheme, "theme", "default", "Theme name")
 	convertCmd.Flags().StringVar(&convertAPIKey, "api-key", "", "API key for md2wechat.cn")
 	convertCmd.Flags().StringVar(&convertFontSize, "font-size", "medium", "Font size: small/medium/large (API mode only)")
+	convertCmd.Flags().StringVar(&convertBackgroundType, "background-type", "default", "Background type: default/grid/none (API mode only)")
 	convertCmd.Flags().StringVar(&convertCustomPrompt, "custom-prompt", "", "Custom AI prompt (AI mode only)")
 	convertCmd.Flags().StringVarP(&convertOutput, "output", "o", "", "Output HTML file path")
 	convertCmd.Flags().BoolVar(&convertPreview, "preview", false, "Preview only, do not upload images")
@@ -87,12 +94,13 @@ func runConvert(cmd *cobra.Command, args []string) error {
 
 	// 构建转换请求
 	req := &converter.ConvertRequest{
-		Markdown:     string(markdown),
-		Mode:         converter.ConvertMode(convertMode),
-		Theme:        convertTheme,
-		APIKey:       convertAPIKey,
-		FontSize:     convertFontSize,
-		CustomPrompt: convertCustomPrompt,
+		Markdown:       string(markdown),
+		Mode:           converter.ConvertMode(convertMode),
+		Theme:          convertTheme,
+		APIKey:         convertAPIKey,
+		FontSize:       convertFontSize,
+		BackgroundType: convertBackgroundType,
+		CustomPrompt:   convertCustomPrompt,
 	}
 
 	// 执行转换

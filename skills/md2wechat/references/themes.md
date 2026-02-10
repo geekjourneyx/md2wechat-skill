@@ -15,14 +15,132 @@
 
 ### API 模式主题
 
+**v2 API 现已支持 38 个精美主题！**
+
+#### 主题预览
+📚 **完整主题预览**: [https://md2wechat.app/theme-gallery](https://md2wechat.app/theme-gallery)
+
+#### 基础主题（6 个）- v1.0 内置
+
 | 主题 | 命令参数 | 风格描述 | 适合内容 |
 |------|----------|----------|----------|
-| **default** | `--mode api` 或默认 | 默认主题，简洁专业 | 通用内容 |
-| **bytedance** | `--theme bytedance` | 字节跳动风格 | 科技资讯 |
-| **apple** | `--theme apple` | Apple 极简风格 | 产品评测 |
-| **sports** | `--theme sports` | 运动活力风格 | 体育内容 |
-| **chinese** | `--theme chinese` | 中国传统文化风格 | 文化文章 |
-| **cyber** | `--theme cyber` | 赛博朋克风格 | 前沿科技 |
+| **default** | `--mode api` 或默认 | 微信经典，温暖舒适 | 通用内容 |
+| **bytedance** | `--theme bytedance` | 科技现代，简洁利落 | 科技资讯 |
+| **apple** | `--theme apple` | 视觉渐变，精致优雅 | 产品评测 |
+| **sports** | `--theme sports` | 活力动感，充满能量 | 体育健康 |
+| **chinese** | `--theme chinese` | 古典雅致，书卷气息 | 文化文章 |
+| **cyber** | `--theme cyber` | 未来科技，霓虹光影 | 前沿科技 |
+
+#### v2.0 新增主题（32 个）
+
+**Minimal 系列** - 干净克制，纯色文字无装饰
+
+| 颜色 | 主题 | 命令 | 风格 |
+|------|------|------|------|
+| 🟡 | minimal-gold | `--theme minimal-gold` | 金色系 |
+| 🟢 | minimal-green | `--theme minimal-green` | 绿色系 |
+| 🔵 | minimal-blue | `--theme minimal-blue` | 蓝色系 |
+| 🟠 | minimal-orange | `--theme minimal-orange` | 橙色系 |
+| 🔴 | minimal-red | `--theme minimal-red` | 红色系 |
+| 🎓 | minimal-navy | `--theme minimal-navy` | 藏青色系 |
+| ⚫ | minimal-gray | `--theme minimal-gray` | 灰色系 |
+| 🌤 | minimal-sky | `--theme minimal-sky` | 天蓝色系 |
+
+**Focus 系列** - 居中对称，标题上下双横线
+
+| 颜色 | 主题 | 命令 | 风格 |
+|------|------|------|------|
+| 🟡 | focus-gold | `--theme focus-gold` | 金色系 |
+| 🟢 | focus-green | `--theme focus-green` | 绿色系 |
+| 🔵 | focus-blue | `--theme focus-blue` | 蓝色系 |
+| 🟠 | focus-orange | `--theme focus-orange` | 橙色系 |
+| 🔴 | focus-red | `--theme focus-red` | 红色系 |
+| 🎓 | focus-navy | `--theme focus-navy` | 藏青色系 |
+| ⚫ | focus-gray | `--theme focus-gray` | 灰色系 |
+| 🌤 | focus-sky | `--theme focus-sky` | 天蓝色系 |
+
+**Elegant 系列** - 层次丰富，左边框递减 + 渐变背景
+
+| 颜色 | 主题 | 命令 | 风格 |
+|------|------|------|------|
+| 🟡 | elegant-gold | `--theme elegant-gold` | 金色系 |
+| 🟢 | elegant-green | `--theme elegant-green` | 绿色系 |
+| 🔵 | elegant-blue | `--theme elegant-blue` | 蓝色系 |
+| 🟠 | elegant-orange | `--theme elegant-orange` | 橙色系 |
+| 🔴 | elegant-red | `--theme elegant-red` | 红色系 |
+| 🎓 | elegant-navy | `--theme elegant-navy` | 藏青色系 |
+| ⚫ | elegant-gray | `--theme elegant-gray` | 灰色系 |
+| 🌤 | elegant-sky | `--theme elegant-sky` | 天蓝色系 |
+
+**Bold 系列** - 视觉冲击，标题满底色 + 圆角投影
+
+| 颜色 | 主题 | 命令 | 风格 |
+|------|------|------|------|
+| 🟡 | bold-gold | `--theme bold-gold` | 金色系 |
+| 🟢 | bold-green | `--theme bold-green` | 绿色系 |
+| 🔵 | bold-blue | `--theme bold-blue` | 蓝色系 |
+| 🟠 | bold-orange | `--theme bold-orange` | 橙色系 |
+| 🔴 | bold-red | `--theme bold-red` | 红色系 |
+| 🎓 | bold-navy | `--theme bold-navy` | 藏青色系 |
+| ⚫ | bold-gray | `--theme bold-gray` | 灰色系 |
+| 🌤 | bold-sky | `--theme bold-sky` | 天蓝色系 |
+
+#### 主题命名规则
+
+```
+<系列>-<颜色>
+
+系列:
+  minimal  - 干净克制，纯色文字
+  focus    - 居中对称，双横线
+  elegant  - 左边框递减，渐变背景
+  bold     - 标题满底色，圆角投影
+
+颜色: gold, green, blue, orange, red, navy, gray, sky
+```
+
+#### 使用方法
+```bash
+# 基础主题（默认）
+md2wechat convert article.md
+
+# v2.0 新主题
+md2wechat convert article.md --theme elegant-gold --preview
+md2wechat convert article.md --theme minimal-blue --draft --cover cover.jpg
+```
+
+> 💡 **提示**: v2.0 新主题需要配置 `md2wechat_base_url: https://md2wechat.app`
+
+### 背景类型选择 🆕
+
+除了主题，你还可以自定义背景样式：
+
+| 背景类型 | 命令 | 效果 | 适合场景 |
+|----------|------|------|----------|
+| `default` | `--background-type default` | 默认背景（纯色或渐变） | 通用内容 |
+| `grid` | `--background-type grid` | 网格纹理背景 | 技术文档、笔记类 |
+| `none` | `--background-type none` | 无背景（透明） | 嵌入式内容 |
+
+**使用示例：**
+
+```bash
+# 使用网格背景
+md2wechat convert article.md --theme elegant-gold --background-type grid
+
+# 使用无背景
+md2wechat convert article.md --theme minimal-blue --background-type none
+
+# 组合使用
+md2wechat convert article.md --theme focus-green --background-type grid --draft --cover cover.jpg
+```
+
+**配置文件设置：**
+
+```yaml
+# ~/.config/md2wechat/config.yaml
+api:
+  background_type: grid  # default/grid/none
+```
 
 ---
 
@@ -272,12 +390,21 @@ md2wechat convert article.md --mode ai --theme autumn-warm --preview
 - `themes/custom.yaml` - 自定义
 
 **API 主题：**
+
+**v1.0 基础主题（6 个）：**
 - `themes/default.yaml` - 默认主题
 - `themes/bytedance.yaml` - 字节跳动风格
 - `themes/apple.yaml` - Apple 极简风格
 - `themes/sports.yaml` - 运动活力风格
 - `themes/chinese.yaml` - 中国传统文化风格
 - `themes/cyber.yaml` - 赛博朋克风格
+
+**v2.0 新增主题（32 个）：**
+- `themes/api.yaml` - 完整主题列表
+- `themes/elegant-gold.yaml` - Elegant 金色示例
+- `themes/minimal-blue.yaml` - Minimal 蓝色示例
+- `themes/focus-green.yaml` - Focus 绿色示例
+- `themes/bold-red.yaml` - Bold 红色示例
 
 每个主题文件包含完整的 AI 提示词模板，确保生成效果一致。
 

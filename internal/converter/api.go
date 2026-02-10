@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -22,9 +23,10 @@ type APIResponse struct {
 
 // APIRequest md2wechat.cn API 请求
 type APIRequest struct {
-	Markdown string `json:"markdown"`
-	Theme    string `json:"theme"`
-	FontSize string `json:"fontSize,omitempty"`
+	Markdown      string `json:"markdown"`
+	Theme         string `json:"theme"`
+	FontSize      string `json:"fontSize,omitempty"`
+	BackgroundType string `json:"backgroundType,omitempty"` // default/grid/none
 }
 
 // apiConverter API 模式转换器
@@ -39,6 +41,15 @@ func NewAPIConverter(log *zap.Logger) *apiConverter {
 	return &apiConverter{
 		log:     log,
 		baseURL: "https://www.md2wechat.cn/api/convert",
+		timeout: 30 * time.Second,
+	}
+}
+
+// NewAPIConverterWithURL 创建 API 转换器（指定 URL）
+func NewAPIConverterWithURL(log *zap.Logger, baseURL string) *apiConverter {
+	return &apiConverter{
+		log:     log,
+		baseURL: baseURL,
 		timeout: 30 * time.Second,
 	}
 }
@@ -58,14 +69,28 @@ func (c *converter) convertViaAPI(req *ConvertRequest) *ConvertResult {
 		apiTheme = req.Theme
 	}
 
-	// 创建 API 转换器
-	apiConv := NewAPIConverter(c.log)
+	// 创建 API 转换器，传入配置中的 base URL
+	baseURL := c.cfg.MD2WechatBaseURL
+	if baseURL == "" {
+		baseURL = "https://www.md2wechat.cn/api/convert"
+	} else {
+		// 确保路径正确
+		if !strings.HasSuffix(baseURL, "/api/convert") {
+			if strings.HasSuffix(baseURL, "/") {
+				baseURL += "api/convert"
+			} else {
+				baseURL += "/api/convert"
+			}
+		}
+	}
+	apiConv := NewAPIConverterWithURL(c.log, baseURL)
 
 	// 调用 API
 	html, err := apiConv.Convert(&APIRequest{
-		Markdown: req.Markdown,
-		Theme:    apiTheme,
-		FontSize: req.FontSize,
+		Markdown:      req.Markdown,
+		Theme:         apiTheme,
+		FontSize:      req.FontSize,
+		BackgroundType: req.BackgroundType,
 	}, req.APIKey)
 
 	if err != nil {

@@ -60,6 +60,16 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 			return nil, err
 		}
 		return NewModelScopeProvider(cfg)
+	case "openrouter", "or":
+		if err := validateOpenRouterConfig(cfg); err != nil {
+			return nil, err
+		}
+		return NewOpenRouterProvider(cfg)
+	case "gemini", "google":
+		if err := validateGeminiConfig(cfg); err != nil {
+			return nil, err
+		}
+		return NewGeminiProvider(cfg)
 	case "openai", "":
 		if err := validateOpenAIConfig(cfg); err != nil {
 			return nil, err
@@ -69,7 +79,7 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 		return nil, &config.ConfigError{
 			Field:   "ImageProvider",
 			Message: fmt.Sprintf("未知的图片服务提供者: %s", cfg.ImageProvider),
-			Hint:    "支持的提供者: openai, tuzi, modelscope (或 ms)",
+			Hint:    "支持的提供者: openai, tuzi, modelscope (或 ms), openrouter (或 or), gemini (或 google)",
 		}
 	}
 }
@@ -122,5 +132,30 @@ func validateModelScopeConfig(cfg *config.Config) error {
 		}
 	}
 	// ModelScope API Base 有默认值，可以为空
+	return nil
+}
+
+// validateOpenRouterConfig 验证 OpenRouter 配置
+func validateOpenRouterConfig(cfg *config.Config) error {
+	if cfg.ImageAPIKey == "" {
+		return &config.ConfigError{
+			Field:   "ImageAPIKey",
+			Message: "使用 OpenRouter 图片服务需要配置 API Key",
+			Hint:    "在配置文件中设置 api.image_key 或环境变量 IMAGE_API_KEY，前往 openrouter.ai 获取",
+		}
+	}
+	// OpenRouter API Base 有默认值，可以为空
+	return nil
+}
+
+// validateGeminiConfig 验证 Google Gemini 配置
+func validateGeminiConfig(cfg *config.Config) error {
+	if cfg.ImageAPIKey == "" {
+		return &config.ConfigError{
+			Field:   "ImageAPIKey",
+			Message: "使用 Google Gemini 图片服务需要配置 API Key",
+			Hint:    "在配置文件中设置 api.image_key 或环境变量 IMAGE_API_KEY (或 GOOGLE_API_KEY)，前往 https://aistudio.google.com/apikey 获取",
+		}
+	}
 	return nil
 }

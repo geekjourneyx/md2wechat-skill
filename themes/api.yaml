@@ -1,0 +1,149 @@
+# md2wechat API 主题配置
+# 版本混合: v1.0 (基础6个) + v2.0 (新系列32个)
+# 更新: 支持内测 API (https://md2wechat.app) 的 38 个主题
+
+name: api-collection
+type: api
+version: "mixed"
+description: "md2wechat API 主题集 - 38 个精美主题"
+
+# ============================================
+# v1.0 基础主题 (6 个) - 原生内置
+# ============================================
+basic_themes:
+  - name: default
+    version: "1.0"
+    description: "微信经典风格，温暖舒适"
+
+  - name: bytedance
+    version: "1.0"
+    description: "科技现代风格，简洁利落"
+
+  - name: apple
+    version: "1.0"
+    description: "视觉渐变风格，精致优雅"
+
+  - name: sports
+    version: "1.0"
+    description: "活力动感风格，充满能量"
+
+  - name: chinese
+    version: "1.0"
+    description: "古典雅致风格，书卷气息"
+
+  - name: cyber
+    version: "1.0"
+    description: "未来科技风格，霓虹光影"
+
+# ============================================
+# v2.0 新增主题 (32 个) - 内测 API 新增
+# ============================================
+
+# Minimal 系列 - 干净克制，纯色文字无装饰
+minimal_themes:
+  - name: minimal-gold
+    description: "金色系，干净克制"
+
+  - name: minimal-green
+    description: "绿色系，干净克制"
+
+  - name: minimal-blue
+    description: "蓝色系，干净克制"
+
+  - name: minimal-orange
+    description: "橙色系，干净克制"
+
+  - name: minimal-red
+    description: "红色系，干净克制"
+
+  - name: minimal-navy
+    description: "藏青色系，干净克制"
+
+  - name: minimal-gray
+    description: "灰色系，干净克制"
+
+  - name: minimal-sky
+    description: "天蓝色系，干净克制"
+
+# Focus 系列 - 居中对称，标题上下双横线
+focus_themes:
+  - name: focus-gold
+    description: "金色系，居中对称"
+
+  - name: focus-green
+    description: "绿色系，居中对称"
+
+  - name: focus-blue
+    description: "蓝色系，居中对称"
+
+  - name: focus-orange
+    description: "橙色系，居中对称"
+
+  - name: focus-red
+    description: "红色系，居中对称"
+
+  - name: focus-navy
+    description: "藏青色系，居中对称"
+
+  - name: focus-gray
+    description: "灰色系，居中对称"
+
+  - name: focus-sky
+    description: "天蓝色系，居中对称"
+
+# Elegant 系列 - 层次丰富，左边框递减 + 渐变背景
+elegant_themes:
+  - name: elegant-gold
+    description: "金色系，层次丰富，左边框递减"
+
+  - name: elegant-green
+    description: "绿色系，层次丰富，左边框递减"
+
+  - name: elegant-blue
+    description: "蓝色系，层次丰富，左边框递减"
+
+  - name: elegant-orange
+    description: "橙色系，层次丰富，左边框递减"
+
+  - name: elegant-red
+    description: "红色系，层次丰富，左边框递减"
+
+  - name: elegant-navy
+    description: "藏青色系，层次丰富，左边框递减"
+
+  - name: elegant-gray
+    description: "灰色系，层次丰富，左边框递减"
+
+  - name: elegant-sky
+    description: "天蓝色系，层次丰富，左边框递减"
+
+# Bold 系列 - 视觉冲击，标题满底色 + 圆角投影
+bold_themes:
+  - name: bold-gold
+    description: "金色系，标题满底色圆角投影"
+
+  - name: bold-green
+    description: "绿色系，标题满底色圆角投影"
+
+  - name: bold-blue
+    description: "蓝色系，标题满底色圆角投影"
+
+  - name: bold-orange
+    description: "橙色系，标题满底色圆角投影"
+
+  - name: bold-red
+    description: "红色系，标题满底色圆角投影"
+
+  - name: bold-navy
+    description: "藏青色系，标题满底色圆角投影"
+
+  - name: bold-gray
+    description: "灰色系，标题满底色圆角投影"
+
+  - name: bold-sky
+    description: "天蓝色系，标题满底色圆角投影"
+
+# 使用说明
+# v1.0 主题: 兼容新旧 API
+# v2.0 主题: 需要内测 API (https://md2wechat.app)
+# 示例: md2wechat convert article.md --theme elegant-gold

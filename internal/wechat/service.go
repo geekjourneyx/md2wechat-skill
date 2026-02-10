@@ -10,6 +10,7 @@ import (
 	neturl "net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
@@ -174,8 +175,21 @@ func (s *Service) UploadMaterialWithRetry(filePath string, maxRetries int) (*Upl
 	return nil, lastErr
 }
 
-// DownloadFile 下载文件到临时目录
-func DownloadFile(url string) (string, error) {
+// DownloadFile 下载文件到临时目录，或返回本地文件路径
+// 如果传入的是本地文件路径（不以 http:// 或 https:// 开头），则直接返回该路径
+func DownloadFile(urlOrPath string) (string, error) {
+	// 检查是否是本地文件路径（不是 HTTP URL）
+	if !strings.HasPrefix(urlOrPath, "http://") && !strings.HasPrefix(urlOrPath, "https://") {
+		// 本地文件 - 检查是否存在
+		if _, err := os.Stat(urlOrPath); err == nil {
+			return urlOrPath, nil // 直接返回本地路径
+		}
+		return "", fmt.Errorf("local file not found: %s", urlOrPath)
+	}
+
+	// HTTP URL - 下载文件
+	url := urlOrPath
+
 	// 创建 HTTP 客户端
 	client := &http.Client{
 		Timeout: 60 * time.Second,

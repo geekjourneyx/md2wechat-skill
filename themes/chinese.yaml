@@ -1,7 +1,7 @@
-# 中国风主题
+# 中国风风格主题
 name: chinese
 type: api
-description: "中国传统文化风格"
+description: "中国风风格"
 version: "1.0"
 
 # API 模式使用的主题名

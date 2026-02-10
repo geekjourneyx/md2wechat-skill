@@ -128,11 +128,14 @@ image:
 | 配置项 | 必填 | 说明 | 默认值 |
 |--------|------|------|--------|
 | `md2wechat_key` | 否* | md2wechat.cn API Key | - |
+| `md2wechat_base_url` | 否 | md2wechat.cn API 地址 | `https://www.md2wechat.cn` |
 | `image_key` | 否** | 图片生成 API Key | - |
 | `image_base_url` | 否 | 图片 API 地址 | `https://api.openai.com/v1` |
 | `convert_mode` | 否 | 转换模式 | `api` |
 | `default_theme` | 否 | 默认主题 | `default` |
 | `http_timeout` | 否 | 超时时间（秒） | `30` |
+
+> **内测地址**：如需参与内测体验新功能，可将 `md2wechat_base_url` 设置为 `https://md2wechat.app`
 
 * API 模式需要
 ** AI 生成图片时需要
@@ -156,6 +159,7 @@ image:
 | `WECHAT_APPID` | `wechat.appid` | 微信 AppID |
 | `WECHAT_SECRET` | `wechat.secret` | 微信 Secret |
 | `MD2WECHAT_API_KEY` | `api.md2wechat_key` | md2wechat API Key |
+| `MD2WECHAT_BASE_URL` | `api.md2wechat_base_url` | md2wechat API 地址 |
 | `IMAGE_API_KEY` | `api.image_key` | 图片生成 API Key |
 | `IMAGE_API_BASE` | `api.image_base_url` | 图片 API 地址 |
 | `CONVERT_MODE` | `api.convert_mode` | 转换模式 |

@@ -1,0 +1,15 @@
+# Elegant 系列 - 金色系 (v2.0 新增)
+name: elegant-gold
+type: api
+version: "2.0"
+description: "层次丰富，左边框递减 + 渐变背景"
+api_theme: "elegant-gold"
+
+# v2.0 主题特性
+style:
+  series: "elegant"
+  color: "gold"
+  layout: "左边框递减 + 渐变背景"
+  mood: "层次丰富"
+  best_for: "深度文章、情感故事"
+  api_required: "https://md2wechat.app"

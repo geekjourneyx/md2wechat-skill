@@ -1,7 +1,7 @@
-# 默认主题
+# 微信默认风格主题
 name: default
 type: api
-description: "默认主题"
+description: "微信默认风格"
 version: "1.0"
 
 # API 模式使用的主题名

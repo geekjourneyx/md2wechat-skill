@@ -1,0 +1,15 @@
+# Minimal 系列 - 蓝色系 (v2.0 新增)
+name: minimal-blue
+type: api
+version: "2.0"
+description: "干净克制，纯色文字无装饰"
+api_theme: "minimal-blue"
+
+# v2.0 主题特性
+style:
+  series: "minimal"
+  color: "blue"
+  layout: "纯色文字无装饰"
+  mood: "干净克制"
+  best_for: "技术文档、简洁风格"
+  api_required: "https://md2wechat.app"

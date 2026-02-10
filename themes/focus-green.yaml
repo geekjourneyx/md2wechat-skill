@@ -1,0 +1,15 @@
+# Focus 系列 - 绿色系 (v2.0 新增)
+name: focus-green
+type: api
+version: "2.0"
+description: "居中对称，标题上下双横线"
+api_theme: "focus-green"
+
+# v2.0 主题特性
+style:
+  series: "focus"
+  color: "green"
+  layout: "居中对称，标题上下双横线"
+  mood: "平衡和谐"
+  best_for: "商务内容、正式文章"
+  api_required: "https://md2wechat.app"

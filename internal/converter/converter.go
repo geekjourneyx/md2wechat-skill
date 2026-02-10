@@ -35,8 +35,9 @@ type ConvertRequest struct {
 	Theme    string      // 主题名称 / AI 提示词名称
 
 	// API 模式专用
-	APIKey   string // md2wechat.cn API Key
-	FontSize string // small/medium/large
+	APIKey        string // md2wechat.cn API Key
+	FontSize      string // small/medium/large
+	BackgroundType string // 背景类型: default/grid/none
 
 	// AI 模式专用
 	CustomPrompt string // 自定义提示词

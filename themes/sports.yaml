@@ -1,7 +1,7 @@
-# 运动主题
+# 体育风格主题
 name: sports
 type: api
-description: "运动活力风格"
+description: "体育风格"
 version: "1.0"
 
 # API 模式使用的主题名
