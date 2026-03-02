@@ -165,7 +165,7 @@ func CompleteAIConversion(html string, images []ImageRef, theme string) *Convert
 
 // IsAIRequest 检查结果是否是 AI 请求
 func IsAIRequest(result *ConvertResult) bool {
-	return result.Error != "" && len(result.Error) > 14 && result.Error[:14] == "AI_MODE_REQUEST"
+	return result.Error != "" && len(result.Error) > 14 && result.Error[:15] == "AI_MODE_REQUEST"
 }
 
 // ExtractAIRequest 从结果中提取 AI 请求
