@@ -48,7 +48,6 @@ wechat:
 
 api:
   md2wechat_key: "你的 md2wechat API Key"
-  md2wechat_base_url: "https://www.md2wechat.cn"
   convert_mode: "api"
   default_theme: "default"
 ```
@@ -80,7 +79,6 @@ md2wechat config show --format json
 这样可以直接看到当前生效的：
 
 - `config_file`
-- `md2wechat_base_url`
 - `image_provider`
 - `image_api_base`
 - `default_convert_mode`
@@ -103,20 +101,17 @@ https://www.md2wechat.cn
 
 ```yaml
 api:
-  md2wechat_base_url: "https://www.md2wechat.cn"
 ```
 
 如果你要切到备用域名：
 
 ```yaml
 api:
-  md2wechat_base_url: "https://md2wechat.app"
 ```
 
 ### 方式二：用环境变量临时覆盖
 
 ```bash
-export MD2WECHAT_BASE_URL="https://md2wechat.app"
 ```
 
 环境变量优先级高于配置文件，适合：
@@ -224,8 +219,6 @@ wechat:
   secret: "your_wechat_secret"
 
 api:
-  md2wechat_key: "your_md2wechat_api_key"
-  md2wechat_base_url: "https://www.md2wechat.cn"
   image_key: "your_image_api_key"
   image_base_url: "https://api.openai.com/v1"
   image_provider: "openai"
@@ -258,7 +251,6 @@ image:
 | 配置项 | 必需 | 说明 | 默认值 |
 |--------|------|------|--------|
 | `api.md2wechat_key` | API 模式需要 | md2wechat API Key | - |
-| `api.md2wechat_base_url` | 否 | 排版 API 域名 | `https://www.md2wechat.cn` |
 | `api.convert_mode` | 否 | 默认转换模式 | `api` |
 | `api.default_theme` | 否 | 默认主题 | `default` |
 | `api.background_type` | 否 | 背景类型 | `default` |
@@ -290,8 +282,8 @@ image:
 |----------|------------|
 | `WECHAT_APPID` | `wechat.appid` |
 | `WECHAT_SECRET` | `wechat.secret` |
-| `MD2WECHAT_API_KEY` | `api.md2wechat_key` |
-| `MD2WECHAT_BASE_URL` | `api.md2wechat_base_url` |
+ `api.md2wechat_key` |
+
 | `IMAGE_API_KEY` | `api.image_key` |
 | `IMAGE_API_BASE` | `api.image_base_url` |
 | `IMAGE_PROVIDER` | `api.image_provider` |
@@ -324,8 +316,6 @@ image:
 
 ```yaml
 api:
-  md2wechat_key: "your_md2wechat_api_key"
-  md2wechat_base_url: "https://www.md2wechat.cn"
   convert_mode: "api"
 ```
 
@@ -339,7 +329,6 @@ wechat:
   secret: "your_wechat_secret"
 
 api:
-  md2wechat_key: "your_md2wechat_api_key"
 ```
 
 ### 需要 AI 图片生成
@@ -381,13 +370,11 @@ api:
 
 ```yaml
 api:
-  md2wechat_base_url: "https://www.md2wechat.cn"
 ```
 
 2. 当前终端又执行了：
 
 ```bash
-export MD2WECHAT_BASE_URL="https://md2wechat.app"
 ```
 
 最终生效的是：
@@ -409,7 +396,6 @@ md2wechat config validate
 推荐排查顺序：
 
 1. 先看 `config_file` 指向哪个文件
-2. 再看 `md2wechat_base_url` 是否真是你想要的域名
 3. 再看 `image_provider` / `image_api_base` 是否匹配
 4. 最后检查环境变量是否把文件里的值覆盖掉了
 

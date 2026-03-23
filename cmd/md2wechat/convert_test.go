@@ -99,8 +99,6 @@ func (f *fakeDraftCreator) CreateDraft(artifact publish.Artifact) (*publish.Draf
 
 func TestRunConvertDraftPipelineReplacesMixedImagesAndUsesMarkdownTitle(t *testing.T) {
 	oldCfg, oldLog := cfg, log
-	oldMode, oldTheme, oldAPIKey := convertMode, convertTheme, convertAPIKey
-	oldFontSize, oldBackground := convertFontSize, convertBackgroundType
 	oldCustomPrompt, oldOutput := convertCustomPrompt, convertOutput
 	oldPreview, oldUpload, oldDraft := convertPreview, convertUpload, convertDraft
 	oldSaveDraft, oldCover := convertSaveDraft, convertCoverImage
@@ -108,8 +106,6 @@ func TestRunConvertDraftPipelineReplacesMixedImagesAndUsesMarkdownTitle(t *testi
 	oldNewDraftCreator, oldUploadCoverImageFn := newDraftCreator, uploadCoverImageFn
 	t.Cleanup(func() {
 		cfg, log = oldCfg, oldLog
-		convertMode, convertTheme, convertAPIKey = oldMode, oldTheme, oldAPIKey
-		convertFontSize, convertBackgroundType = oldFontSize, oldBackground
 		convertCustomPrompt, convertOutput = oldCustomPrompt, oldOutput
 		convertPreview, convertUpload, convertDraft = oldPreview, oldUpload, oldDraft
 		convertSaveDraft, convertCoverImage = oldSaveDraft, oldCover
@@ -120,7 +116,6 @@ func TestRunConvertDraftPipelineReplacesMixedImagesAndUsesMarkdownTitle(t *testi
 	cfg = &config.Config{
 		WechatAppID:        "appid",
 		WechatSecret:       "secret",
-		MD2WechatAPIKey:    "api-key",
 		DefaultConvertMode: "api",
 		MaxImageWidth:      1920,
 		MaxImageSize:       5 * 1024 * 1024,
@@ -128,16 +123,13 @@ func TestRunConvertDraftPipelineReplacesMixedImagesAndUsesMarkdownTitle(t *testi
 	}
 	log = zap.NewNop()
 
-	convertMode = "api"
+	convertMode = "ai"
 	convertTheme = "default"
 	convertPreview = false
 	convertUpload = false
 	convertDraft = true
 	convertSaveDraft = ""
 	convertCoverImage = "/tmp/cover.jpg"
-	convertAPIKey = ""
-	convertFontSize = "medium"
-	convertBackgroundType = "default"
 	convertCustomPrompt = ""
 	convertOutput = ""
 
@@ -164,7 +156,7 @@ func TestRunConvertDraftPipelineReplacesMixedImagesAndUsesMarkdownTitle(t *testi
 	conv := &fakeConverter{
 		result: &converter.ConvertResult{
 			Success: true,
-			Mode:    converter.ModeAPI,
+			Mode:    converter.ModeAI,
 			Theme:   "default",
 			HTML:    `<p>a</p><img src="https://cdn.example.com/1"><p>b</p><img src="https://cdn.example.com/2"><p>c</p><img src="https://cdn.example.com/3">`,
 			Images: []converter.ImageRef{
@@ -243,29 +235,21 @@ func TestRunConvertDraftPipelineReplacesMixedImagesAndUsesMarkdownTitle(t *testi
 
 func TestSaveDraftWritesMetadataFromFrontMatter(t *testing.T) {
 	oldCfg, oldLog := cfg, log
-	oldMode, oldTheme, oldAPIKey := convertMode, convertTheme, convertAPIKey
-	oldFontSize, oldBackground := convertFontSize, convertBackgroundType
 	oldCustomPrompt, oldOutput := convertCustomPrompt, convertOutput
 	oldPreview, oldUpload, oldDraft := convertPreview, convertUpload, convertDraft
 	oldSaveDraftPath, oldCover := convertSaveDraft, convertCoverImage
 	oldNewConverter := newMarkdownConverter
 	t.Cleanup(func() {
 		cfg, log = oldCfg, oldLog
-		convertMode, convertTheme, convertAPIKey = oldMode, oldTheme, oldAPIKey
-		convertFontSize, convertBackgroundType = oldFontSize, oldBackground
 		convertCustomPrompt, convertOutput = oldCustomPrompt, oldOutput
 		convertPreview, convertUpload, convertDraft = oldPreview, oldUpload, oldDraft
 		convertSaveDraft, convertCoverImage = oldSaveDraftPath, oldCover
 		newMarkdownConverter = oldNewConverter
 	})
 
-	cfg = &config.Config{MD2WechatAPIKey: "api-key"}
 	log = zap.NewNop()
-	convertMode = "api"
+	convertMode = "ai"
 	convertTheme = "default"
-	convertAPIKey = ""
-	convertFontSize = "medium"
-	convertBackgroundType = "default"
 	convertCustomPrompt = ""
 	convertOutput = ""
 	convertPreview = false
@@ -292,7 +276,7 @@ func TestSaveDraftWritesMetadataFromFrontMatter(t *testing.T) {
 		return &fakeConverter{
 			result: &converter.ConvertResult{
 				Success: true,
-				Mode:    converter.ModeAPI,
+				Mode:    converter.ModeAI,
 				Theme:   "default",
 				HTML:    "<p>content</p>",
 			},
@@ -317,8 +301,6 @@ func TestSaveDraftWritesMetadataFromFrontMatter(t *testing.T) {
 
 func TestRunConvertImageFailureBlocksDraftCreation(t *testing.T) {
 	oldCfg, oldLog := cfg, log
-	oldMode, oldTheme, oldAPIKey := convertMode, convertTheme, convertAPIKey
-	oldFontSize, oldBackground := convertFontSize, convertBackgroundType
 	oldCustomPrompt, oldOutput := convertCustomPrompt, convertOutput
 	oldPreview, oldUpload, oldDraft := convertPreview, convertUpload, convertDraft
 	oldSaveDraft, oldCover := convertSaveDraft, convertCoverImage
@@ -326,8 +308,6 @@ func TestRunConvertImageFailureBlocksDraftCreation(t *testing.T) {
 	oldNewDraftCreator, oldUploadCoverImageFn := newDraftCreator, uploadCoverImageFn
 	t.Cleanup(func() {
 		cfg, log = oldCfg, oldLog
-		convertMode, convertTheme, convertAPIKey = oldMode, oldTheme, oldAPIKey
-		convertFontSize, convertBackgroundType = oldFontSize, oldBackground
 		convertCustomPrompt, convertOutput = oldCustomPrompt, oldOutput
 		convertPreview, convertUpload, convertDraft = oldPreview, oldUpload, oldDraft
 		convertSaveDraft, convertCoverImage = oldSaveDraft, oldCover
@@ -338,7 +318,6 @@ func TestRunConvertImageFailureBlocksDraftCreation(t *testing.T) {
 	cfg = &config.Config{
 		WechatAppID:        "appid",
 		WechatSecret:       "secret",
-		MD2WechatAPIKey:    "api-key",
 		DefaultConvertMode: "api",
 		MaxImageWidth:      1920,
 		MaxImageSize:       5 * 1024 * 1024,
@@ -346,16 +325,13 @@ func TestRunConvertImageFailureBlocksDraftCreation(t *testing.T) {
 	}
 	log = zap.NewNop()
 
-	convertMode = "api"
+	convertMode = "ai"
 	convertTheme = "default"
 	convertPreview = false
 	convertUpload = false
 	convertDraft = true
 	convertSaveDraft = ""
 	convertCoverImage = "/tmp/cover.jpg"
-	convertAPIKey = ""
-	convertFontSize = "medium"
-	convertBackgroundType = "default"
 	convertCustomPrompt = ""
 	convertOutput = ""
 
@@ -369,7 +345,7 @@ func TestRunConvertImageFailureBlocksDraftCreation(t *testing.T) {
 		return &fakeConverter{
 			result: &converter.ConvertResult{
 				Success: true,
-				Mode:    converter.ModeAPI,
+				Mode:    converter.ModeAI,
 				Theme:   "default",
 				HTML:    `<img src="images/local.png">`,
 				Images: []converter.ImageRef{
@@ -508,8 +484,6 @@ func TestHandleAIResultWritesPromptToPromptFileInsteadOfHTML(t *testing.T) {
 
 func TestRunConvertOutputsStableJSONEnvelopeWhenRequested(t *testing.T) {
 	oldCfg, oldLog := cfg, log
-	oldMode, oldTheme, oldAPIKey := convertMode, convertTheme, convertAPIKey
-	oldFontSize, oldBackground := convertFontSize, convertBackgroundType
 	oldCustomPrompt, oldOutput := convertCustomPrompt, convertOutput
 	oldPreview, oldUpload, oldDraft := convertPreview, convertUpload, convertDraft
 	oldSaveDraft, oldCover := convertSaveDraft, convertCoverImage
@@ -517,8 +491,6 @@ func TestRunConvertOutputsStableJSONEnvelopeWhenRequested(t *testing.T) {
 	oldJSON := jsonOutput
 	t.Cleanup(func() {
 		cfg, log = oldCfg, oldLog
-		convertMode, convertTheme, convertAPIKey = oldMode, oldTheme, oldAPIKey
-		convertFontSize, convertBackgroundType = oldFontSize, oldBackground
 		convertCustomPrompt, convertOutput = oldCustomPrompt, oldOutput
 		convertPreview, convertUpload, convertDraft = oldPreview, oldUpload, oldDraft
 		convertSaveDraft, convertCoverImage = oldSaveDraft, oldCover
@@ -526,14 +498,10 @@ func TestRunConvertOutputsStableJSONEnvelopeWhenRequested(t *testing.T) {
 		jsonOutput = oldJSON
 	})
 
-	cfg = &config.Config{MD2WechatAPIKey: "api-key"}
 	log = zap.NewNop()
 	jsonOutput = true
-	convertMode = "api"
+	convertMode = "ai"
 	convertTheme = "default"
-	convertAPIKey = ""
-	convertFontSize = "medium"
-	convertBackgroundType = "default"
 	convertCustomPrompt = ""
 	convertOutput = ""
 	convertPreview = false
@@ -553,7 +521,7 @@ func TestRunConvertOutputsStableJSONEnvelopeWhenRequested(t *testing.T) {
 		return &fakeConverter{
 			result: &converter.ConvertResult{
 				Success: true,
-				Mode:    converter.ModeAPI,
+				Mode:    converter.ModeAI,
 				Theme:   "default",
 				HTML:    "<p>正文</p>",
 				Images:  nil,
@@ -578,15 +546,13 @@ func TestRunConvertOutputsStableJSONEnvelopeWhenRequested(t *testing.T) {
 		t.Fatalf("unexpected envelope: %#v", response)
 	}
 	data, _ := response["data"].(map[string]any)
-	if data["html"] != "<p>正文</p>" || data["mode"] != "api" || data["title"] != "标题" {
+	if data["html"] != "<p>正文</p>" || data["mode"] != "ai" || data["title"] != "标题" {
 		t.Fatalf("unexpected data payload: %#v", data)
 	}
 }
 
 func TestRunConvertJSONStillWritesOutputFileWhenRequested(t *testing.T) {
 	oldCfg, oldLog := cfg, log
-	oldMode, oldTheme, oldAPIKey := convertMode, convertTheme, convertAPIKey
-	oldFontSize, oldBackground := convertFontSize, convertBackgroundType
 	oldCustomPrompt, oldOutput := convertCustomPrompt, convertOutput
 	oldPreview, oldUpload, oldDraft := convertPreview, convertUpload, convertDraft
 	oldSaveDraft, oldCover := convertSaveDraft, convertCoverImage
@@ -594,8 +560,6 @@ func TestRunConvertJSONStillWritesOutputFileWhenRequested(t *testing.T) {
 	oldJSON := jsonOutput
 	t.Cleanup(func() {
 		cfg, log = oldCfg, oldLog
-		convertMode, convertTheme, convertAPIKey = oldMode, oldTheme, oldAPIKey
-		convertFontSize, convertBackgroundType = oldFontSize, oldBackground
 		convertCustomPrompt, convertOutput = oldCustomPrompt, oldOutput
 		convertPreview, convertUpload, convertDraft = oldPreview, oldUpload, oldDraft
 		convertSaveDraft, convertCoverImage = oldSaveDraft, oldCover
@@ -603,14 +567,10 @@ func TestRunConvertJSONStillWritesOutputFileWhenRequested(t *testing.T) {
 		jsonOutput = oldJSON
 	})
 
-	cfg = &config.Config{MD2WechatAPIKey: "api-key"}
 	log = zap.NewNop()
 	jsonOutput = true
-	convertMode = "api"
+	convertMode = "ai"
 	convertTheme = "default"
-	convertAPIKey = ""
-	convertFontSize = "medium"
-	convertBackgroundType = "default"
 	convertCustomPrompt = ""
 	convertPreview = false
 	convertUpload = false
@@ -630,7 +590,7 @@ func TestRunConvertJSONStillWritesOutputFileWhenRequested(t *testing.T) {
 		return &fakeConverter{
 			result: &converter.ConvertResult{
 				Success: true,
-				Mode:    converter.ModeAPI,
+				Mode:    converter.ModeAI,
 				Theme:   "default",
 				HTML:    "<p>正文</p>",
 			},

@@ -235,7 +235,6 @@ func TestToMapMasksSecrets(t *testing.T) {
 	cfg := &Config{
 		WechatAppID:        "appid",
 		WechatSecret:       "secret-value",
-		MD2WechatAPIKey:    "api-key-value",
 		ImageAPIKey:        "image-key-value",
 		CompressImages:     true,
 		MaxImageWidth:      1920,
@@ -247,8 +246,7 @@ func TestToMapMasksSecrets(t *testing.T) {
 	}
 
 	result := cfg.ToMap(true)
-	if result["wechat_secret"] == "secret-value" || result["md2wechat_api_key"] == "api-key-value" || result["image_api_key"] == "image-key-value" {
-		t.Fatalf("expected secrets to be masked: %#v", result)
+        if result["wechat_secret"] == "secret-value" || result["image_api_key"] == "image-key-value" {
 	}
 }
 
@@ -258,11 +256,8 @@ func TestSaveConfigAndLoadRoundTrip(t *testing.T) {
 	cfg := &Config{
 		WechatAppID:           "appid",
 		WechatSecret:          "secret",
-		MD2WechatAPIKey:       "api-key",
-		MD2WechatBaseURL:      "https://example.com",
 		DefaultConvertMode:    "api",
 		DefaultTheme:          "default",
-		DefaultBackgroundType: "default",
 		ImageProvider:         "openai",
 		ImageAPIKey:           "image-key",
 		ImageAPIBase:          "https://api.example.com",

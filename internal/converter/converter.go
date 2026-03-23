@@ -1,5 +1,5 @@
 // Package converter 提供 Markdown 到微信公众号 HTML 的转换功能
-// 支持两种转换模式：API 模式（调用 md2wechat.cn）和 AI 模式（通过 Claude 生成）
+// 现仅支持 AI 模式（通过 Claude 生成）
 package converter
 
 import (
@@ -17,8 +17,7 @@ import (
 type ConvertMode string
 
 const (
-	ModeAPI ConvertMode = "api" // API 模式：调用 md2wechat.cn
-	ModeAI  ConvertMode = "ai"  // AI 模式：通过 Claude 生成
+	ModeAI ConvertMode = "ai" // AI 模式：通过 Claude 生成
 )
 
 // ImageType 图片类型
@@ -36,11 +35,6 @@ type ConvertRequest struct {
 	Markdown string      // Markdown 内容
 	Mode     ConvertMode // 转换模式
 	Theme    string      // 主题名称 / AI 提示词名称
-
-	// API 模式专用
-	APIKey         string // md2wechat.cn API Key
-	FontSize       string // small/medium/large
-	BackgroundType string // 背景类型: default/grid/none
 
 	// AI 模式专用
 	CustomPrompt string // 自定义提示词
@@ -116,8 +110,6 @@ func (c *converter) Convert(req *ConvertRequest) *ConvertResult {
 
 	// 根据模式选择转换器
 	switch req.Mode {
-	case ModeAPI:
-		return c.convertViaAPI(req)
 	case ModeAI:
 		return c.convertViaAI(req)
 	default:
@@ -137,7 +129,7 @@ func (c *converter) validateRequest(req *ConvertRequest) error {
 	}
 
 	if req.Mode == "" {
-		req.Mode = ModeAPI
+		req.Mode = ModeAI
 	}
 
 	if req.Theme == "" {
@@ -145,13 +137,6 @@ func (c *converter) validateRequest(req *ConvertRequest) error {
 	}
 
 	switch req.Mode {
-	case ModeAPI:
-		if req.APIKey == "" && c.cfg.MD2WechatAPIKey == "" {
-			return ErrMissingAPIKey
-		}
-		if req.APIKey == "" {
-			req.APIKey = c.cfg.MD2WechatAPIKey
-		}
 	case ModeAI:
 		// AI 模式不需要额外验证
 	}
@@ -242,9 +227,7 @@ func InsertImagePlaceholders(html string, images []ImageRef) string {
 // 错误定义
 var (
 	ErrEmptyMarkdown = &ConvertError{Code: "EMPTY_MARKDOWN", Message: "markdown content cannot be empty"}
-	ErrMissingAPIKey = &ConvertError{Code: "MISSING_API_KEY", Message: "API key is required for API mode"}
 	ErrInvalidTheme  = &ConvertError{Code: "INVALID_THEME", Message: "invalid theme name"}
-	ErrAPIFailure    = &ConvertError{Code: "API_FAILURE", Message: "API call failed"}
 	ErrAIFailure     = &ConvertError{Code: "AI_FAILURE", Message: "AI generation failed"}
 )
 

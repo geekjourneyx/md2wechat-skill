@@ -326,7 +326,6 @@ md2wechat config show --format json
 重点看：
 
 - `config_file`
-- 当前 `md2wechat_base_url`
 - 当前图片 provider
 
 ---

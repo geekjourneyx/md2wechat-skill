@@ -150,15 +150,11 @@ func TestConvertReturnsValidationErrors(t *testing.T) {
 		promptBuilder: NewPromptBuilder(),
 	}
 
-	result := conv.Convert(&ConvertRequest{Markdown: "", Mode: ModeAPI})
+	result := conv.Convert(&ConvertRequest{Markdown: "", Mode: ModeAI})
 	if result.Success || !strings.Contains(result.Error, ErrEmptyMarkdown.Error()) {
 		t.Fatalf("unexpected empty markdown result: %+v", result)
 	}
 
-	result = conv.Convert(&ConvertRequest{Markdown: "# title", Mode: ModeAPI})
-	if result.Success || !strings.Contains(result.Error, ErrMissingAPIKey.Error()) {
-		t.Fatalf("unexpected missing key result: %+v", result)
-	}
 }
 
 func TestAIRequestHelpersExposePreparedPrompt(t *testing.T) {

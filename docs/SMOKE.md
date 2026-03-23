@@ -18,7 +18,6 @@
 
 - 可读取的 `~/.config/md2wechat/config.yaml`
 - 有效的 `WECHAT_APPID` / `WECHAT_SECRET`
-- 有效的 `MD2WECHAT_API_KEY`
 - 可用的图片服务配置
 - 微信接口白名单已放通当前执行机 IP
 

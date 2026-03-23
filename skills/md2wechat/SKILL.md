@@ -5,18 +5,14 @@ description: Convert Markdown to WeChat Official Account HTML. Use this whenever
 
 # MD to WeChat
 
-Converts Markdown articles to WeChat Official Account formatted HTML with inline CSS and optionally uploads to draft box. Supports two modes:
+Converts Markdown articles to WeChat Official Account formatted HTML with inline CSS and optionally uploads to draft box. Supported natively via AI mode:
 
-- **API Mode**: Fast conversion using md2wechat.cn API
 - **AI Mode**: Generate themed AI requests / prompts for external models such as Claude Code
 
 ## Quick Start
 
 ```bash
-# Preview HTML (API mode, fast)
-md2wechat convert article.md --preview
-
-# Generate AI request / prompt (AI mode, themed)
+# Generate AI request / prompt (AI mode)
 md2wechat convert article.md --mode ai --theme autumn-warm --preview
 
 # Upload to WeChat draft box
@@ -30,23 +26,6 @@ Before asking the user to edit configuration, check these in order:
 1. `~/.config/md2wechat/config.yaml` (default and recommended)
 2. Environment variables such as `MD2WECHAT_BASE_URL`
 3. Project-local `md2wechat.yaml` / `md2wechat.yml` / `md2wechat.json`
-
-If the user asks how to switch the API domain, change:
-
-- `api.md2wechat_base_url` in the config file, or
-- `MD2WECHAT_BASE_URL` in the environment
-
-Default API domain:
-
-```text
-https://www.md2wechat.cn
-```
-
-Backup domain:
-
-```text
-https://md2wechat.app
-```
 
 Default conversion mode:
 
@@ -292,10 +271,9 @@ These are representative examples. The authoritative list is `themes list --json
 
 **Ask the user**: "Which mode and theme would you like?" - Only ask if the user doesn't specify in their request.
 
-- **API mode** (fast): default, bytedance, apple, sports, chinese, cyber
 - **AI mode** (themed): autumn-warm, spring-fresh, ocean-calm
 
-**Default**: Use `API mode` if user doesn't specify.
+**Default**: ai mode.
 
 Read [references/themes.md](references/themes.md) for visual intent and prompt examples only. Do not treat it as the authoritative theme inventory.
 
@@ -303,13 +281,7 @@ Read [references/themes.md](references/themes.md) for visual intent and prompt e
 
 ## Step 3: Generate HTML
 
-### API Mode
 
-Call md2wechat CLI:
-
-```bash
-md2wechat convert article.md --mode api
-```
 
 ### AI Mode
 
@@ -575,7 +547,7 @@ This is a simple article with no images.
 ```
 
 **Process**:
-1. Generate HTML with API mode
+1. Generate AI prompt
 2. Skip image processing
 3. Ask: preview or upload?
 4. If upload → create draft
@@ -741,7 +713,6 @@ If you encounter this error:
 3. Consider splitting into multiple articles
 4. Use simpler themes with less inline styling
 
-API mode generates more inline CSS which increases content size. For very long articles, consider manual editing or splitting.
 
 **Q: API rate limit exceeded**
 A: WeChat has API limits. Wait and retry:
@@ -793,7 +764,7 @@ md2wechat version --json
 ```
 
 **Q: AI mode very slow**
-A: AI mode requires Claude API call and takes 10-30 seconds. For faster results, use API mode.
+A: AI mode requires Claude API call and takes 10-30 seconds.
 
 ---
 

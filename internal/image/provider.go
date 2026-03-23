@@ -31,6 +31,16 @@ var providerRegistry = []ProviderMeta{
 		SupportsSize:   true,
 	},
 	{
+		Name:           "bailian",
+		Aliases:        []string{"aliyun"},
+		Description:    "Aliyun Bailian (DashScope) image generation provider",
+		RequiredConfig: []string{"IMAGE_API_KEY"},
+		OptionalConfig: []string{"IMAGE_API_BASE", "IMAGE_MODEL", "IMAGE_SIZE"},
+		DefaultBaseURL: "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+		DefaultModel:   "qwen-image-2.0",
+		SupportsSize:   true,
+	},
+	{
 		Name:           "tuzi",
 		Description:    "TuZi image generation provider",
 		RequiredConfig: []string{"IMAGE_API_KEY", "IMAGE_API_BASE"},
@@ -149,6 +159,11 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 			return nil, err
 		}
 		return NewOpenRouterProvider(cfg)
+	case "bailian", "aliyun":
+		if err := validateBailianConfig(cfg); err != nil {
+			return nil, err
+		}
+		return NewBailianProvider(cfg)
 	case "gemini", "google":
 		if err := validateGeminiConfig(cfg); err != nil {
 			return nil, err
@@ -163,7 +178,7 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 		return nil, &config.ConfigError{
 			Field:   "ImageProvider",
 			Message: fmt.Sprintf("未知的图片服务提供者: %s", cfg.ImageProvider),
-			Hint:    "支持的提供者: openai, tuzi, modelscope (或 ms), openrouter (或 or), gemini (或 google)",
+			Hint:    "支持的提供者: openai, tuzi, modelscope (或 ms), openrouter (或 or), gemini (或 google), bailian (或 aliyun)",
 		}
 	}
 }
@@ -239,6 +254,18 @@ func validateGeminiConfig(cfg *config.Config) error {
 			Field:   "ImageAPIKey",
 			Message: "使用 Google Gemini 图片服务需要配置 API Key",
 			Hint:    "在配置文件中设置 api.image_key 或环境变量 IMAGE_API_KEY (或 GOOGLE_API_KEY)，前往 https://aistudio.google.com/apikey 获取",
+		}
+	}
+	return nil
+}
+
+// validateBailianConfig 验证 Bailian 配置
+func validateBailianConfig(cfg *config.Config) error {
+	if cfg.ImageAPIKey == "" {
+		return &config.ConfigError{
+			Field:   "ImageAPIKey",
+			Message: "使用 bailian provider 时，API Key 不能为空",
+			Hint:    "请在配置文件中设置 api.image_key，或通过环境变量 IMAGE_API_KEY 设置",
 		}
 	}
 	return nil

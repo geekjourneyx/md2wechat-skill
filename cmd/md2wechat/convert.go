@@ -71,28 +71,22 @@ Supported themes (38 total):
 
 // convert 命令参数
 var (
-	convertMode           string
-	convertTheme          string
-	convertAPIKey         string
-	convertFontSize       string
-	convertBackgroundType string
-	convertCustomPrompt   string
-	convertOutput         string
-	convertPreview        bool
-	convertUpload         bool
-	convertDraft          bool
-	convertSaveDraft      string
-	convertCoverImage     string // 封面图片路径
+	convertMode         string
+	convertTheme        string
+	convertCustomPrompt string
+	convertOutput       string
+	convertPreview      bool
+	convertUpload       bool
+	convertDraft        bool
+	convertSaveDraft    string
+	convertCoverImage   string // 封面图片路径
 )
 
 func init() {
 	// 添加 flags
-	convertCmd.Flags().StringVar(&convertMode, "mode", "api", "Conversion mode: api or ai")
+	convertCmd.Flags().StringVar(&convertMode, "mode", "ai", "Conversion mode: ai (only)")
 	convertCmd.Flags().StringVar(&convertTheme, "theme", "default", "Theme name")
-	convertCmd.Flags().StringVar(&convertAPIKey, "api-key", "", "API key for md2wechat.cn")
-	convertCmd.Flags().StringVar(&convertFontSize, "font-size", "medium", "Font size: small/medium/large (API mode only)")
-	convertCmd.Flags().StringVar(&convertBackgroundType, "background-type", "default", "Background type: default/grid/none (API mode only)")
-	convertCmd.Flags().StringVar(&convertCustomPrompt, "custom-prompt", "", "Custom AI prompt (AI mode only)")
+	convertCmd.Flags().StringVar(&convertCustomPrompt, "custom-prompt", "", "Custom AI prompt")
 	convertCmd.Flags().StringVarP(&convertOutput, "output", "o", "", "Output HTML file path")
 	convertCmd.Flags().BoolVar(&convertPreview, "preview", false, "Preview only, do not upload images")
 	convertCmd.Flags().BoolVar(&convertUpload, "upload", false, "Upload images to WeChat and replace URLs")
@@ -140,13 +134,10 @@ func runConvert(cmd *cobra.Command, args []string) error {
 			SaveDraft:   convertSaveDraft != "",
 		},
 		ConvertRequest: &converter.ConvertRequest{
-			Markdown:       string(markdown),
-			Mode:           converter.ConvertMode(convertMode),
-			Theme:          convertTheme,
-			APIKey:         convertAPIKey,
-			FontSize:       convertFontSize,
-			BackgroundType: convertBackgroundType,
-			CustomPrompt:   convertCustomPrompt,
+			Markdown:     string(markdown),
+			Mode:         converter.ConvertMode(convertMode),
+			Theme:        convertTheme,
+			CustomPrompt: convertCustomPrompt,
 		},
 		MarkdownDir:    filepath.Dir(markdownFile),
 		OutputFile:     convertOutput,
@@ -272,15 +263,9 @@ func resolveAIPromptOutputPath(outputPath string) string {
 
 func validateConvertConfig() error {
 	switch convertMode {
-	case "", "api", "ai":
+	case "", "ai":
 	default:
 		return newCLIError(codeConvertInvalid, fmt.Sprintf("invalid convert mode: %s", convertMode))
-	}
-
-	if convertMode == "api" {
-		if convertAPIKey == "" && cfg.MD2WechatAPIKey == "" {
-			return newCLIError(codeConvertInvalid, "MD2WECHAT_API_KEY is required for API mode")
-		}
 	}
 
 	if convertUpload || convertDraft {

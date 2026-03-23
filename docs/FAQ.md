@@ -299,7 +299,6 @@ md2wechat config show --format json
 重点看：
 
 - `config_file`
-- `md2wechat_base_url`
 - `image_provider`
 - `default_convert_mode`
 
@@ -318,7 +317,6 @@ API 模式需要 `md2wechat` 排版服务的 API Key。
 **方案 A：配置 API Key**
 
 ```bash
-export MD2WECHAT_API_KEY="your_key"
 ```
 
 **方案 B：显式改走 AI 模式**

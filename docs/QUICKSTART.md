@@ -57,14 +57,12 @@ md2wechat config init
 
 ```yaml
 api:
-  md2wechat_base_url: "https://www.md2wechat.cn"
 ```
 
 备用域名可改为：
 
 ```yaml
 api:
-  md2wechat_base_url: "https://md2wechat.app"
 ```
 
 默认主题和默认写作风格已经随二进制内置，不需要额外拷贝 `themes/` 或 `writers/` 目录。

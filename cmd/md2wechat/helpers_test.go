@@ -30,55 +30,29 @@ func TestValidateConvertConfigRejectsInvalidMode(t *testing.T) {
 	}
 }
 
-func TestValidateConvertConfigRequiresAPIKeyInAPIMode(t *testing.T) {
-	oldCfg, oldMode := cfg, convertMode
-	oldUpload, oldDraft := convertUpload, convertDraft
-	t.Cleanup(func() {
-		cfg = oldCfg
-		convertMode = oldMode
-		convertUpload = oldUpload
-		convertDraft = oldDraft
-	})
-
-	cfg = &config.Config{}
-	convertMode = "api"
-	convertUpload = false
-	convertDraft = false
-
-	if err := validateConvertConfig(); err == nil || !strings.Contains(err.Error(), "MD2WECHAT_API_KEY") {
-		t.Fatalf("validateConvertConfig() error = %v", err)
-	}
-}
 
 func TestCreateWeChatDraftRequiresCoverImage(t *testing.T) {
 	oldCfg, oldLog := cfg, log
-	oldMode, oldTheme, oldAPIKey := convertMode, convertTheme, convertAPIKey
-	oldFontSize, oldBackground := convertFontSize, convertBackgroundType
 	oldCustomPrompt, oldOutput := convertCustomPrompt, convertOutput
 	oldPreview, oldUpload, oldDraft := convertPreview, convertUpload, convertDraft
 	oldSaveDraft, oldCover := convertSaveDraft, convertCoverImage
 	oldNewConverter := newMarkdownConverter
 	t.Cleanup(func() {
 		cfg, log = oldCfg, oldLog
-		convertMode, convertTheme, convertAPIKey = oldMode, oldTheme, oldAPIKey
-		convertFontSize, convertBackgroundType = oldFontSize, oldBackground
 		convertCustomPrompt, convertOutput = oldCustomPrompt, oldOutput
 		convertPreview, convertUpload, convertDraft = oldPreview, oldUpload, oldDraft
 		convertSaveDraft, convertCoverImage = oldSaveDraft, oldCover
 		newMarkdownConverter = oldNewConverter
 	})
 
-	cfg = &config.Config{WechatAppID: "appid", WechatSecret: "secret", MD2WechatAPIKey: "api-key"}
 	log = zap.NewNop()
-	convertMode = "api"
+	convertMode = "ai"
 	convertTheme = "default"
 	convertPreview = false
 	convertUpload = false
 	convertDraft = true
 	convertSaveDraft = ""
 	convertCoverImage = ""
-	convertFontSize = "medium"
-	convertBackgroundType = "default"
 
 	markdownPath := filepath.Join(t.TempDir(), "article.md")
 	if err := os.WriteFile(markdownPath, []byte("# Title\n"), 0600); err != nil {
@@ -88,7 +62,7 @@ func TestCreateWeChatDraftRequiresCoverImage(t *testing.T) {
 		return &fakeConverter{
 			result: &converter.ConvertResult{
 				Success: true,
-				Mode:    converter.ModeAPI,
+				Mode:    converter.ModeAI,
 				Theme:   "default",
 				HTML:    "<p>body</p>",
 			},

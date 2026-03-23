@@ -1024,7 +1024,7 @@ wechat:
 # API 配置
 api:
   md2wechat_key: "md2wechat.cn 的 API Key"  # API 模式需要
-  md2wechat_base_url: "https://www.md2wechat.cn"  # 可改成 https://md2wechat.app
+  # 可改成 https://md2wechat.app
   convert_mode: "api"                       # 配置展示/兼容字段；不传 --mode 时 CLI 仍默认 api
   default_theme: "default"                  # 默认主题
   http_timeout: 30                          # 超时时间（秒）

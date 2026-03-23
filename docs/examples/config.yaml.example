@@ -2,10 +2,7 @@ wechat:
   appid: "your_wechat_appid"
   secret: "your_wechat_secret"
 
-api:
-  md2wechat_key: "your_md2wechat_api_key"
-  md2wechat_base_url: "https://www.md2wechat.cn"
-  image_key: "your_image_api_key"
+api:  image_key: "your_image_api_key"
   image_base_url: "https://api.openai.com/v1"
   image_provider: "openai"
   image_model: "gpt-image-1.5"

@@ -163,7 +163,7 @@ func TestServiceConvertProcessesAssetsAndCreatesDraft(t *testing.T) {
 		zap.NewNop(),
 		&fakeMarkdownConverter{
 			result: &converter.ConvertResult{
-				Mode:    converter.ModeAPI,
+				Mode:    converter.ModeAI,
 				Theme:   "default",
 				Success: true,
 				Status:  action.StatusCompleted,
@@ -205,9 +205,8 @@ func TestServiceConvertProcessesAssetsAndCreatesDraft(t *testing.T) {
 		},
 		ConvertRequest: &converter.ConvertRequest{
 			Markdown: "body",
-			Mode:     converter.ModeAPI,
+			Mode:     converter.ModeAI,
 			Theme:    "default",
-			APIKey:   "api-key",
 		},
 		MarkdownDir:    dir,
 		OutputFile:     filepath.Join(dir, "out.html"),
@@ -259,7 +258,7 @@ func TestServiceConvertReturnsTypedStageErrors(t *testing.T) {
 		zap.NewNop(),
 		&fakeMarkdownConverter{
 			result: &converter.ConvertResult{
-				Mode:    converter.ModeAPI,
+				Mode:    converter.ModeAI,
 				Theme:   "default",
 				Success: true,
 				Status:  action.StatusCompleted,
@@ -284,9 +283,8 @@ func TestServiceConvertReturnsTypedStageErrors(t *testing.T) {
 		Intent: PublishIntent{Upload: true},
 		ConvertRequest: &converter.ConvertRequest{
 			Markdown: "body",
-			Mode:     converter.ModeAPI,
+			Mode:     converter.ModeAI,
 			Theme:    "default",
-			APIKey:   "api-key",
 		},
 	})
 	if !IsAssetError(err) {
