@@ -246,7 +246,7 @@ func TestToMapMasksSecrets(t *testing.T) {
 	}
 
 	result := cfg.ToMap(true)
-        if result["wechat_secret"] == "secret-value" || result["image_api_key"] == "image-key-value" {
+	if result["wechat_secret"] == "secret-value" || result["image_api_key"] == "image-key-value" {
 	}
 }
 
@@ -254,19 +254,19 @@ func TestSaveConfigAndLoadRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.yaml")
 	cfg := &Config{
-		WechatAppID:           "appid",
-		WechatSecret:          "secret",
-		DefaultConvertMode:    "api",
-		DefaultTheme:          "default",
-		ImageProvider:         "openai",
-		ImageAPIKey:           "image-key",
-		ImageAPIBase:          "https://api.example.com",
-		ImageModel:            "model",
-		ImageSize:             "1024x1024",
-		CompressImages:        false,
-		MaxImageWidth:         1600,
-		MaxImageSize:          3 * 1024 * 1024,
-		HTTPTimeout:           45,
+		WechatAppID:        "appid",
+		WechatSecret:       "secret",
+		DefaultConvertMode: "api",
+		DefaultTheme:       "default",
+		ImageProvider:      "openai",
+		ImageAPIKey:        "image-key",
+		ImageAPIBase:       "https://api.example.com",
+		ImageModel:         "model",
+		ImageSize:          "1024x1024",
+		CompressImages:     false,
+		MaxImageWidth:      1600,
+		MaxImageSize:       3 * 1024 * 1024,
+		HTTPTimeout:        45,
 	}
 
 	if err := SaveConfig(path, cfg); err != nil {

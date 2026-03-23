@@ -27,7 +27,6 @@
 - 如果你是 mac 用户，优先用 Homebrew 安装 CLI：`brew install geekjourneyx/tap/md2wechat`
 - 如果你已经有稳定可用的 Go 环境，也可以选 `go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v2.0.3`
 - 想直接安装 CLI：看 [安装指南](docs/INSTALL.md)
-- 想申请 API 服务或咨询：扫描文末公众号二维码联系，备注「API咨询」
 - 想先看支持的主题 / 图片 prompt / provider：执行 discovery 命令
 - 想在 Claude Code / Codex / OpenCode 等 Coding Agent 里使用：先安装 CLI，再执行 `npx skills add`
 - 想在 Obsidian 的 Claudian 插件里使用：先安装 CLI，再执行 `npx skills add`，然后看 [Obsidian / Claudian 指南](docs/OBSIDIAN.md)
@@ -79,8 +78,7 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 ---
 
 > ### 先看这里
-> - `convert` 默认走 `API` 模式，需要你自己的 `md2wechat.cn` API Key；如需咨询或申请内测，扫描文末公众号二维码联系，备注「API内测」
-> - `AI` 模式不需要 `md2wechat.cn` API Key，但当前 CLI 返回的是 `AI request / prompt`，需要由 Claude Code / Codex / OpenAI 等外部模型继续完成 HTML
+> - `convert` 默认会返回 `AI request / prompt`，可以由 Claude Code / Codex / OpenAI 等外部模型接力完成 HTML 的生成
 > - 主题、图片 prompt、provider 不要靠猜，先执行 `md2wechat themes list --json`、`md2wechat prompts list --kind image --json`、`md2wechat providers list --json`
 > - 安装、配置和校验入口分别看：[安装指南](docs/INSTALL.md) / [配置指南](docs/CONFIG.md) / [能力发现](docs/DISCOVERY.md)
 
@@ -209,7 +207,7 @@ md2wechat convert article.md --draft --cover cover.jpg
 ### 站点入口
 
 - 国际站: [md2wechat.com](https://www.md2wechat.com/)
-- 国内站 / API 主站: [md2wechat.cn](https://md2wechat.cn)
+- 国内站: [md2wechat.cn](https://md2wechat.cn)
 - GitHub 项目: [geekjourneyx/md2wechat-skill](https://github.com/geekjourneyx/md2wechat-skill)
 
 ### 关于作者
@@ -226,19 +224,14 @@ md2wechat convert article.md --draft --cover cover.jpg
 
 ```mermaid
 flowchart LR
-    A[用 Markdown 写文章] --> B{选择模式}
+    A[用 Markdown 写文章] --> E[生成 AI request]
 
-    B -->|API 模式| C[调用 md2wechat.cn API]
-    C --> D[获取 HTML]
-
-    B -->|AI 模式| E[生成 AI request]
     E --> F[由 Claude 等继续生成 HTML]
 
-    D --> G[预览效果]
-    F --> G
+    F --> G[预览效果]
 
     G --> H{满意吗}
-    H -->|不满意| B
+    H -->|不满意| E
     H -->|满意| I[上传图片]
     I --> J[发送到微信草稿箱]
     J --> K[完成]
@@ -277,30 +270,19 @@ flowchart LR
 - `write` = 帮你写文章（从想法到完整文章）
 - `convert` = 帮你排版（从 Markdown 到微信格式）
 
-### 两种转换模式
-
-| 模式 | 适合谁 | 特点 | 样式 |
-|------|--------|------|------|
-| **API 模式** | 追求稳定、快速 | 调用 md2wechat.cn API，秒级响应 | 简洁专业 |
-| **AI 模式** | 追求精美排版 | 生成 AI request / prompt，样式更丰富 | 秋日暖光 / 春日清新 / 深海静谧 |
-
 ### 完整工作流程
 
 ```mermaid
 flowchart LR
     A1[Markdown 写作] --> A2[插入图片]
-    A2 --> B1{选择模式}
+    A2 --> B3[生成 AI request]
 
-    B1 -->|API| B2[md2wechat.cn]
-    B1 -->|AI| B3[生成 AI request]
-
-    B2 --> B4[HTML 生成]
     B3 --> B4[由 Claude 等继续生成 HTML]
 
     B4 --> C1[预览效果]
     C1 --> C2{满意吗}
 
-    C2 -->|调整| B1
+    C2 -->|调整| A2
     C2 -->|OK| C3[上传图片]
     C3 --> C4[发送草稿]
     C4 --> C5[完成]
@@ -700,7 +682,7 @@ md2wechat convert article.md --draft --cover cover.jpg
 # 3. 创建草稿并推送到微信后台
 ```
 
-### AI 模式主题选择
+### 主题选择
 
 | 主题名 | 命令 | 风格 | 适合内容 |
 |--------|------|------|----------|
@@ -708,7 +690,7 @@ md2wechat convert article.md --draft --cover cover.jpg
 | **春日清新** | `--theme spring-fresh` | 清新绿色调 | 旅行日记、自然主题 |
 | **深海静谧** | `--theme ocean-calm` | 专业蓝色调 | 技术文章、商业分析 |
 
-### API 模式主题选择
+### 其他主题分类
 
 精确主题清单以运行时 discovery 输出为准：
 
@@ -952,7 +934,7 @@ api:
 
 ### 什么是 AI 模式？
 
-**AI 模式**当前会生成用于外部大模型继续处理的排版请求，而不是像 API 模式那样直接在本地返回最终 HTML。
+**AI 模式**当前会生成用于外部大模型继续处理的排版请求，而不是直接在本地返回最终 HTML。
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -971,16 +953,6 @@ api:
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
-
-### AI 模式的优势
-
-| 对比项 | API 模式 | AI 模式 |
-|--------|----------|----------|
-| 响应速度 | 秒级 | 需要额外 AI 步骤 |
-| 排版质量 | 👍 标准规范 | 🌟 精美多样 |
-| 样式选择 | 2-3 种 | 更灵活 |
-| 成本 | 低 | 取决于外部 AI |
-| 适合场景 | 日常文章 | 重要文章、品牌内容 |
 
 ### 在 Claude Code 中使用 AI 模式
 
@@ -1021,11 +993,9 @@ wechat:
   appid: "你的AppID"
   secret: "你的Secret"
 
-# API 配置
+# API/通用 配置
 api:
-  md2wechat_key: "md2wechat.cn 的 API Key"  # API 模式需要
-  # 可改成 https://md2wechat.app
-  convert_mode: "api"                       # 配置展示/兼容字段；不传 --mode 时 CLI 仍默认 api
+  convert_mode: "ai"                        # 默认模式
   default_theme: "default"                  # 默认主题
   http_timeout: 30                          # 超时时间（秒）
 
@@ -1035,11 +1005,6 @@ image:
   max_width: 1920         # 最大宽度
   max_size_mb: 5          # 最大文件大小（MB）
 ```
-
-如果你不知道 API 域名在哪里改，就改这里：
-
-- 配置文件：`api.md2wechat_base_url`
-- 环境变量：`MD2WECHAT_BASE_URL`
 
 默认主题和默认写作风格已经内置在二进制里。
 如果你要覆盖它们，优先级从高到低是：
@@ -1054,11 +1019,6 @@ image:
 - [配置指南](docs/CONFIG.md)
 - [示例配置](docs/examples/config.yaml.example)
 - [真实烟雾测试记录](docs/SMOKE.md)
-
-需要明确一点：
-
-- `md2wechat convert article.md` 在未显式传 `--mode` 时，始终默认走 `api`
-- 只有显式传 `--mode ai` 才会走 AI 模式
 
 ---
 
@@ -1454,7 +1414,7 @@ md2wechat config validate
 # 写好技术文章
 vim my-tech-post.md
 
-# 使用简洁的 API 模式转换
+# 转换并预览
 md2wechat convert my-tech-post.md --preview
 
 # 满意后发送草稿
@@ -1663,11 +1623,11 @@ md2wechat write --style dan-koe --humanize
 
 **解决方案：**
 1. 缩短文章内容
-2. 减少不必要的格式（API 模式的 inline CSS 会增加内容体积）
+2. 减少不必要的格式（inline CSS 会增加内容体积）
 3. 拆分为多篇文章发布
 4. 使用更简洁的排版主题
 
-**注意：** API 模式生成的 HTML 包含大量 inline CSS，会使内容体积膨胀约 5-10 倍。长文章建议：
+**注意：** 生成的 HTML 包含大量 inline CSS，会使内容体积膨胀约 5-10 倍。长文章建议：
 - 使用更简洁的 Markdown 写作
 - 删除部分图片或使用外部图片链接
 - 手动在微信编辑器中复制粘贴（绕过 API 限制）

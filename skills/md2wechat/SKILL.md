@@ -17,6 +17,9 @@ md2wechat convert article.md --mode ai --theme autumn-warm --preview
 
 # Upload to WeChat draft box
 md2wechat convert article.md --draft --cover cover.jpg
+
+# Create a draft directly from existing HTML
+md2wechat create_draft --file article.html --cover cover.jpg --title "Article Title" --desc "Article summary"
 ```
 
 ### Config Location
@@ -469,7 +472,7 @@ Display HTML in markdown code block for user to copy.
 Create draft and run:
 
 ```bash
-md2wechat convert article.md --draft --cover cover.jpg
+md2wechat create_draft --file article.html --cover cover.jpg --title "Article Title" --desc "Article summary"
 ```
 
 **Required for draft**:

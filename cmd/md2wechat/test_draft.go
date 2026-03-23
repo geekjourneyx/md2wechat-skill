@@ -1,12 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
-	"github.com/geekjourneyx/md2wechat-skill/internal/publish"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 var testHTMLCmd = &cobra.Command{
@@ -27,46 +22,17 @@ var testHTMLCmd = &cobra.Command{
 }
 
 func runTestDraft(htmlFile, coverImage string) (map[string]any, error) {
-	if err := cfg.ValidateForWeChat(); err != nil {
-		return nil, wrapCLIError(codeConfigInvalid, err, err.Error())
-	}
-
-	html, err := os.ReadFile(htmlFile)
-	if err != nil {
-		return nil, wrapCLIError(codeTestDraftReadFailed, err, fmt.Sprintf("read HTML file: %v", err))
-	}
-
-	log.Info("testing draft creation",
-		zap.Int("html_length", len(html)),
-		zap.String("cover", coverImage))
-
-	log.Info("uploading cover image", zap.String("path", coverImage))
-	coverMediaID, err := uploadCoverImageFn(coverImage)
-	if err != nil {
-		return nil, wrapCLIError(codeTestDraftCoverFailed, err, fmt.Sprintf("upload cover: %v", err))
-	}
-	log.Info("cover uploaded", zap.String("media_id", maskMediaID(coverMediaID)))
-
-	svc := newDraftCreator()
-	result, err := svc.CreateDraft(publish.Artifact{
-		HTML: string(html),
-		Metadata: publish.Metadata{
-			Title:  "AI生成测试文章",
-			Digest: "这是AI生成的微信公众号文章测试",
-		},
-		CoverMediaID: coverMediaID,
+	result, err := executeDraftCreation(draftExecutionInput{
+		HTMLFile:   htmlFile,
+		CoverImage: coverImage,
+		Title:      "AI生成测试文章",
+		Digest:     "这是AI生成的微信公众号文章测试",
 	})
 	if err != nil {
-		return nil, wrapCLIError(codeTestDraftCreateFailed, err, fmt.Sprintf("create draft: %v", err))
+		if _, ok := extractCLIError(err); ok {
+			return nil, err
+		}
+		return nil, wrapDraftExecutionError(err, codeTestDraftReadFailed, codeTestDraftCoverFailed, codeTestDraftCreateFailed)
 	}
-
-	response := map[string]any{
-		"media_id": result.MediaID,
-		"message":  "Draft created successfully! You can check it in WeChat backend.",
-	}
-	if result.DraftURL != "" {
-		response["draft_url"] = result.DraftURL
-	}
-
-	return response, nil
+	return buildDraftResponse(result), nil
 }

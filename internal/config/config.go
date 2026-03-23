@@ -18,8 +18,8 @@ type Config struct {
 	WechatSecret string `json:"wechat_secret" yaml:"wechat_secret" env:"WECHAT_SECRET"`
 
 	// md2wechat.cn API 配置
-	DefaultConvertMode    string `json:"default_convert_mode" yaml:"default_convert_mode" env:"CONVERT_MODE"`
-	DefaultTheme          string `json:"default_theme" yaml:"default_theme" env:"DEFAULT_THEME"`
+	DefaultConvertMode string `json:"default_convert_mode" yaml:"default_convert_mode" env:"CONVERT_MODE"`
+	DefaultTheme       string `json:"default_theme" yaml:"default_theme" env:"DEFAULT_THEME"`
 
 	// 图片生成 API 配置
 	ImageProvider string `json:"image_provider" yaml:"image_provider" env:"IMAGE_PROVIDER"`
@@ -48,14 +48,14 @@ type configFile struct {
 	} `json:"wechat" yaml:"wechat"`
 
 	API struct {
-		ImageKey         string `json:"image_key" yaml:"image_key"`
-		ImageBaseURL     string `json:"image_base_url" yaml:"image_base_url"`
-		ImageProvider    string `json:"image_provider" yaml:"image_provider"`
-		ImageModel       string `json:"image_model" yaml:"image_model"`
-		ImageSize        string `json:"image_size" yaml:"image_size"`
-		ConvertMode      string `json:"convert_mode" yaml:"convert_mode"`
-		DefaultTheme     string `json:"default_theme" yaml:"default_theme"`
-		HTTPTimeout      int    `json:"http_timeout" yaml:"http_timeout"`
+		ImageKey      string `json:"image_key" yaml:"image_key"`
+		ImageBaseURL  string `json:"image_base_url" yaml:"image_base_url"`
+		ImageProvider string `json:"image_provider" yaml:"image_provider"`
+		ImageModel    string `json:"image_model" yaml:"image_model"`
+		ImageSize     string `json:"image_size" yaml:"image_size"`
+		ConvertMode   string `json:"convert_mode" yaml:"convert_mode"`
+		DefaultTheme  string `json:"default_theme" yaml:"default_theme"`
+		HTTPTimeout   int    `json:"http_timeout" yaml:"http_timeout"`
 	} `json:"api" yaml:"api"`
 
 	Image struct {
@@ -74,16 +74,16 @@ func Load() (*Config, error) {
 // LoadWithDefaults 使用指定配置文件路径加载配置
 func LoadWithDefaults(configPath string) (*Config, error) {
 	cfg := &Config{
-		DefaultConvertMode:    "api",
-		DefaultTheme:          "default",
-		CompressImages:        true,
-		MaxImageWidth:         1920,
-		MaxImageSize:          5 * 1024 * 1024, // 5MB
-		HTTPTimeout:           30,
-		ImageProvider:         "openai",
-		ImageAPIBase:          "https://api.openai.com/v1",
-		ImageModel:            "gpt-image-1.5",
-		ImageSize:             "1024x1024",
+		DefaultConvertMode: "api",
+		DefaultTheme:       "default",
+		CompressImages:     true,
+		MaxImageWidth:      1920,
+		MaxImageSize:       5 * 1024 * 1024, // 5MB
+		HTTPTimeout:        30,
+		ImageProvider:      "openai",
+		ImageAPIBase:       "https://api.openai.com/v1",
+		ImageModel:         "gpt-image-1.5",
+		ImageSize:          "1024x1024",
 	}
 
 	// 1. 尝试从配置文件加载
@@ -351,7 +351,6 @@ func (c *Config) ValidateForImageGeneration() error {
 	return nil
 }
 
-
 // GetConfigFile 获取配置文件路径
 func (c *Config) GetConfigFile() string {
 	return c.configFile
@@ -360,20 +359,20 @@ func (c *Config) GetConfigFile() string {
 // ToMap 转换为 map 用于显示
 func (c *Config) ToMap(maskSecret bool) map[string]any {
 	result := map[string]any{
-		"wechat_appid":            c.WechatAppID,
-		"wechat_secret":           maskIf(c.WechatSecret, maskSecret),
-		"default_convert_mode":    c.DefaultConvertMode,
-		"default_theme":           c.DefaultTheme,
-		"image_provider":          c.ImageProvider,
-		"image_api_key":           maskIf(c.ImageAPIKey, maskSecret),
-		"image_api_base":          c.ImageAPIBase,
-		"image_model":             c.ImageModel,
-		"image_size":              c.ImageSize,
-		"compress_images":         c.CompressImages,
-		"max_image_width":         c.MaxImageWidth,
-		"max_image_size_mb":       c.MaxImageSize / 1024 / 1024,
-		"http_timeout":            c.HTTPTimeout,
-		"config_file":             c.configFile,
+		"wechat_appid":         c.WechatAppID,
+		"wechat_secret":        maskIf(c.WechatSecret, maskSecret),
+		"default_convert_mode": c.DefaultConvertMode,
+		"default_theme":        c.DefaultTheme,
+		"image_provider":       c.ImageProvider,
+		"image_api_key":        maskIf(c.ImageAPIKey, maskSecret),
+		"image_api_base":       c.ImageAPIBase,
+		"image_model":          c.ImageModel,
+		"image_size":           c.ImageSize,
+		"compress_images":      c.CompressImages,
+		"max_image_width":      c.MaxImageWidth,
+		"max_image_size_mb":    c.MaxImageSize / 1024 / 1024,
+		"http_timeout":         c.HTTPTimeout,
+		"config_file":          c.configFile,
 	}
 	return result
 }

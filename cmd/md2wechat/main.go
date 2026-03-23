@@ -8,7 +8,6 @@ import (
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/action"
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
-	"github.com/geekjourneyx/md2wechat-skill/internal/draft"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -49,6 +48,7 @@ const (
 	codeConvertCompleted       = "CONVERT_COMPLETED"
 	codeImageUploadFailed      = "IMAGE_UPLOAD_FAILED"
 	codeImageGenerateFailed    = "IMAGE_GENERATE_FAILED"
+	codeDraftCreateInvalid     = "DRAFT_CREATE_INVALID"
 	codeDraftCreateFailed      = "DRAFT_CREATE_FAILED"
 	codeImagePostInvalid       = "IMAGE_POST_INVALID"
 	codeImagePostPreviewFailed = "IMAGE_POST_PREVIEW_FAILED"
@@ -154,7 +154,7 @@ Examples:
   md2wechat upload_image ./photo.jpg
   md2wechat download_and_upload https://example.com/image.jpg
   md2wechat generate_image "A cute cat"
-  md2wechat create_draft draft.json`,
+	md2wechat create_draft --file article.html --cover cover.jpg --title "Article Title"`,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		Version:       Version,
@@ -233,29 +233,6 @@ Examples:
 	rootCmd.AddCommand(generateImageCmd)
 	rootCmd.AddCommand(generateCoverCmd)
 	rootCmd.AddCommand(generateInfographicCmd)
-
-	// create_draft command
-	var createDraftCmd = &cobra.Command{
-		Use:   "create_draft <json_file>",
-		Short: "Create WeChat draft article from JSON file",
-		Args:  cobra.ExactArgs(1),
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return initConfig()
-		},
-		RunE: func(cmd *cobra.Command, args []string) error {
-			jsonFile := args[0]
-			if err := cfg.ValidateForWeChat(); err != nil {
-				return wrapCLIError(codeConfigInvalid, err, err.Error())
-			}
-			svc := draft.NewService(cfg, log)
-			result, err := svc.CreateDraftFromFile(jsonFile)
-			if err != nil {
-				return wrapCLIError(codeDraftCreateFailed, err, err.Error())
-			}
-			responseSuccess(result)
-			return nil
-		},
-	}
 	rootCmd.AddCommand(createDraftCmd)
 
 	var versionCmd = &cobra.Command{

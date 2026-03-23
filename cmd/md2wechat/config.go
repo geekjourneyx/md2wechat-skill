@@ -170,19 +170,19 @@ func initConfigFile(outputFile string) error {
 
 	// 创建示例配置
 	cfg := &config.Config{
-		WechatAppID:           "your_wechat_appid",
-		WechatSecret:          "your_wechat_secret",
-		ImageProvider:         "openai",
-		ImageAPIKey:           "your_image_api_key",
-		ImageAPIBase:          "https://api.openai.com/v1",
-		ImageModel:            "gpt-image-1.5",
-		ImageSize:             "1024x1024",
-		DefaultConvertMode:    "api",
-		DefaultTheme:          "default",
-		CompressImages:        true,
-		MaxImageWidth:         1920,
-		MaxImageSize:          5 * 1024 * 1024,
-		HTTPTimeout:           30,
+		WechatAppID:        "your_wechat_appid",
+		WechatSecret:       "your_wechat_secret",
+		ImageProvider:      "openai",
+		ImageAPIKey:        "your_image_api_key",
+		ImageAPIBase:       "https://api.openai.com/v1",
+		ImageModel:         "gpt-image-1.5",
+		ImageSize:          "1024x1024",
+		DefaultConvertMode: "api",
+		DefaultTheme:       "default",
+		CompressImages:     true,
+		MaxImageWidth:      1920,
+		MaxImageSize:       5 * 1024 * 1024,
+		HTTPTimeout:        30,
 	}
 
 	if err := config.SaveConfig(outputFile, cfg); err != nil {

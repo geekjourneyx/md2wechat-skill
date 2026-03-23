@@ -292,11 +292,22 @@ cat draft.json
 }
 ```
 
-### 从 JSON 创建草稿
+### 从 HTML 创建草稿
 
 ```bash
-md2wechat create_draft draft.json
+md2wechat create_draft \
+  --file article.html \
+  --cover cover.jpg \
+  --title "文章标题" \
+  --desc "文章摘要"
 ```
+
+其中：
+
+- `--file`：要发布的 HTML 文件
+- `--cover`：封面图路径，会先上传到微信素材库
+- `--title`：草稿标题
+- `--desc`：草稿摘要，不传时会根据 HTML 内容自动生成
 
 ---
 

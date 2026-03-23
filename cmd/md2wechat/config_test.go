@@ -98,7 +98,7 @@ func TestConfigShowYAMLOutput(t *testing.T) {
 	})
 
 	output := string(stdout)
-        if !strings.Contains(output, "wechat:") || strings.Contains(output, "\"success\"") {
+	if !strings.Contains(output, "wechat:") || strings.Contains(output, "\"success\"") {
 	}
 }
 

@@ -96,7 +96,7 @@ POST https://api.weixin.qq.com/cgi-bin/draft/add?access_token=ACCESS_TOKEN
 
 ```bash
 # 图文消息
-md2wechat create_draft <json_file>
+md2wechat create_draft --file article.html --cover cover.jpg --title "文章标题" --desc "文章摘要"
 
 # 图片消息（小绿书）
 md2wechat create_image_post -t "标题" --images photo1.jpg,photo2.jpg

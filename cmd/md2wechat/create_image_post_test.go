@@ -386,6 +386,63 @@ func TestRunTestDraftStopsOnCoverUploadFailure(t *testing.T) {
 	}
 }
 
+func TestRunCreateDraftUsesFlagsAndAutoGeneratesDesc(t *testing.T) {
+	oldCfg, oldLog := cfg, log
+	oldNewDraftCreator, oldUploadCoverImageFn := newDraftCreator, uploadCoverImageFn
+	oldFile, oldCover := createDraftFile, createDraftCover
+	oldTitle, oldDesc := createDraftTitle, createDraftDesc
+	t.Cleanup(func() {
+		cfg, log = oldCfg, oldLog
+		newDraftCreator, uploadCoverImageFn = oldNewDraftCreator, oldUploadCoverImageFn
+		createDraftFile, createDraftCover = oldFile, oldCover
+		createDraftTitle, createDraftDesc = oldTitle, oldDesc
+	})
+
+	cfg = &config.Config{WechatAppID: "appid", WechatSecret: "secret"}
+	log = zap.NewNop()
+
+	htmlFile := filepath.Join(t.TempDir(), "article.html")
+	if err := os.WriteFile(htmlFile, []byte("<h1>标题</h1><p>第一段内容</p>"), 0600); err != nil {
+		t.Fatalf("write html: %v", err)
+	}
+
+	drafter := &fakeDraftCreator{result: &publish.DraftResult{MediaID: "draft-3", DraftURL: "https://example.com/draft/3"}}
+	newDraftCreator = func() publish.DraftCreator { return drafter }
+	uploadCoverImageFn = func(imagePath string) (string, error) {
+		if imagePath != "/tmp/cover.jpg" {
+			t.Fatalf("cover image path = %q", imagePath)
+		}
+		return "cover-media-id", nil
+	}
+
+	createDraftFile = htmlFile
+	createDraftCover = "/tmp/cover.jpg"
+	createDraftTitle = "手动标题"
+	createDraftDesc = ""
+
+	result, err := runCreateDraft()
+	if err != nil {
+		t.Fatalf("runCreateDraft() error = %v", err)
+	}
+	if result.MediaID != "draft-3" || result.DraftURL != "https://example.com/draft/3" {
+		t.Fatalf("runCreateDraft() result = %#v", result)
+	}
+	if len(drafter.artifacts) != 1 {
+		t.Fatalf("drafter artifacts = %#v", drafter.artifacts)
+	}
+
+	artifact := drafter.artifacts[0]
+	if artifact.Metadata.Title != "手动标题" {
+		t.Fatalf("artifact title = %#v", artifact)
+	}
+	if artifact.Metadata.Digest != "标题\n第一段内容" {
+		t.Fatalf("artifact digest = %#v", artifact)
+	}
+	if artifact.CoverMediaID != "cover-media-id" {
+		t.Fatalf("artifact cover = %#v", artifact)
+	}
+}
+
 func TestTestDraftCmdOutputsStableEnvelope(t *testing.T) {
 	oldCfg, oldLog := cfg, log
 	oldNewDraftCreator, oldUploadCoverImageFn := newDraftCreator, uploadCoverImageFn

@@ -30,7 +30,6 @@ func TestValidateConvertConfigRejectsInvalidMode(t *testing.T) {
 	}
 }
 
-
 func TestCreateWeChatDraftRequiresCoverImage(t *testing.T) {
 	oldCfg, oldLog := cfg, log
 	oldCustomPrompt, oldOutput := convertCustomPrompt, convertOutput
@@ -130,6 +129,42 @@ func TestRunTestDraftReturnsReadErrorForMissingFile(t *testing.T) {
 		t.Fatalf("runTestDraft() error = %v", err)
 	} else if cliErr, ok := err.(*cliError); !ok || cliErr.Code != codeTestDraftReadFailed {
 		t.Fatalf("runTestDraft() error code = %#v", err)
+	}
+}
+
+func TestRunCreateDraftRequiresFlags(t *testing.T) {
+	oldFile, oldCover := createDraftFile, createDraftCover
+	oldTitle, oldDesc := createDraftTitle, createDraftDesc
+	t.Cleanup(func() {
+		createDraftFile, createDraftCover = oldFile, oldCover
+		createDraftTitle, createDraftDesc = oldTitle, oldDesc
+	})
+
+	createDraftFile = ""
+	createDraftCover = "/tmp/cover.jpg"
+	createDraftTitle = "Title"
+	createDraftDesc = "desc"
+
+	if _, err := runCreateDraft(); err == nil || !strings.Contains(err.Error(), "--file is required") {
+		t.Fatalf("runCreateDraft() error = %v", err)
+	} else if cliErr, ok := err.(*cliError); !ok || cliErr.Code != codeDraftCreateInvalid {
+		t.Fatalf("runCreateDraft() error code = %#v", err)
+	}
+
+	createDraftFile = "/tmp/article.html"
+	createDraftCover = ""
+	if _, err := runCreateDraft(); err == nil || !strings.Contains(err.Error(), "--cover is required") {
+		t.Fatalf("runCreateDraft() error = %v", err)
+	} else if cliErr, ok := err.(*cliError); !ok || cliErr.Code != codeDraftCreateInvalid {
+		t.Fatalf("runCreateDraft() error code = %#v", err)
+	}
+
+	createDraftCover = "/tmp/cover.jpg"
+	createDraftTitle = ""
+	if _, err := runCreateDraft(); err == nil || !strings.Contains(err.Error(), "--title is required") {
+		t.Fatalf("runCreateDraft() error = %v", err)
+	} else if cliErr, ok := err.(*cliError); !ok || cliErr.Code != codeDraftCreateInvalid {
+		t.Fatalf("runCreateDraft() error code = %#v", err)
 	}
 }
 

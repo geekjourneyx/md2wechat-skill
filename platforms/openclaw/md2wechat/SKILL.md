@@ -79,7 +79,7 @@ Image handling:
 
 Drafts and image posts:
 
-- `md2wechat create_draft draft.json`
+- `md2wechat create_draft --file article.html --cover cover.jpg --title "Article Title" --desc "Article summary"`
 - `md2wechat test-draft article.html cover.jpg`
 - `md2wechat create_image_post -t "Weekend Trip" --images photo1.jpg,photo2.jpg`
 - `md2wechat create_image_post -t "Travel Diary" -m article.md`
