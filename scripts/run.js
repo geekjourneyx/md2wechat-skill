@@ -16,7 +16,10 @@ const binaryPath = path.resolve(path.join(binDir, `md2wechat${ext}`));
 // Belt-and-suspenders assertion: the resolved path must stay inside binDir.
 // binaryPath is constructed entirely from fixed constants (not user input),
 // so this guard can only fire if __dirname itself is somehow manipulated.
-if (!binaryPath.startsWith(binDir + path.sep)) {
+// path.relative() is used instead of startsWith() for cross-platform safety
+// (Windows paths can use either slash direction after normalisation).
+const rel = path.relative(binDir, binaryPath);
+if (rel.startsWith("..") || path.isAbsolute(rel)) {
   console.error(
     "Internal error: binary path is outside the expected bin/ directory."
   );
