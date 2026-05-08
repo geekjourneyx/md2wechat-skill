@@ -101,6 +101,8 @@ function downloadToFile(source, destinationPath) {
           return;
         }
 
+        // destinationPath is always inside a mkdtempSync-created temp
+        // directory; assetName comes from a hardcoded platform whitelist.
         const file = fs.createWriteStream(destinationPath);
         response.pipe(file);
         file.on("finish", () => {
