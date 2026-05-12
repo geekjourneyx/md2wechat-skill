@@ -16,16 +16,16 @@ md2wechat 支持多种图片生成服务，可以在 Markdown 中使用 AI 生�
 
 ```yaml
 api:
-  # 图片服务提供者: openai, tuzi, modelscope, openrouter, gemini
-  image_provider: "tuzi"
+  # 图片服务提供者: openai, ark, tuzi, modelscope, openrouter, gemini
+  image_provider: "ark"
 
   # API 配置
   image_key: "your-api-key"
-  image_base_url: "https://api.tu-zi.com/v1"
+  image_base_url: "https://ark.cn-beijing.volces.com/api/v3"
 
   # 生成参数
-  image_model: "doubao-seedream-4-5-251128"
-  image_size: "2048x2048"  # TuZi 要求最小 3686400 像素
+  image_model: "doubao-seedream-5.0-lite"
+  image_size: "2K"
 
 image:
   compress: true
@@ -271,6 +271,58 @@ OpenRouter 支持三种分辨率等级（通过尺寸自动判断）：
 |------|------|
 | 1K | 标准分辨率 |
 | 2K | 较高分辨率（默认）|
+
+---
+
+### Ark
+
+火山引擎 Ark 直连 Seedream 图片生成接口，适合需要直接使用 Seedream 5.0 lite 的场景。
+
+#### 配置示例
+
+```yaml
+api:
+  image_provider: "ark"
+  image_key: "your-ark-api-key"
+  image_base_url: "https://ark.cn-beijing.volces.com/api/v3"
+  image_model: "doubao-seedream-5.0-lite"
+  image_size: "2K"
+```
+
+或使用环境变量：
+
+```bash
+export IMAGE_PROVIDER="ark"
+export IMAGE_API_KEY="your-ark-api-key"
+export IMAGE_API_BASE="https://ark.cn-beijing.volces.com/api/v3"
+export IMAGE_MODEL="doubao-seedream-5.0-lite"
+export IMAGE_SIZE="2K"
+```
+
+#### 支持的模型
+
+| 模型 | 说明 |
+|------|------|
+| `doubao-seedream-5.0-lite` | Seedream 5.0 lite（推荐） |
+| `doubao-seedream-4.5` | Seedream 4.5 |
+| `doubao-seedream-4.0` | Seedream 4.0 |
+| `doubao-seedream-3.0-t2i` | Seedream 3.0 文生图 |
+
+#### 支持的尺寸
+
+Seedream 5.0 lite 支持 `2K`、`3K` 和符合总像素范围的 `WIDTHxHEIGHT`。
+
+建议直接使用以下尺寸：
+
+| 尺寸 | 比例 | 说明 |
+|------|------|------|
+| `2048x2048` | 1:1 | 正方形 |
+| `2560x1440` | 16:9 | 横版封面 |
+| `1440x2560` | 9:16 | 竖版 |
+| `3072x2048` | 3:2 | 横版 |
+| `2048x3072` | 2:3 | 竖版 |
+
+> **注意**：Ark + Seedream 5.0 lite 默认更适合使用 `2K`，比通用 OpenAI 路径更贴近图片生成需求。
 | 4K | 最高分辨率 |
 
 > **完整文档**: 更多图片生成配置和使用方法，请参考 [OpenRouter 官方文档](https://openrouter.ai/docs/guides/overview/multimodal/image-generation)。

@@ -48,6 +48,7 @@ func TestBuildProviderViewsUsesCurrentRuntimeDefaults(t *testing.T) {
 	}
 
 	defaults := map[string]string{
+		"ark":        "doubao-seedream-5.0-lite",
 		"openrouter": "google/gemini-3-pro-image-preview",
 		"gemini":     "gemini-3.1-flash-image-preview",
 	}

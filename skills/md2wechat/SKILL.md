@@ -9,6 +9,13 @@ Converts Markdown articles to WeChat Official Account formatted HTML with inline
 
 - **AI Mode**: Generate themed AI requests / prompts for external models such as Claude Code
 
+## 生成html流程
+```bash
+md2wechat convert article.md -theme autumn-warm
+
+```
+
+
 ## Quick Start
 
 ```bash
@@ -80,7 +87,7 @@ md2wechat generate_infographic --article article.md --preset infographic-dark-ti
 md2wechat generate_infographic --article article.md --preset infographic-handdrawn-sketchnote
 md2wechat generate_infographic --article article.md --preset infographic-apple-keynote-premium
 md2wechat generate_infographic --article article.md --preset infographic-victorian-engraving-banner --aspect 21:9
-md2wechat generate_image --preset cover-hero --article article.md --model gemini-3-pro-image-preview
+md2wechat generate_image --preset cover-hero --article article.md --model doubao-seedream-5.0-lite
 ```
 
 ### Natural Language Image Generation
@@ -283,10 +290,6 @@ Read [references/themes.md](references/themes.md) for visual intent and prompt e
 ---
 
 ## Step 3: Generate HTML
-
-
-
-### AI Mode
 
 Read the selected style prompt from `references/themes.md` and generate an AI request / prompt for an external model to continue into WeChat-safe HTML with **inline CSS**.
 
@@ -717,15 +720,6 @@ If you encounter this error:
 4. Use simpler themes with less inline styling
 
 
-**Q: API rate limit exceeded**
-A: WeChat has API limits. Wait and retry:
-```bash
-# Wait 60 seconds
-sleep 60
-# Retry
-md2wechat convert article.md --draft
-```
-
 ### HTML/Style Issues
 
 **Q: Styles not working in WeChat editor**
@@ -778,8 +772,6 @@ This skill assumes the `md2wechat` CLI is already installed and available on `PA
 ```bash
 # Show help
 md2wechat --help
-
-# Convert and preview
 md2wechat convert article.md --preview
 
 # Convert with AI theme

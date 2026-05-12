@@ -387,6 +387,7 @@ md2wechat themes list --json
 md2wechat prompts list --json
 md2wechat prompts list --kind image --archetype cover --json
 md2wechat prompts list --kind image --tag editorial --json
+md2wechat providers show ark --json
 ```
 
 看具体资源：
@@ -415,7 +416,7 @@ md2wechat generate_infographic --article article.md --preset infographic-victori
 如需只在本次调用切换模型，可直接加 `--model`：
 
 ```bash
-md2wechat generate_cover --article article.md --model gemini-3-pro-image-preview
+md2wechat generate_cover --article article.md --model doubao-seedream-5.0-lite
 ```
 
 如果你不确定某个图片 preset 更偏封面还是信息图，先运行：

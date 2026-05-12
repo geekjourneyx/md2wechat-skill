@@ -34,6 +34,7 @@ md2wechat capabilities --json
 md2wechat providers list --json
 md2wechat providers show openai --json
 md2wechat providers show openrouter --json
+md2wechat providers show ark --json
 ```
 
 当前 CLI 会枚举 provider 元数据，包括：
@@ -133,7 +134,7 @@ md2wechat generate_infographic --article article.md --preset infographic-dark-ti
 md2wechat generate_infographic --article article.md --preset infographic-handdrawn-sketchnote
 md2wechat generate_infographic --article article.md --preset infographic-apple-keynote-premium
 md2wechat generate_infographic --article article.md --preset infographic-victorian-engraving-banner --aspect 21:9
-md2wechat generate_image --preset cover-hero --article article.md --model gemini-3-pro-image-preview
+md2wechat generate_image --preset cover-hero --article article.md --model doubao-seedream-5.0-lite
 ```
 
 高频图片命令和 prompt catalog 的关系是：

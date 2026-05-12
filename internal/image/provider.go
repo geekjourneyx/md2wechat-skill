@@ -49,6 +49,16 @@ var providerRegistry = []ProviderMeta{
 		SupportsSize:   true,
 	},
 	{
+		Name:           "ark",
+		Aliases:        []string{"volcengine", "volces"},
+		Description:    "Volcengine Ark image generation provider",
+		RequiredConfig: []string{"IMAGE_API_KEY"},
+		OptionalConfig: []string{"IMAGE_API_BASE", "IMAGE_MODEL", "IMAGE_SIZE"},
+		DefaultBaseURL: "https://ark.cn-beijing.volces.com/api/v3",
+		DefaultModel:   "doubao-seedream-5.0-lite",
+		SupportsSize:   true,
+	},
+	{
 		Name:           "modelscope",
 		Aliases:        []string{"ms"},
 		Description:    "ModelScope image generation provider",
@@ -164,6 +174,11 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 			return nil, err
 		}
 		return NewBailianProvider(cfg)
+	case "ark", "volcengine", "volces":
+		if err := validateArkConfig(cfg); err != nil {
+			return nil, err
+		}
+		return NewArkProvider(cfg)
 	case "gemini", "google":
 		if err := validateGeminiConfig(cfg); err != nil {
 			return nil, err
@@ -178,7 +193,7 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 		return nil, &config.ConfigError{
 			Field:   "ImageProvider",
 			Message: fmt.Sprintf("未知的图片服务提供者: %s", cfg.ImageProvider),
-			Hint:    "支持的提供者: openai, tuzi, modelscope (或 ms), openrouter (或 or), gemini (或 google), bailian (或 aliyun)",
+			Hint:    "支持的提供者: openai, ark (或 volcengine / volces), tuzi, modelscope (或 ms), openrouter (或 or), gemini (或 google), bailian (或 aliyun)",
 		}
 	}
 }
@@ -216,6 +231,18 @@ func validateTuZiConfig(cfg *config.Config) error {
 			Field:   "ImageAPIBase",
 			Message: "需要配置 TuZi API Base URL",
 			Hint:    "在配置文件中设置 api.image_base_url，通常为 https://api.tu-zi.com/v1",
+		}
+	}
+	return nil
+}
+
+// validateArkConfig 验证 Ark 配置
+func validateArkConfig(cfg *config.Config) error {
+	if cfg.ImageAPIKey == "" {
+		return &config.ConfigError{
+			Field:   "ImageAPIKey",
+			Message: "使用 Ark 图片服务需要配置 API Key",
+			Hint:    "在配置文件中设置 api.image_key 或环境变量 IMAGE_API_KEY，前往火山引擎 Ark 控制台获取",
 		}
 	}
 	return nil

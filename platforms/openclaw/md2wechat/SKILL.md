@@ -44,6 +44,7 @@ Run these before selecting a provider, theme, or prompt:
 Inspect a specific resource before using it:
 
 - `md2wechat providers show openrouter --json`
+- `md2wechat providers show ark --json`
 - `md2wechat themes show autumn-warm --json`
 - `md2wechat prompts show cover-default --kind image --json`
 - `md2wechat prompts show cover-hero --kind image --archetype cover --tag hero --json`
@@ -72,6 +73,7 @@ Image handling:
 - `md2wechat download_and_upload https://example.com/image.jpg`
 - `md2wechat generate_image "A cute cat sitting on a windowsill"`
 - `md2wechat generate_image --preset cover-hero --article article.md --size 2560x1440`
+- `md2wechat generate_image --preset cover-hero --article article.md --model doubao-seedream-5.0-lite`
 - `md2wechat generate_cover --article article.md`
 - `md2wechat generate_infographic --article article.md --preset infographic-comparison`
 - `md2wechat generate_infographic --article article.md --preset infographic-dark-ticket-cn --aspect 21:9`

@@ -179,7 +179,7 @@ md2wechat generate_infographic --article article.md --preset infographic-timelin
 md2wechat generate_image --preset cover-hero --article article.md
 
 # 单次覆盖图片模型
-md2wechat generate_image --preset cover-hero --article article.md --model gemini-3-pro-image-preview
+md2wechat generate_image --preset cover-hero --article article.md --model doubao-seedream-5.0-lite
 ```
 
 输出示例：

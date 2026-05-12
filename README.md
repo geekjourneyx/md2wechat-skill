@@ -874,6 +874,7 @@ md2wechat generate_infographic --article article.md --preset infographic-compari
 | 服务 | 配置值 | 说明 | 获取方式 |
 |------|--------|------|----------|
 | **ModelScope** | `modelscope` 或 `ms` | 阿里 ModelScope，免费额度 | [modelscope.cn](https://modelscope.cn/my/myaccesstoken) |
+| **Ark** | `ark` 或 `volcengine` | 火山引擎 Seedream 直连，支持 Seedream 5.0 lite | [volcengine.com](https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey) |
 | **TuZi** | `tuzi` | 国产 API，稳定快速 | [tu-zi.com](https://api.tu-zi.com) |
 | **OpenAI** | `openai` | 官方 OpenAI | [platform.openai.com](https://platform.openai.com) |
 | **OpenRouter** | `openrouter` 或 `or` | 多模型聚合接口，支持 Gemini / Flux 等 | [openrouter.ai](https://openrouter.ai) |
@@ -889,6 +890,15 @@ export IMAGE_API_BASE=https://api-inference.modelscope.cn
 export IMAGE_MODEL=Tongyi-MAI/Z-Image-Turbo
 ```
 
+```bash
+# 使用 Ark Seedream（推荐，直连 Seedream 5.0 lite）
+export IMAGE_PROVIDER=ark
+export IMAGE_API_KEY=ark-your-token-here
+export IMAGE_API_BASE=https://ark.cn-beijing.volces.com/api/v3
+export IMAGE_MODEL=doubao-seedream-5.0-lite
+export IMAGE_SIZE=2K
+```
+
 ```yaml
 # config.yaml
 api:
@@ -897,6 +907,16 @@ api:
   image_base_url: https://api-inference.modelscope.cn
   image_model: Tongyi-MAI/Z-Image-Turbo
   image_size: 1024x1024
+```
+
+```yaml
+# config.yaml
+api:
+  image_provider: ark
+  image_key: ark-your-token-here
+  image_base_url: https://ark.cn-beijing.volces.com/api/v3
+  image_model: doubao-seedream-5.0-lite
+  image_size: 2K
 ```
 
 > `--model` 可覆盖当前命令的图片模型；未传时，优先使用 `IMAGE_MODEL`，再回退到 `api.image_model`，最后才是 provider 默认模型。

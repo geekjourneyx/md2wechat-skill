@@ -50,6 +50,7 @@ api:
   md2wechat_key: "你的 md2wechat API Key"
   convert_mode: "api"
   default_theme: "default"
+  # image_provider: openai | ark | tuzi | modelscope | openrouter | gemini
 ```
 
 ### 3. 验证当前配置
