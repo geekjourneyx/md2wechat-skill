@@ -314,6 +314,7 @@ Examples:
 	rootCmd.AddCommand(providersCmd)
 	rootCmd.AddCommand(themesCmd)
 	rootCmd.AddCommand(promptsCmd)
+	rootCmd.AddCommand(skillsCmd)
 
 	// write command
 	rootCmd.AddCommand(writeCmd)

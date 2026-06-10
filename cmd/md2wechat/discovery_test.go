@@ -220,7 +220,7 @@ func TestBuildCapabilitiesDataKeepsConvertContractStableWithInspectAndPreview(t 
 	if !ok {
 		t.Fatalf("commands type = %T", data["commands"])
 	}
-	if !contains(commands, "inspect") || !contains(commands, "preview") || !contains(commands, "convert") {
+	if !contains(commands, "inspect") || !contains(commands, "preview") || !contains(commands, "convert") || !contains(commands, "skills") {
 		t.Fatalf("commands = %#v", commands)
 	}
 

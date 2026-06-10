@@ -755,6 +755,7 @@ md2wechat config show --format json
 ```bash
 md2wechat config show --format json
 md2wechat capabilities --json
+md2wechat skills read md2wechat --json
 md2wechat providers list --json
 md2wechat providers show volcengine --json
 md2wechat themes list --json
@@ -764,6 +765,7 @@ md2wechat prompts list --json
 这样 Agent 才知道：
 
 - 当前配置用了哪份文件
+- 当前安装二进制内置的 Agent SOP 是什么
 - 默认 provider 是什么
 - 当前 provider 支持哪些模型
 - 当前有哪些 theme / prompt 真正可用

@@ -9,6 +9,7 @@
 对于 Agent、脚本或 CI，discovery 应服务于下一步决策，而不是每次任务都全量枚举。使用最小必要集合：
 
 - 版本、能力或行为不确定：`md2wechat version --json`、`md2wechat capabilities --json`
+- 当前安装版本的 Agent SOP 不确定：`md2wechat skills list --json`、`md2wechat skills read md2wechat --json`
 - API、草稿、上传或配置 readiness：`md2wechat doctor --json`，必要时再 `md2wechat config show --format json`
 - 文章排版且用户未指定主题或模块：`md2wechat themes list --json`、`md2wechat layout list --json`
 - 已指定某个资源：使用对应的 `providers show`、`themes show`、`prompts show` 或 `layout show`
@@ -30,6 +31,7 @@ md2wechat capabilities --json
 - 当前可枚举的 theme
 - 当前可枚举的 prompt catalog
 - `layout` catalog 是否可用、模块数量、schema version、是否仅 API 模式渲染
+- `skills` 命令是否可用，用于读取当前二进制内嵌的 Agent skill
 
 示例片段：
 
@@ -42,11 +44,26 @@ md2wechat capabilities --json
     "api_mode_only": true,
     "schema_version": "1"
   },
-  "commands": ["convert", "inspect", "preview", "layout", "themes"]
+  "commands": ["convert", "inspect", "preview", "layout", "themes", "skills"]
 }
 ```
 
 未出现在 `commands` 中的命令不应被 Agent 当成可执行能力。未来工作流不通过 `capabilities` 预告。
+
+## 内置 Agent Skills
+
+```bash
+md2wechat skills list --json
+md2wechat skills read md2wechat --json
+```
+
+`skills` 命令读取的是当前安装二进制内嵌的 skill，不依赖远程仓库、README 或本地外部 skill 目录。它适合 Agent 在以下情况下使用：
+
+- 安装版本未知，需要确认当前版本 SOP；
+- 本地 `skills/md2wechat/SKILL.md` 或远程仓库可能比二进制更新或更旧；
+- 自动化脚本需要拿到 `content_hash`、side effects、risk level 和可读 SOP 内容。
+
+`skills list --json` 返回摘要元数据；`skills read <name> --json` 返回同样的 metadata 加完整 `content`。这两个命令是只读 discovery，不会读取用户文章、上传图片或创建草稿。
 
 ## 本地体检
 

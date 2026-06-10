@@ -225,11 +225,14 @@ md2wechat doctor --json                    # API、草稿、上传或配置本�
 md2wechat prompts list --kind image --json # 图片 prompt 选择时使用
 md2wechat providers list --json            # 图片生成 provider 选择时使用
 md2wechat capabilities --json              # 版本、命令能力或行为边界不确定时使用
+md2wechat skills read md2wechat --json     # 读取当前二进制内置的 Agent SOP
 ```
 
 Agent 排版时应保持原始 Markdown 只读：把文章复制到临时 Markdown，按需用 `layout render` 插入少量模块，先 `layout validate`，再把临时稿交给 `convert`。只有用户明确要求时，才把生成稿保存到源文件旁边。
 
-所有命令加 `--json` 后 stdout 只输出 JSON envelope，适合脚本和 Agent 直接消费。
+`skills list/read` 用来发现并读取当前安装版本随二进制发布的 Agent skill，适合在 README、远程仓库或本地 skill 可能过期时先确认运行时 SOP。
+
+所有 discovery 命令加 `--json` 后 stdout 只输出 JSON envelope，适合脚本和 Agent 直接消费。
 
 ---
 

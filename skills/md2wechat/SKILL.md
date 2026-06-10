@@ -1,6 +1,6 @@
 ---
 name: md2wechat
-description: Convert Markdown to WeChat Official Account HTML. Use this whenever the user wants WeChat article formatting, article preview, WeChat draft upload, image generation for articles, cover or infographic generation, image-post creation, writer-style drafting, AI trace removal, or current discovery of supported providers, themes, prompts, and layout modules.
+description: Convert Markdown to WeChat Official Account HTML. Use this whenever the user wants WeChat article formatting, article preview, WeChat draft upload, image generation for articles, cover or infographic generation, image-post creation, writer-style drafting, AI trace removal, or current discovery of embedded skills, supported providers, themes, prompts, and layout modules.
 ---
 
 # md2wechat
@@ -16,6 +16,7 @@ Choose the command family before taking any publish or generation action:
 - Article cover or article infographic: prefer `generate_cover` or `generate_infographic` over raw `generate_image` when a bundled preset fits.
 - Writing in a creator style or removing AI traces: use `write` or `humanize`.
 - Provider, theme, prompt, or layout uncertainty: run discovery first. Do not guess from memory or repository files.
+- Skill/version uncertainty: read the embedded runtime skill from the installed binary before relying on this repository copy.
 
 Treat `convert --draft` and `create_image_post` as different publish targets, not interchangeable variants.
 
@@ -58,6 +59,12 @@ Run the smallest useful discovery set:
   md2wechat capabilities --json
   ```
 
+- Unknown installed skill protocol or possible doc drift:
+  ```bash
+  md2wechat skills list --json
+  md2wechat skills read md2wechat --json
+  ```
+
 For simple local actions such as `preview`, `humanize`, or a user-specified command with explicit flags, do not run unrelated provider, theme, prompt, or layout discovery.
 
 Inspect specific resources only when the task needs them:
@@ -69,7 +76,7 @@ md2wechat prompts show <name> --kind <kind> --json
 md2wechat layout show <name> --json
 ```
 
-Use CLI output as the source of truth for currently available modes, providers, themes, prompts, and layout modules.
+Use CLI output as the source of truth for currently available modes, providers, themes, prompts, layout modules, and embedded skill guidance.
 
 ## Configuration Boundaries
 

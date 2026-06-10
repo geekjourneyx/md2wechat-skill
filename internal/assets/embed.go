@@ -2,13 +2,14 @@ package assets
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 	"path"
 	"sort"
 	"strings"
 )
 
-//go:embed builtin/themes/*.yaml builtin/writers/*.yaml builtin/prompts/*/*.yaml builtin/layout/*/*.yaml
+//go:embed builtin/themes/*.yaml builtin/writers/*.yaml builtin/prompts/*/*.yaml builtin/layout/*/*.yaml builtin/skills/*/SKILL.md
 var builtinFS embed.FS
 
 func listYAMLNames(dir string) ([]string, error) {
@@ -84,4 +85,26 @@ func ListBuiltinLayouts(category string) ([]string, error) {
 
 func ReadBuiltinLayout(category, name string) ([]byte, error) {
 	return readYAMLFile(path.Join("builtin/layout", category), name)
+}
+
+func ListBuiltinSkills() ([]string, error) {
+	entries, err := fs.ReadDir(builtinFS, "builtin/skills")
+	if err != nil {
+		return nil, err
+	}
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() {
+			names = append(names, entry.Name())
+		}
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
+func ReadBuiltinSkill(name string) ([]byte, error) {
+	if strings.TrimSpace(name) == "" || strings.ContainsAny(name, `/\`) || name == "." || name == ".." {
+		return nil, fmt.Errorf("invalid builtin skill name: %q", name)
+	}
+	return builtinFS.ReadFile(path.Join("builtin/skills", name, "SKILL.md"))
 }
