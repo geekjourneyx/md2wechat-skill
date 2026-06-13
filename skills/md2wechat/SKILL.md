@@ -112,6 +112,8 @@ When the user asks to format an article and has not chosen a theme or modules:
 
 Saving generated Markdown next to the source file requires explicit user confirmation and must not overwrite the source.
 
+For final inline HTML that will be pasted into or uploaded to WeChat drafts, avoid native `<ul>` / `<li>` for visible article lists unless that exact rendering has been verified in the WeChat editor. The editor/client may add default list spacing on top of inline styles. Render compact lists as separate `<p>` lines with an inline bullet such as `&bull;` and explicit `margin` / `line-height`.
+
 ## Theme Selection
 
 - Read `type` and `selectable` from `themes list --json`.
