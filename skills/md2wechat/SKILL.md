@@ -83,6 +83,7 @@ Use CLI output as the source of truth for currently available modes, providers, 
 - WeChat draft creation requires WeChat credentials.
 - If the user provides an existing draft `media_id`, prefer `md2wechat update_draft <media_id> <json_file> --index <n>` over creating a new draft. Use `create_draft` only when no existing draft should be preserved or update is unavailable.
 - If a user may edit the draft manually, pull the cloud draft first with `md2wechat get_draft <media_id> --output <cloud-json>` and base edits on that fetched JSON. Do not update from an older local JSON artifact when the cloud draft may have changed.
+- To send an existing draft preview without changing it, use `md2wechat preview_send <media_id> --openid <openid>` or `--wxname <wechat_id>`. If WeChat returns `48001`, report that the account lacks mass preview API permission.
 - Image generation may require image-provider credentials.
 - `doctor --json` is local-only: it checks local readiness and does not perform live authentication, upload images, or create drafts.
 - Use `config show --format json` when the user asks what configuration is currently effective.
@@ -192,6 +193,12 @@ Before updating an existing draft:
 - Reuse the same JSON article format as `create_draft`; `update_draft` updates only `articles[index]`.
 - If the CLI lacks `get_draft`, report that cloud edits cannot be safely preserved before updating.
 - If the update fails because the CLI lacks `update_draft` or the API rejects the media ID, report the blocker before creating a replacement draft.
+
+Before sending a draft preview:
+
+- Use `md2wechat preview_send <media_id> --openid <openid>` when an openid is known, or `--wxname <wechat_id>` when the user provides a WeChat ID.
+- Preview sending does not modify the draft, but it still calls a live WeChat API and sends the article preview to the target user.
+- If the API returns `48001 api unauthorized`, do not retry with the same credentials; the account lacks permission for the mass preview endpoint.
 
 Markdown images are uploaded or replaced only during `--upload` or `--draft`, not during plain conversion or preview.
 

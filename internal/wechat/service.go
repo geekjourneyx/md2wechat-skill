@@ -117,6 +117,25 @@ type CreateDraftResult struct {
 	DraftURL string `json:"draft_url,omitempty"`
 }
 
+// PreviewDraftResult contains WeChat's preview-send response.
+type PreviewDraftResult struct {
+	MediaID    string `json:"media_id"`
+	OpenID     string `json:"openid,omitempty"`
+	WxName     string `json:"wxname,omitempty"`
+	MsgID      int64  `json:"msg_id"`
+	MsgDataID  int64  `json:"msg_data_id"`
+	MsgStatus  string `json:"msg_status,omitempty"`
+	PreviewURL string `json:"preview_url,omitempty"`
+}
+
+type previewDraftResponse struct {
+	ErrCode   int    `json:"errcode"`
+	ErrMsg    string `json:"errmsg"`
+	MsgID     int64  `json:"msg_id"`
+	MsgDataID int64  `json:"msg_data_id"`
+	MsgStatus string `json:"msg_status"`
+}
+
 // UpdateDraftRequest 微信草稿更新请求
 type UpdateDraftRequest struct {
 	MediaID  string         `json:"media_id"`
@@ -174,6 +193,95 @@ func (s *Service) GetDraft(mediaID string) ([]*draft.Article, error) {
 		zap.Duration("duration", duration))
 
 	return articles, nil
+}
+
+// PreviewDraftToOpenID sends an mpnews draft preview to one follower by openid.
+func (s *Service) PreviewDraftToOpenID(mediaID string, openID string) (*PreviewDraftResult, error) {
+	return s.previewDraft(mediaID, openID, "")
+}
+
+// PreviewDraftToWxName sends an mpnews draft preview to one follower by WeChat ID.
+func (s *Service) PreviewDraftToWxName(mediaID string, wxName string) (*PreviewDraftResult, error) {
+	return s.previewDraft(mediaID, "", wxName)
+}
+
+func (s *Service) previewDraft(mediaID string, openID string, wxName string) (*PreviewDraftResult, error) {
+	mediaID = strings.TrimSpace(mediaID)
+	openID = strings.TrimSpace(openID)
+	wxName = strings.TrimSpace(wxName)
+	if mediaID == "" {
+		return nil, errors.New("media_id is required")
+	}
+	if (openID == "") == (wxName == "") {
+		return nil, errors.New("exactly one of openid or wxname is required")
+	}
+	startTime := time.Now()
+	oa := s.getOfficialAccount()
+	accessToken, err := oa.GetAccessToken()
+	if err != nil {
+		return nil, fmt.Errorf("get access token: %w", err)
+	}
+
+	req := map[string]any{
+		"mpnews": map[string]any{
+			"media_id": mediaID,
+		},
+		"msgtype": "mpnews",
+	}
+	if openID != "" {
+		req["touser"] = openID
+	} else {
+		req["towxname"] = wxName
+	}
+	reqBody, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+
+	apiURL := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/message/mass/preview?access_token=%s", accessToken)
+	httpReq, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(reqBody))
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	httpResp, err := s.getHTTPClient().Do(httpReq)
+	if err != nil {
+		s.log.Error("preview draft failed",
+			zap.String("media_id", maskMediaID(mediaID)),
+			zap.Error(err))
+		return nil, fmt.Errorf("call wechat api: %w", err)
+	}
+	defer func() {
+		_ = httpResp.Body.Close()
+	}()
+
+	respBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
+	var resp previewDraftResponse
+	if err := json.Unmarshal(respBody, &resp); err != nil {
+		return nil, fmt.Errorf("parse response: %w", err)
+	}
+	if resp.ErrCode != 0 {
+		return nil, ExplainDraftError(fmt.Errorf("wechat api error: %d - %s", resp.ErrCode, resp.ErrMsg))
+	}
+
+	duration := time.Since(startTime)
+	s.log.Info("draft preview sent",
+		zap.String("media_id", maskMediaID(mediaID)),
+		zap.Duration("duration", duration))
+
+	return &PreviewDraftResult{
+		MediaID:   mediaID,
+		OpenID:    openID,
+		WxName:    wxName,
+		MsgID:     resp.MsgID,
+		MsgDataID: resp.MsgDataID,
+		MsgStatus: resp.MsgStatus,
+	}, nil
 }
 
 // UpdateDraft 更新已有草稿中的单篇图文

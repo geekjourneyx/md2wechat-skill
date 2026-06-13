@@ -10,6 +10,7 @@ import (
 	"github.com/geekjourneyx/md2wechat-skill/internal/action"
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 	"github.com/geekjourneyx/md2wechat-skill/internal/draft"
+	wechatservice "github.com/geekjourneyx/md2wechat-skill/internal/wechat"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
@@ -56,6 +57,7 @@ const (
 	codeImageGenerateFailed    = "IMAGE_GENERATE_FAILED"
 	codeDraftCreateFailed      = "DRAFT_CREATE_FAILED"
 	codeDraftGetFailed         = "DRAFT_GET_FAILED"
+	codeDraftPreviewFailed     = "DRAFT_PREVIEW_FAILED"
 	codeImagePostInvalid       = "IMAGE_POST_INVALID"
 	codeImagePostPreviewFailed = "IMAGE_POST_PREVIEW_FAILED"
 	codeImagePostCreateFailed  = "IMAGE_POST_CREATE_FAILED"
@@ -189,9 +191,11 @@ Examples:
   md2wechat upload_image ./photo.jpg
   md2wechat download_and_upload https://example.com/image.jpg
   md2wechat generate_image "A cute cat"
-  md2wechat create_draft draft.json
-  md2wechat get_draft <media_id> --output cloud-draft.json
-  md2wechat update_draft <media_id> draft.json --index 0`,
+	  md2wechat create_draft draft.json
+	  md2wechat get_draft <media_id> --output cloud-draft.json
+	  md2wechat update_draft <media_id> draft.json --index 0
+	  md2wechat preview_send <media_id> --openid OPENID
+	  md2wechat preview_send <media_id> --wxname WECHAT_ID`,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		Version:       Version,
@@ -345,6 +349,44 @@ Examples:
 	}
 	updateDraftCmd.Flags().IntVar(&updateDraftIndex, "index", 0, "Article index inside the existing draft to update")
 	rootCmd.AddCommand(updateDraftCmd)
+
+	var previewSendOpenID string
+	var previewSendWxName string
+	var previewSendCmd = &cobra.Command{
+		Use:   "preview_send <media_id>",
+		Short: "Send an existing WeChat draft preview to one follower",
+		Args:  cobra.ExactArgs(1),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return initConfig()
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mediaID := args[0]
+			if err := cfg.ValidateForWeChat(); err != nil {
+				return wrapCLIError(codeConfigInvalid, err, err.Error())
+			}
+			svc := wechatservice.NewService(cfg, log)
+			var result *wechatservice.PreviewDraftResult
+			var err error
+			switch {
+			case previewSendOpenID != "" && previewSendWxName != "":
+				return newCLIError(codeDraftPreviewFailed, "use exactly one of --openid or --wxname")
+			case previewSendOpenID != "":
+				result, err = svc.PreviewDraftToOpenID(mediaID, previewSendOpenID)
+			case previewSendWxName != "":
+				result, err = svc.PreviewDraftToWxName(mediaID, previewSendWxName)
+			default:
+				return newCLIError(codeDraftPreviewFailed, "one of --openid or --wxname is required")
+			}
+			if err != nil {
+				return wrapCLIError(codeDraftPreviewFailed, err, err.Error())
+			}
+			responseSuccess(result)
+			return nil
+		},
+	}
+	previewSendCmd.Flags().StringVar(&previewSendOpenID, "openid", "", "Follower openid to receive the preview")
+	previewSendCmd.Flags().StringVar(&previewSendWxName, "wxname", "", "WeChat ID to receive the preview")
+	rootCmd.AddCommand(previewSendCmd)
 
 	var versionCmd = &cobra.Command{
 		Use:   "version",
