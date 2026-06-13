@@ -117,6 +117,19 @@ type CreateDraftResult struct {
 	DraftURL string `json:"draft_url,omitempty"`
 }
 
+// UpdateDraftRequest 微信草稿更新请求
+type UpdateDraftRequest struct {
+	MediaID  string         `json:"media_id"`
+	Index    int            `json:"index"`
+	Articles *draft.Article `json:"articles"`
+}
+
+// UpdateDraftResponse 微信草稿更新响应
+type UpdateDraftResponse struct {
+	ErrCode int    `json:"errcode"`
+	ErrMsg  string `json:"errmsg"`
+}
+
 // CreateDraft 创建草稿
 func (s *Service) CreateDraft(articles []*draft.Article) (*CreateDraftResult, error) {
 	startTime := time.Now()
@@ -133,6 +146,68 @@ func (s *Service) CreateDraft(articles []*draft.Article) (*CreateDraftResult, er
 	duration := time.Since(startTime)
 	s.log.Info("draft created",
 		zap.String("media_id", maskMediaID(mediaID)),
+		zap.Duration("duration", duration))
+
+	return &CreateDraftResult{
+		MediaID: mediaID,
+	}, nil
+}
+
+// UpdateDraft 更新已有草稿中的单篇图文
+func (s *Service) UpdateDraft(mediaID string, index int, article *draft.Article) (*CreateDraftResult, error) {
+	startTime := time.Now()
+
+	oa := s.getOfficialAccount()
+	accessToken, err := oa.GetAccessToken()
+	if err != nil {
+		return nil, fmt.Errorf("get access token: %w", err)
+	}
+
+	req := UpdateDraftRequest{
+		MediaID:  mediaID,
+		Index:    index,
+		Articles: article,
+	}
+	reqBody, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("marshal request: %w", err)
+	}
+
+	apiURL := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/draft/update?access_token=%s", accessToken)
+	httpReq, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(reqBody))
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	httpResp, err := s.getHTTPClient().Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("call wechat api: %w", err)
+	}
+	defer func() {
+		_ = httpResp.Body.Close()
+	}()
+
+	respBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response: %w", err)
+	}
+
+	var resp UpdateDraftResponse
+	if err := json.Unmarshal(respBody, &resp); err != nil {
+		return nil, fmt.Errorf("parse response: %w", err)
+	}
+	if resp.ErrCode != 0 {
+		s.log.Error("update draft failed",
+			zap.Int("errcode", resp.ErrCode),
+			zap.String("errmsg", resp.ErrMsg))
+		return nil, fmt.Errorf("%s", ExplainDraftAPIError(resp.ErrCode, resp.ErrMsg))
+	}
+
+	duration := time.Since(startTime)
+	s.log.Info("draft updated",
+		zap.String("media_id", maskMediaID(mediaID)),
+		zap.Int("index", index),
 		zap.Duration("duration", duration))
 
 	return &CreateDraftResult{

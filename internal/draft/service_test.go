@@ -71,6 +71,35 @@ func TestCreateDraftFromFileValidationErrors(t *testing.T) {
 	}
 }
 
+func TestArticleForUpdateSelectsRequestedIndex(t *testing.T) {
+	req := DraftRequest{
+		Articles: []Article{
+			{Title: "First", Content: "one"},
+			{Title: "Second", Content: "two"},
+		},
+	}
+
+	got, err := articleForUpdate(req, 1)
+	if err != nil {
+		t.Fatalf("articleForUpdate() error = %v", err)
+	}
+	if got.Title != "Second" || got.Content != "two" {
+		t.Fatalf("articleForUpdate() = %#v", got)
+	}
+}
+
+func TestArticleForUpdateValidationErrors(t *testing.T) {
+	if _, err := articleForUpdate(DraftRequest{}, 0); err == nil {
+		t.Fatal("expected no articles error")
+	}
+	if _, err := articleForUpdate(DraftRequest{Articles: []Article{{Title: "Only", Content: "one"}}}, 1); err == nil {
+		t.Fatal("expected index out of range error")
+	}
+	if _, err := articleForUpdate(DraftRequest{Articles: []Article{{Title: "Only", Content: "one"}}}, -1); err == nil {
+		t.Fatal("expected negative index error")
+	}
+}
+
 func TestBuildSDKArticleConvertsOptionalFields(t *testing.T) {
 	got, err := buildSDKArticle(Article{
 		Title:            "Title",

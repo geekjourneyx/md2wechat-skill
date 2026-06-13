@@ -60,6 +60,7 @@ const (
 	codeImagePostCreateFailed  = "IMAGE_POST_CREATE_FAILED"
 	codeImagePostPreviewReady  = "IMAGE_POST_PREVIEW_READY"
 	codeImagePostCreated       = "IMAGE_POST_CREATED"
+	codeDraftUpdateFailed      = "DRAFT_UPDATE_FAILED"
 	codeTestDraftReadFailed    = "TEST_DRAFT_READ_FAILED"
 	codeTestDraftCoverFailed   = "TEST_DRAFT_COVER_FAILED"
 	codeTestDraftCreateFailed  = "TEST_DRAFT_CREATE_FAILED"
@@ -187,7 +188,8 @@ Examples:
   md2wechat upload_image ./photo.jpg
   md2wechat download_and_upload https://example.com/image.jpg
   md2wechat generate_image "A cute cat"
-  md2wechat create_draft draft.json`,
+  md2wechat create_draft draft.json
+  md2wechat update_draft <media_id> draft.json --index 0`,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		Version:       Version,
@@ -290,6 +292,32 @@ Examples:
 		},
 	}
 	rootCmd.AddCommand(createDraftCmd)
+
+	var updateDraftIndex int
+	var updateDraftCmd = &cobra.Command{
+		Use:   "update_draft <media_id> <json_file>",
+		Short: "Update an existing WeChat draft article from JSON file",
+		Args:  cobra.ExactArgs(2),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return initConfig()
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mediaID := args[0]
+			jsonFile := args[1]
+			if err := cfg.ValidateForWeChat(); err != nil {
+				return wrapCLIError(codeConfigInvalid, err, err.Error())
+			}
+			svc := draft.NewService(cfg, log)
+			result, err := svc.UpdateDraftFromFile(mediaID, updateDraftIndex, jsonFile)
+			if err != nil {
+				return wrapCLIError(codeDraftUpdateFailed, err, err.Error())
+			}
+			responseSuccess(result)
+			return nil
+		},
+	}
+	updateDraftCmd.Flags().IntVar(&updateDraftIndex, "index", 0, "Article index inside the existing draft to update")
+	rootCmd.AddCommand(updateDraftCmd)
 
 	var versionCmd = &cobra.Command{
 		Use:   "version",

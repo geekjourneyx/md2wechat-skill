@@ -115,6 +115,44 @@ func (s *Service) CreateDraftFromFile(jsonFile string) (*DraftResult, error) {
 	}, nil
 }
 
+// UpdateDraftFromFile 从 JSON 文件更新已有草稿中的指定图文
+func (s *Service) UpdateDraftFromFile(mediaID string, index int, jsonFile string) (*DraftResult, error) {
+	s.log.Info("updating draft from file",
+		zap.String("media_id", mediaID),
+		zap.Int("index", index),
+		zap.String("file", jsonFile))
+
+	data, err := os.ReadFile(jsonFile)
+	if err != nil {
+		return nil, fmt.Errorf("read file: %w", err)
+	}
+
+	var req DraftRequest
+	if err := json.Unmarshal(data, &req); err != nil {
+		return nil, fmt.Errorf("parse json: %w", err)
+	}
+
+	article, err := articleForUpdate(req, index)
+	if err != nil {
+		return nil, err
+	}
+
+	sdkArticle, err := buildSDKArticle(article)
+	if err != nil {
+		return nil, fmt.Errorf("article %d: %w", index, err)
+	}
+
+	result, err := s.ws.UpdateDraft(mediaID, index, sdkArticle)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DraftResult{
+		MediaID:  result.MediaID,
+		DraftURL: result.DraftURL,
+	}, nil
+}
+
 // CreateDraft 创建草稿
 func (s *Service) CreateDraft(articles []Article) (*DraftResult, error) {
 	// 转换为 SDK 格式
@@ -145,6 +183,16 @@ func buildSDKArticles(articles []Article) ([]*draft.Article, error) {
 		sdkArticles = append(sdkArticles, sdkArticle)
 	}
 	return sdkArticles, nil
+}
+
+func articleForUpdate(req DraftRequest, index int) (Article, error) {
+	if len(req.Articles) == 0 {
+		return Article{}, fmt.Errorf("no articles in request")
+	}
+	if index < 0 || index >= len(req.Articles) {
+		return Article{}, fmt.Errorf("article index %d out of range", index)
+	}
+	return req.Articles[index], nil
 }
 
 func buildSDKArticle(article Article) (*draft.Article, error) {

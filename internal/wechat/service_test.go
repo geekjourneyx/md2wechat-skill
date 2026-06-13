@@ -295,6 +295,85 @@ func TestCreateDraftUsesAccessTokenAndReturnsMediaIDOnly(t *testing.T) {
 	}
 }
 
+func TestUpdateDraftPostsJSONAndReturnsExistingMediaID(t *testing.T) {
+	oldClient := util.DefaultHTTPClient
+	var draftRequestBody []byte
+	httpClient := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			switch {
+			case strings.Contains(req.URL.String(), "/cgi-bin/token"):
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"access_token":"token-123","expires_in":7200}`)),
+					Header:     make(http.Header),
+					Request:    req,
+				}, nil
+			case strings.Contains(req.URL.String(), "/cgi-bin/draft/update"):
+				if req.Method != http.MethodPost {
+					t.Fatalf("request method = %s, want POST", req.Method)
+				}
+				if got := req.Header.Get("Content-Type"); got != "application/json" {
+					t.Fatalf("content type = %q, want application/json", got)
+				}
+				if !strings.Contains(req.URL.String(), "access_token=token-123") {
+					t.Fatalf("request url missing token: %s", req.URL.String())
+				}
+				body, err := io.ReadAll(req.Body)
+				if err != nil {
+					return nil, err
+				}
+				draftRequestBody = append([]byte(nil), body...)
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"errcode":0,"errmsg":"ok"}`)),
+					Header:     make(http.Header),
+					Request:    req,
+				}, nil
+			default:
+				t.Fatalf("unexpected request url: %s", req.URL.String())
+				return nil, nil
+			}
+		}),
+	}
+	t.Cleanup(func() {
+		util.DefaultHTTPClient = oldClient
+	})
+	util.DefaultHTTPClient = httpClient
+
+	svc := &Service{
+		cfg: &config.Config{
+			WechatAppID:  "appid",
+			WechatSecret: "secret",
+		},
+		log:        zap.NewNop(),
+		httpClient: httpClient,
+	}
+
+	result, err := svc.UpdateDraft("draft-media-123", 0, &draft.Article{
+		Title:        "Updated title",
+		Content:      "<p>updated</p>",
+		Digest:       "Updated digest",
+		ThumbMediaID: "thumb-123",
+	})
+	if err != nil {
+		t.Fatalf("UpdateDraft() error = %v", err)
+	}
+	if result.MediaID != "draft-media-123" {
+		t.Fatalf("media id = %q, want existing media id", result.MediaID)
+	}
+
+	var req UpdateDraftRequest
+	if err := json.Unmarshal(draftRequestBody, &req); err != nil {
+		t.Fatalf("unmarshal request body: %v", err)
+	}
+	if req.MediaID != "draft-media-123" || req.Index != 0 {
+		t.Fatalf("request identity = %#v", req)
+	}
+	if req.Articles.Title != "Updated title" || req.Articles.Content != "<p>updated</p>" || req.Articles.ThumbMediaID != "thumb-123" {
+		t.Fatalf("request article = %#v", req.Articles)
+	}
+}
+
 func TestCreateNewspicDraftPostsJSONAndReturnsMediaID(t *testing.T) {
 	oldClient := util.DefaultHTTPClient
 	var draftRequestBody []byte
