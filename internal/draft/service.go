@@ -5,6 +5,7 @@ import (
 	"fmt"
 	stdhtml "html"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -76,6 +77,14 @@ type DraftResult struct {
 	DraftURL string `json:"draft_url,omitempty"`
 }
 
+// DraftPullResult 草稿读取结果
+type DraftPullResult struct {
+	MediaID  string       `json:"media_id"`
+	Articles []Article    `json:"articles"`
+	Output   string       `json:"output,omitempty"`
+	Draft    DraftRequest `json:"draft"`
+}
+
 // CreateDraftFromFile 从 JSON 文件创建草稿
 func (s *Service) CreateDraftFromFile(jsonFile string) (*DraftResult, error) {
 	s.log.Info("creating draft from file", zap.String("file", jsonFile))
@@ -105,6 +114,77 @@ func (s *Service) CreateDraftFromFile(jsonFile string) (*DraftResult, error) {
 
 	// 调用微信 API
 	result, err := s.ws.CreateDraft(articles)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DraftResult{
+		MediaID:  result.MediaID,
+		DraftURL: result.DraftURL,
+	}, nil
+}
+
+// GetDraft 读取云端已有草稿，并可保存为 create/update 兼容 JSON
+func (s *Service) GetDraft(mediaID string, outputFile string) (*DraftPullResult, error) {
+	s.log.Info("getting draft", zap.String("media_id", mediaID))
+
+	if strings.TrimSpace(mediaID) == "" {
+		return nil, fmt.Errorf("media_id is required")
+	}
+
+	sdkArticles, err := s.ws.GetDraft(mediaID)
+	if err != nil {
+		return nil, err
+	}
+
+	articles := make([]Article, 0, len(sdkArticles))
+	for _, sdkArticle := range sdkArticles {
+		articles = append(articles, articleFromSDKArticle(sdkArticle))
+	}
+	req := DraftRequest{Articles: articles}
+
+	if outputFile != "" {
+		if err := writeDraftRequest(outputFile, req); err != nil {
+			return nil, err
+		}
+	}
+
+	return &DraftPullResult{
+		MediaID:  mediaID,
+		Articles: articles,
+		Output:   outputFile,
+		Draft:    req,
+	}, nil
+}
+
+// UpdateDraftFromFile 从 JSON 文件更新已有草稿中的指定图文
+func (s *Service) UpdateDraftFromFile(mediaID string, index int, jsonFile string) (*DraftResult, error) {
+	s.log.Info("updating draft from file",
+		zap.String("media_id", mediaID),
+		zap.Int("index", index),
+		zap.String("file", jsonFile))
+
+	data, err := os.ReadFile(jsonFile)
+	if err != nil {
+		return nil, fmt.Errorf("read file: %w", err)
+	}
+
+	var req DraftRequest
+	if err := json.Unmarshal(data, &req); err != nil {
+		return nil, fmt.Errorf("parse json: %w", err)
+	}
+
+	article, err := articleForUpdate(req, index)
+	if err != nil {
+		return nil, err
+	}
+
+	sdkArticle, err := buildSDKArticle(article)
+	if err != nil {
+		return nil, fmt.Errorf("article %d: %w", index, err)
+	}
+
+	result, err := s.ws.UpdateDraft(mediaID, index, sdkArticle)
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +227,33 @@ func buildSDKArticles(articles []Article) ([]*draft.Article, error) {
 	return sdkArticles, nil
 }
 
+func articleForUpdate(req DraftRequest, index int) (Article, error) {
+	if len(req.Articles) == 0 {
+		return Article{}, fmt.Errorf("no articles in request")
+	}
+	if index < 0 || index >= len(req.Articles) {
+		return Article{}, fmt.Errorf("article index %d out of range", index)
+	}
+	return req.Articles[index], nil
+}
+
+func articleFromSDKArticle(sdkArticle *draft.Article) Article {
+	if sdkArticle == nil {
+		return Article{}
+	}
+	return Article{
+		Title:              sdkArticle.Title,
+		Author:             sdkArticle.Author,
+		Digest:             sdkArticle.Digest,
+		Content:            sdkArticle.Content,
+		ContentSourceURL:   sdkArticle.ContentSourceURL,
+		ThumbMediaID:       sdkArticle.ThumbMediaID,
+		ShowCoverPic:       int(sdkArticle.ShowCoverPic),
+		NeedOpenComment:    int(sdkArticle.NeedOpenComment),
+		OnlyFansCanComment: int(sdkArticle.OnlyFansCanComment),
+	}
+}
+
 func buildSDKArticle(article Article) (*draft.Article, error) {
 	if article.Title == "" {
 		return nil, fmt.Errorf("title is required")
@@ -156,10 +263,12 @@ func buildSDKArticle(article Article) (*draft.Article, error) {
 	}
 
 	sdkArticle := &draft.Article{
-		Title:   article.Title,
-		Content: article.Content,
-		Digest:  article.Digest,
-		Author:  article.Author,
+		Title:              article.Title,
+		Content:            article.Content,
+		Digest:             article.Digest,
+		Author:             article.Author,
+		NeedOpenComment:    uint(article.NeedOpenComment),
+		OnlyFansCanComment: uint(article.OnlyFansCanComment),
 	}
 
 	if article.ThumbMediaID != "" {
@@ -172,6 +281,22 @@ func buildSDKArticle(article Article) (*draft.Article, error) {
 	}
 
 	return sdkArticle, nil
+}
+
+func writeDraftRequest(outputFile string, req DraftRequest) error {
+	data, err := json.MarshalIndent(req, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal draft: %w", err)
+	}
+	if dir := filepath.Dir(outputFile); dir != "." && dir != "" {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("create output directory: %w", err)
+		}
+	}
+	if err := os.WriteFile(outputFile, append(data, '\n'), 0600); err != nil {
+		return fmt.Errorf("write output: %w", err)
+	}
+	return nil
 }
 
 // GenerateDigestFromContent 从内容生成摘要

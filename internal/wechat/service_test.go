@@ -295,6 +295,216 @@ func TestCreateDraftUsesAccessTokenAndReturnsMediaIDOnly(t *testing.T) {
 	}
 }
 
+func TestPreviewDraftToOpenIDUsesMassPreviewEndpoint(t *testing.T) {
+	oldClient := util.DefaultHTTPClient
+	var previewRequestBody []byte
+	httpClient := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			switch {
+			case strings.Contains(req.URL.String(), "/cgi-bin/token"):
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"access_token":"token-123","expires_in":7200}`)),
+					Header:     make(http.Header),
+					Request:    req,
+				}, nil
+			case strings.Contains(req.URL.String(), "/cgi-bin/message/mass/preview"):
+				if req.URL.Query().Get("access_token") != "token-123" {
+					t.Fatalf("access token = %q", req.URL.Query().Get("access_token"))
+				}
+				body, err := io.ReadAll(req.Body)
+				if err != nil {
+					t.Fatalf("read request body: %v", err)
+				}
+				previewRequestBody = body
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"errcode":0,"errmsg":"preview ok","msg_id":123,"msg_data_id":456,"msg_status":"SEND_SUCCESS"}`)),
+					Header:     make(http.Header),
+					Request:    req,
+				}, nil
+			default:
+				t.Fatalf("unexpected request url: %s", req.URL.String())
+				return nil, nil
+			}
+		}),
+	}
+	t.Cleanup(func() {
+		util.DefaultHTTPClient = oldClient
+	})
+	util.DefaultHTTPClient = httpClient
+
+	svc := &Service{
+		cfg: &config.Config{
+			WechatAppID:  "appid",
+			WechatSecret: "secret",
+		},
+		log:        zap.NewNop(),
+		httpClient: httpClient,
+	}
+
+	result, err := svc.PreviewDraftToOpenID("draft-media-123", "openid-abc")
+	if err != nil {
+		t.Fatalf("PreviewDraftToOpenID() error = %v", err)
+	}
+	if result.MsgID != 123 || result.MsgDataID != 456 || result.MsgStatus != "SEND_SUCCESS" {
+		t.Fatalf("result = %#v", result)
+	}
+
+	var req map[string]any
+	if err := json.Unmarshal(previewRequestBody, &req); err != nil {
+		t.Fatalf("unmarshal request body: %v", err)
+	}
+	if req["touser"] != "openid-abc" || req["msgtype"] != "mpnews" {
+		t.Fatalf("request identity fields = %#v", req)
+	}
+	mpnews, ok := req["mpnews"].(map[string]any)
+	if !ok || mpnews["media_id"] != "draft-media-123" {
+		t.Fatalf("mpnews payload = %#v", req["mpnews"])
+	}
+}
+
+func TestPreviewDraftToWxNameUsesMassPreviewEndpoint(t *testing.T) {
+	oldClient := util.DefaultHTTPClient
+	var previewRequestBody []byte
+	httpClient := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			switch {
+			case strings.Contains(req.URL.String(), "/cgi-bin/token"):
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"access_token":"token-123","expires_in":7200}`)),
+					Header:     make(http.Header),
+					Request:    req,
+				}, nil
+			case strings.Contains(req.URL.String(), "/cgi-bin/message/mass/preview"):
+				body, err := io.ReadAll(req.Body)
+				if err != nil {
+					t.Fatalf("read request body: %v", err)
+				}
+				previewRequestBody = body
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"errcode":0,"errmsg":"preview ok","msg_id":321,"msg_data_id":654}`)),
+					Header:     make(http.Header),
+					Request:    req,
+				}, nil
+			default:
+				t.Fatalf("unexpected request url: %s", req.URL.String())
+				return nil, nil
+			}
+		}),
+	}
+	t.Cleanup(func() {
+		util.DefaultHTTPClient = oldClient
+	})
+	util.DefaultHTTPClient = httpClient
+
+	svc := &Service{
+		cfg: &config.Config{
+			WechatAppID:  "appid",
+			WechatSecret: "secret",
+		},
+		log:        zap.NewNop(),
+		httpClient: httpClient,
+	}
+
+	result, err := svc.PreviewDraftToWxName("draft-media-123", "wechat-id")
+	if err != nil {
+		t.Fatalf("PreviewDraftToWxName() error = %v", err)
+	}
+	if result.MsgID != 321 || result.MsgDataID != 654 || result.WxName != "wechat-id" {
+		t.Fatalf("result = %#v", result)
+	}
+
+	var req map[string]any
+	if err := json.Unmarshal(previewRequestBody, &req); err != nil {
+		t.Fatalf("unmarshal request body: %v", err)
+	}
+	if req["towxname"] != "wechat-id" || req["touser"] != nil {
+		t.Fatalf("request identity fields = %#v", req)
+	}
+}
+
+func TestUpdateDraftPostsJSONAndReturnsExistingMediaID(t *testing.T) {
+	oldClient := util.DefaultHTTPClient
+	var draftRequestBody []byte
+	httpClient := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			switch {
+			case strings.Contains(req.URL.String(), "/cgi-bin/token"):
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"access_token":"token-123","expires_in":7200}`)),
+					Header:     make(http.Header),
+					Request:    req,
+				}, nil
+			case strings.Contains(req.URL.String(), "/cgi-bin/draft/update"):
+				if req.Method != http.MethodPost {
+					t.Fatalf("request method = %s, want POST", req.Method)
+				}
+				if got := req.Header.Get("Content-Type"); got != "application/json" {
+					t.Fatalf("content type = %q, want application/json", got)
+				}
+				if !strings.Contains(req.URL.String(), "access_token=token-123") {
+					t.Fatalf("request url missing token: %s", req.URL.String())
+				}
+				body, err := io.ReadAll(req.Body)
+				if err != nil {
+					return nil, err
+				}
+				draftRequestBody = append([]byte(nil), body...)
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(`{"errcode":0,"errmsg":"ok"}`)),
+					Header:     make(http.Header),
+					Request:    req,
+				}, nil
+			default:
+				t.Fatalf("unexpected request url: %s", req.URL.String())
+				return nil, nil
+			}
+		}),
+	}
+	t.Cleanup(func() {
+		util.DefaultHTTPClient = oldClient
+	})
+	util.DefaultHTTPClient = httpClient
+
+	svc := &Service{
+		cfg: &config.Config{
+			WechatAppID:  "appid",
+			WechatSecret: "secret",
+		},
+		log:        zap.NewNop(),
+		httpClient: httpClient,
+	}
+
+	result, err := svc.UpdateDraft("draft-media-123", 0, &draft.Article{
+		Title:        "Updated title",
+		Content:      "<p>updated</p>",
+		Digest:       "Updated digest",
+		ThumbMediaID: "thumb-123",
+	})
+	if err != nil {
+		t.Fatalf("UpdateDraft() error = %v", err)
+	}
+	if result.MediaID != "draft-media-123" {
+		t.Fatalf("media id = %q, want existing media id", result.MediaID)
+	}
+
+	var req UpdateDraftRequest
+	if err := json.Unmarshal(draftRequestBody, &req); err != nil {
+		t.Fatalf("unmarshal request body: %v", err)
+	}
+	if req.MediaID != "draft-media-123" || req.Index != 0 {
+		t.Fatalf("request identity = %#v", req)
+	}
+	if req.Articles.Title != "Updated title" || req.Articles.Content != "<p>updated</p>" || req.Articles.ThumbMediaID != "thumb-123" {
+		t.Fatalf("request article = %#v", req.Articles)
+	}
+}
+
 func TestCreateNewspicDraftPostsJSONAndReturnsMediaID(t *testing.T) {
 	oldClient := util.DefaultHTTPClient
 	var draftRequestBody []byte

@@ -81,6 +81,9 @@ Use CLI output as the source of truth for currently available modes, providers, 
 - `convert` defaults to API mode unless the user explicitly asks for `--mode ai`.
 - API conversion requires md2wechat API credentials.
 - WeChat draft creation requires WeChat credentials.
+- If the user provides an existing draft `media_id`, prefer `md2wechat update_draft <media_id> <json_file> --index <n>` over creating a new draft. Use `create_draft` only when no existing draft should be preserved or update is unavailable.
+- If a user may edit the draft manually, pull the cloud draft first with `md2wechat get_draft <media_id> --output <cloud-json>` and base edits on that fetched JSON. Do not update from an older local JSON artifact when the cloud draft may have changed.
+- To send an existing draft preview without changing it, use `md2wechat preview_send <media_id> --openid <openid>` or `--wxname <wechat_id>`. If WeChat returns `48001`, report that the account lacks mass preview API permission.
 - Image generation may require image-provider credentials.
 - `doctor --json` is local-only: it checks local readiness and does not perform live authentication, upload images, or create drafts.
 - Use `config show --format json` when the user asks what configuration is currently effective.
@@ -110,6 +113,8 @@ When the user asks to format an article and has not chosen a theme or modules:
 8. Pass the formatted Markdown artifact to `convert`.
 
 Saving generated Markdown next to the source file requires explicit user confirmation and must not overwrite the source.
+
+For final inline HTML that will be pasted into or uploaded to WeChat drafts, avoid native `<ul>` / `<li>` for visible article lists unless that exact rendering has been verified in the WeChat editor. The editor/client may add default list spacing on top of inline styles. Render compact lists as separate `<p>` lines with an inline bullet such as `&bull;` and explicit `margin` / `line-height`.
 
 ## Theme Selection
 
@@ -176,6 +181,24 @@ Before draft creation:
 - Draft creation requires a cover via `--cover` or `--cover-media-id`.
 - Do not assume a WeChat URL or `mmbiz.qpic.cn` URL can be reused as `thumb_media_id`.
 - If draft creation returns `45004`, check digest, summary, and description before assuming the body is too long.
+
+Before updating an existing draft:
+
+- Confirm the target draft `media_id` and article `--index` (default `0` for single-article drafts).
+- Pull the latest cloud draft first:
+  ```bash
+  md2wechat get_draft <media_id> --output /tmp/md2wechat-format/<run-id>/cloud-draft.json --json
+  ```
+  Use the fetched JSON as the base for edits, so manual changes made in the WeChat editor are preserved.
+- Reuse the same JSON article format as `create_draft`; `update_draft` updates only `articles[index]`.
+- If the CLI lacks `get_draft`, report that cloud edits cannot be safely preserved before updating.
+- If the update fails because the CLI lacks `update_draft` or the API rejects the media ID, report the blocker before creating a replacement draft.
+
+Before sending a draft preview:
+
+- Use `md2wechat preview_send <media_id> --openid <openid>` when an openid is known, or `--wxname <wechat_id>` when the user provides a WeChat ID.
+- Preview sending does not modify the draft, but it still calls a live WeChat API and sends the article preview to the target user.
+- If the API returns `48001 api unauthorized`, do not retry with the same credentials; the account lacks permission for the mass preview endpoint.
 
 Markdown images are uploaded or replaced only during `--upload` or `--draft`, not during plain conversion or preview.
 

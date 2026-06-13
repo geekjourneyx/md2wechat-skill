@@ -323,7 +323,7 @@ func buildCapabilitiesData() (map[string]any, error) {
 	return map[string]any{
 		"commands": []string{
 			"convert", "inspect", "preview", "config", "write", "humanize", "upload_image",
-			"download_and_upload", "generate_image", "generate_cover", "generate_infographic", "create_draft",
+			"download_and_upload", "generate_image", "generate_cover", "generate_infographic", "create_draft", "get_draft", "update_draft", "preview_send",
 			"create_image_post", "test-draft", "providers", "themes",
 			"prompts", "layout", "brand", "doctor", "skills", "capabilities", "version",
 		},
