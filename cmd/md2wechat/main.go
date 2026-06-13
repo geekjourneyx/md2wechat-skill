@@ -55,6 +55,7 @@ const (
 	codeImageUploadFailed      = "IMAGE_UPLOAD_FAILED"
 	codeImageGenerateFailed    = "IMAGE_GENERATE_FAILED"
 	codeDraftCreateFailed      = "DRAFT_CREATE_FAILED"
+	codeDraftGetFailed         = "DRAFT_GET_FAILED"
 	codeImagePostInvalid       = "IMAGE_POST_INVALID"
 	codeImagePostPreviewFailed = "IMAGE_POST_PREVIEW_FAILED"
 	codeImagePostCreateFailed  = "IMAGE_POST_CREATE_FAILED"
@@ -189,6 +190,7 @@ Examples:
   md2wechat download_and_upload https://example.com/image.jpg
   md2wechat generate_image "A cute cat"
   md2wechat create_draft draft.json
+  md2wechat get_draft <media_id> --output cloud-draft.json
   md2wechat update_draft <media_id> draft.json --index 0`,
 		SilenceErrors: true,
 		SilenceUsage:  true,
@@ -294,6 +296,31 @@ Examples:
 	rootCmd.AddCommand(createDraftCmd)
 
 	var updateDraftIndex int
+	var getDraftOutput string
+	var getDraftCmd = &cobra.Command{
+		Use:   "get_draft <media_id>",
+		Short: "Fetch an existing WeChat draft article as JSON",
+		Args:  cobra.ExactArgs(1),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return initConfig()
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			mediaID := args[0]
+			if err := cfg.ValidateForWeChat(); err != nil {
+				return wrapCLIError(codeConfigInvalid, err, err.Error())
+			}
+			svc := draft.NewService(cfg, log)
+			result, err := svc.GetDraft(mediaID, getDraftOutput)
+			if err != nil {
+				return wrapCLIError(codeDraftGetFailed, err, err.Error())
+			}
+			responseSuccess(result)
+			return nil
+		},
+	}
+	getDraftCmd.Flags().StringVarP(&getDraftOutput, "output", "o", "", "Write fetched draft JSON to this file")
+	rootCmd.AddCommand(getDraftCmd)
+
 	var updateDraftCmd = &cobra.Command{
 		Use:   "update_draft <media_id> <json_file>",
 		Short: "Update an existing WeChat draft article from JSON file",

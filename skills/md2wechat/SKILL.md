@@ -82,6 +82,7 @@ Use CLI output as the source of truth for currently available modes, providers, 
 - API conversion requires md2wechat API credentials.
 - WeChat draft creation requires WeChat credentials.
 - If the user provides an existing draft `media_id`, prefer `md2wechat update_draft <media_id> <json_file> --index <n>` over creating a new draft. Use `create_draft` only when no existing draft should be preserved or update is unavailable.
+- If a user may edit the draft manually, pull the cloud draft first with `md2wechat get_draft <media_id> --output <cloud-json>` and base edits on that fetched JSON. Do not update from an older local JSON artifact when the cloud draft may have changed.
 - Image generation may require image-provider credentials.
 - `doctor --json` is local-only: it checks local readiness and does not perform live authentication, upload images, or create drafts.
 - Use `config show --format json` when the user asks what configuration is currently effective.
@@ -183,7 +184,13 @@ Before draft creation:
 Before updating an existing draft:
 
 - Confirm the target draft `media_id` and article `--index` (default `0` for single-article drafts).
+- Pull the latest cloud draft first:
+  ```bash
+  md2wechat get_draft <media_id> --output /tmp/md2wechat-format/<run-id>/cloud-draft.json --json
+  ```
+  Use the fetched JSON as the base for edits, so manual changes made in the WeChat editor are preserved.
 - Reuse the same JSON article format as `create_draft`; `update_draft` updates only `articles[index]`.
+- If the CLI lacks `get_draft`, report that cloud edits cannot be safely preserved before updating.
 - If the update fails because the CLI lacks `update_draft` or the API rejects the media ID, report the blocker before creating a replacement draft.
 
 Markdown images are uploaded or replaced only during `--upload` or `--draft`, not during plain conversion or preview.

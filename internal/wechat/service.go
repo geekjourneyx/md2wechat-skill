@@ -153,6 +153,29 @@ func (s *Service) CreateDraft(articles []*draft.Article) (*CreateDraftResult, er
 	}, nil
 }
 
+// GetDraft 获取已有草稿图文列表
+func (s *Service) GetDraft(mediaID string) ([]*draft.Article, error) {
+	startTime := time.Now()
+	oa := s.getOfficialAccount()
+	dm := oa.GetDraft()
+
+	articles, err := dm.GetDraft(mediaID)
+	if err != nil {
+		s.log.Error("get draft failed",
+			zap.String("media_id", maskMediaID(mediaID)),
+			zap.Error(err))
+		return nil, fmt.Errorf("get draft: %w", ExplainDraftError(err))
+	}
+
+	duration := time.Since(startTime)
+	s.log.Info("draft fetched",
+		zap.String("media_id", maskMediaID(mediaID)),
+		zap.Int("articles", len(articles)),
+		zap.Duration("duration", duration))
+
+	return articles, nil
+}
+
 // UpdateDraft 更新已有草稿中的单篇图文
 func (s *Service) UpdateDraft(mediaID string, index int, article *draft.Article) (*CreateDraftResult, error) {
 	startTime := time.Now()
