@@ -70,6 +70,7 @@ md2wechat providers list --json
 - `tuzi` — 图子 AI
 - `modelscope` / `ms` — ModelScope
 - `openrouter` / `or` — OpenRouter
+- `requesty` / `rq` — Requesty
 - `gemini` / `google` — Google Gemini
 - `volcengine` / `volc` — 火山引擎
 

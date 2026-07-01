@@ -18,7 +18,7 @@ md2wechat 支持多种图片生成服务，可以在 Markdown 中使用 AI 生�
 
 ```yaml
 api:
-  # 图片服务提供者: openai, tuzi, modelscope, openrouter, gemini, volcengine
+  # 图片服务提供者: openai, tuzi, modelscope, openrouter, requesty, gemini, volcengine
   image_provider: "tuzi"
 
   # API 配置
@@ -362,6 +362,57 @@ OpenRouter 支持三种分辨率等级（通过尺寸自动判断）：
 
 ---
 
+### Requesty
+
+Requesty 提供统一的 OpenAI 兼容 API 接口，支持多种图片生成模型。
+
+#### 配置示例
+
+```yaml
+api:
+  image_provider: "requesty"
+  image_key: "sk-..."
+  # image_base_url 可选，默认为 https://router.requesty.ai/v1
+  image_model: "google/gemini-3.1-flash-image-preview"
+  image_size: "16:9"  # 支持比例格式或 WIDTHxHEIGHT
+```
+
+或使用环境变量：
+
+```bash
+export IMAGE_PROVIDER="requesty"
+export IMAGE_API_KEY="sk-..."
+export IMAGE_MODEL="google/gemini-3.1-flash-image-preview"
+export IMAGE_SIZE="16:9"
+```
+
+#### 支持的模型
+
+| 模型 | 说明 |
+|------|------|
+| `google/gemini-3.1-flash-image-preview` | Gemini 3.1 Flash（默认，推荐）|
+| `vertex/gemini-2.5-flash-image` | Gemini 2.5 Flash |
+
+#### 支持的尺寸
+
+Requesty 支持两种尺寸配置方式（与 OpenRouter 一致），可在配置文件中设置 `image_size`，也可通过命令行 `--size` 参数覆盖。宽高比与 WIDTHxHEIGHT 映射规则同上文 OpenRouter 一节。
+
+#### 分辨率等级
+
+Requesty 支持三种分辨率等级（通过尺寸自动判断）：
+
+| 等级 | 说明 |
+|------|------|
+| 1K | 标准分辨率 |
+| 2K | 较高分辨率（默认）|
+| 4K | 最高分辨率 |
+
+#### 获取 API Key
+
+前往 [Requesty](https://requesty.ai) 注册并获取 API Key。
+
+---
+
 ### Google Gemini
 
 直接调用 Google Gemini API，使用官方 Go SDK，无需通过第三方平台。
@@ -500,7 +551,7 @@ md2wechat convert article.md --preview
 ### Q: 提示 "参数配置有误" 怎么办？
 
 **A:** 请检查：
-1. `image_provider` 是否为 `openai`、`tuzi`、`modelscope`、`openrouter`、`gemini` 或 `volcengine`
+1. `image_provider` 是否为 `openai`、`tuzi`、`modelscope`、`openrouter`、`requesty`、`gemini` 或 `volcengine`
 2. `image_model` 是否在支持的模型列表中
 3. `image_size` 是否在支持的尺寸列表中
 4. **ModelScope 只支持 `WIDTHxHEIGHT`**

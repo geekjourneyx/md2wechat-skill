@@ -134,6 +134,7 @@ md2wechat providers show volcengine --json
 - `tuzi`
 - `modelscope` / `ms`
 - `openrouter` / `or`
+- `requesty` / `rq`
 - `gemini` / `google`
 - `volcengine` / `volc`
 
