@@ -178,6 +178,7 @@ md2wechat providers show minimax --json
 - `tuzi`
 - `modelscope` / `ms`
 - `openrouter` / `or`
+- `requesty` / `rq`
 - `gemini` / `google`
 - `volcengine` / `volc`
 

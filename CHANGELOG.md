@@ -102,6 +102,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documented `inspect --json data.readiness.targets/blockers` as the publish preflight truth source, while keeping `advise --json` scoped to optional enhancement decisions.
 - Tightened Agent-facing repository rules to keep deterministic routing free of subjective hardcoded phrase lists and style-quality heuristics.
 
+### Added
+- **Requesty Image Provider**: Dedicated OpenAI-compatible image generation provider (aliases `requesty` / `rq`)
+  - Base URL `https://router.requesty.ai/v1`, `/chat/completions` endpoint returning an image URL
+  - Verified image models: `google/gemini-3.1-flash-image-preview` (default), `vertex/gemini-2.5-flash-image`
+  - Configuration: `image_provider: requesty`
+  - New files: `internal/image/requesty.go`, `internal/image/requesty_test.go`
+  - Updated: `internal/image/provider.go`, `internal/config/config.go`, and provider docs
+
 ## [2.9.0] - 2026-06-26
 
 ### Added
