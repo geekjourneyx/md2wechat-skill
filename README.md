@@ -19,6 +19,11 @@
 [![Agent Ready](https://img.shields.io/badge/Agent-Ready-00b0aa)](#agent-工作流)
 [![API](https://img.shields.io/badge/API-Professional-blue)](#专业-api)
 
+<p>
+  <a href="https://trendshift.io/repositories/26638?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-26638" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/26638/daily?language=Go" alt="geekjourneyx%2Fmd2wechat-skill | Trendshift" width="250" height="55"/></a>
+  <a href="https://trendshift.io/repositories/26638?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-26638" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/26638/weekly?language=Go" alt="geekjourneyx%2Fmd2wechat-skill | Trendshift" width="250" height="55"/></a>
+</p>
+
 [快速开始](#快速开始) · [专业 API](#专业-api) · [Agent 工作流](#agent-工作流) · [高级排版](#高级排版) · [文档](#文档)
 
 </div>
