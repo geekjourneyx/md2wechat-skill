@@ -228,6 +228,16 @@ func applyImageProviderDefaults(cfg *Config) {
 		if cfg.ImageSize == "" {
 			cfg.ImageSize = "1:1"
 		}
+	case "requesty", "rq":
+		if cfg.ImageAPIBase == "" {
+			cfg.ImageAPIBase = "https://router.requesty.ai/v1"
+		}
+		if cfg.ImageModel == "" {
+			cfg.ImageModel = "google/gemini-3.1-flash-image-preview"
+		}
+		if cfg.ImageSize == "" {
+			cfg.ImageSize = "1:1"
+		}
 	case "gemini", "google":
 		if cfg.ImageModel == "" {
 			cfg.ImageModel = "gemini-3.1-flash-image-preview"

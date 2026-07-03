@@ -145,7 +145,7 @@ md2wechat generate_cover --article article.md
 md2wechat generate_infographic --article article.md --preset infographic-comparison
 ```
 
-支持 Volcengine、ModelScope、OpenRouter、OpenAI、Gemini 等服务。配置见 [docs/IMAGE_PROVISIONERS.md](docs/IMAGE_PROVISIONERS.md)。
+支持 Volcengine、ModelScope、OpenRouter、Requesty、OpenAI、Gemini 等服务。配置见 [docs/IMAGE_PROVISIONERS.md](docs/IMAGE_PROVISIONERS.md)。
 
 使用宿主 Agent 的 Image Gen：
 
