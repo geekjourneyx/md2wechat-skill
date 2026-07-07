@@ -369,6 +369,7 @@ func TestBuildCapabilitiesDataDerivesCommandsFromRootManifest(t *testing.T) {
 	for _, want := range []string{
 		"convert",
 		"inspect",
+		"advise",
 		"preview",
 		"config",
 		"write",
@@ -500,6 +501,93 @@ func TestBuildCapabilitiesDataIncludesTitleGenerationCapability(t *testing.T) {
 	}
 }
 
+func TestCapabilitiesIncludesArticleAdvice(t *testing.T) {
+	oldCfg := cfg
+	t.Cleanup(func() { cfg = oldCfg })
+
+	cfg = &config.Config{DefaultTheme: "default"}
+	data, err := buildCapabilitiesData()
+	if err != nil {
+		t.Fatalf("buildCapabilitiesData() error = %v", err)
+	}
+
+	commands, ok := data["commands"].([]string)
+	if !ok {
+		t.Fatalf("commands type = %T", data["commands"])
+	}
+	if !contains(commands, "advise") {
+		t.Fatalf("commands missing advise: %#v", commands)
+	}
+
+	articleAdvice, ok := data["article_advice"].(map[string]any)
+	if !ok {
+		t.Fatalf("article_advice type = %T", data["article_advice"])
+	}
+	wantValues := map[string]any{
+		"available":          true,
+		"command":            "advise",
+		"requires_json":      true,
+		"side_effects":       false,
+		"deterministic":      true,
+		"max_actions":        3,
+		"max_layout_modules": 3,
+		"response_code":      codeAdviseCompleted,
+	}
+	for key, want := range wantValues {
+		if articleAdvice[key] != want {
+			t.Fatalf("article_advice[%s] = %#v, want %#v", key, articleAdvice[key], want)
+		}
+	}
+	tools, ok := articleAdvice["tools"].([]string)
+	if !ok {
+		t.Fatalf("tools type = %T", articleAdvice["tools"])
+	}
+	wantTools := []string{"title", "cover", "layout", "micro_edit"}
+	if len(tools) != len(wantTools) {
+		t.Fatalf("tools = %#v, want %#v", tools, wantTools)
+	}
+	for i := range wantTools {
+		if tools[i] != wantTools[i] {
+			t.Fatalf("tools = %#v, want %#v", tools, wantTools)
+		}
+	}
+}
+
+func TestRootCommandManifestUsesUniquePositiveDiscoveryOrders(t *testing.T) {
+	seen := map[int]string{}
+	for _, entry := range rootCommandManifest() {
+		if entry.Command == nil || entry.DiscoveryOrder <= 0 {
+			continue
+		}
+		fields := strings.Fields(entry.Command.Use)
+		if len(fields) == 0 {
+			t.Fatalf("manifest entry with order %d has empty Use", entry.DiscoveryOrder)
+		}
+		if previous, ok := seen[entry.DiscoveryOrder]; ok {
+			t.Fatalf("duplicate DiscoveryOrder %d for %s and %s", entry.DiscoveryOrder, previous, fields[0])
+		}
+		seen[entry.DiscoveryOrder] = fields[0]
+	}
+}
+
+func TestTopLevelCommandNamesPlaceAdviseAfterInspect(t *testing.T) {
+	names := topLevelCommandNames()
+
+	inspectIndex := -1
+	for i, name := range names {
+		if name == "inspect" {
+			inspectIndex = i
+			break
+		}
+	}
+	if inspectIndex < 0 {
+		t.Fatalf("inspect missing from top-level commands: %#v", names)
+	}
+	if inspectIndex+1 >= len(names) || names[inspectIndex+1] != "advise" {
+		t.Fatalf("commands around inspect = %#v, want advise immediately after inspect", names)
+	}
+}
+
 func TestBuildCapabilitiesDataKeepsStableCommandOrderFromRootManifest(t *testing.T) {
 	oldCfg := cfg
 	t.Cleanup(func() { cfg = oldCfg })
@@ -519,6 +607,7 @@ func TestBuildCapabilitiesDataKeepsStableCommandOrderFromRootManifest(t *testing
 	want := []string{
 		"convert",
 		"inspect",
+		"advise",
 		"preview",
 		"config",
 		"write",

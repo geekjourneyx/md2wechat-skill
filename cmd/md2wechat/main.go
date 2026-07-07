@@ -65,6 +65,8 @@ const (
 	codeConvertAIRequestReady    = "CONVERT_AI_REQUEST_READY"
 	codeConvertCompleted         = "CONVERT_COMPLETED"
 	codeInspectCompleted         = "INSPECT_COMPLETED"
+	codeAdviseReadFailed         = "ADVISE_READ_FAILED"
+	codeAdviseCompleted          = "ADVISE_COMPLETED"
 	codePreviewReady             = "PREVIEW_READY"
 	codePreviewFailed            = "PREVIEW_FAILED"
 	codeImageUploadFailed        = "IMAGE_UPLOAD_FAILED"
@@ -267,30 +269,31 @@ type rootCommandEntry struct {
 
 func rootCommandManifest() []rootCommandEntry {
 	return []rootCommandEntry{
-		{Command: uploadImageCmd, WechatAccount: true, DiscoveryOrder: 8},
-		{Command: downloadAndUploadCmd, WechatAccount: true, DiscoveryOrder: 9},
-		{Command: generateImageCmd, WechatAccount: true, DiscoveryOrder: 10},
-		{Command: generateCoverCmd, WechatAccount: true, DiscoveryOrder: 11},
-		{Command: generateInfographicCmd, WechatAccount: true, DiscoveryOrder: 12},
-		{Command: createDraftCmd, WechatAccount: true, DiscoveryOrder: 13},
-		{Command: versionCmd, DiscoveryOrder: 24},
+		{Command: uploadImageCmd, WechatAccount: true, DiscoveryOrder: 9},
+		{Command: downloadAndUploadCmd, WechatAccount: true, DiscoveryOrder: 10},
+		{Command: generateImageCmd, WechatAccount: true, DiscoveryOrder: 11},
+		{Command: generateCoverCmd, WechatAccount: true, DiscoveryOrder: 12},
+		{Command: generateInfographicCmd, WechatAccount: true, DiscoveryOrder: 13},
+		{Command: createDraftCmd, WechatAccount: true, DiscoveryOrder: 14},
+		{Command: versionCmd, DiscoveryOrder: 25},
 		{Command: convertCmd, WechatAccount: true, DiscoveryOrder: 1},
 		{Command: inspectCmd, WechatAccount: true, DiscoveryOrder: 2},
-		{Command: previewCmd, DiscoveryOrder: 3},
-		{Command: configCmd, DiscoveryOrder: 4},
-		{Command: capabilitiesCmd, DiscoveryOrder: 23},
-		{Command: providersCmd, DiscoveryOrder: 16},
-		{Command: themesCmd, DiscoveryOrder: 17},
-		{Command: promptsCmd, DiscoveryOrder: 18},
-		{Command: writeCmd, DiscoveryOrder: 5},
-		{Command: humanizeCmd, DiscoveryOrder: 6},
-		{Command: titleCmd, DiscoveryOrder: 7},
-		{Command: testHTMLCmd, WechatAccount: true, DiscoveryOrder: 15},
-		{Command: createImagePostCmd, WechatAccount: true, DiscoveryOrder: 14},
-		{Command: layoutCmd, DiscoveryOrder: 19},
-		{Command: brandCmd, DiscoveryOrder: 20},
-		{Command: doctorCmd, DiscoveryOrder: 21},
-		{Command: skillsCmd, DiscoveryOrder: 22},
+		{Command: adviseCmd, DiscoveryOrder: 3},
+		{Command: previewCmd, DiscoveryOrder: 4},
+		{Command: configCmd, DiscoveryOrder: 5},
+		{Command: capabilitiesCmd, DiscoveryOrder: 24},
+		{Command: providersCmd, DiscoveryOrder: 17},
+		{Command: themesCmd, DiscoveryOrder: 18},
+		{Command: promptsCmd, DiscoveryOrder: 19},
+		{Command: writeCmd, DiscoveryOrder: 6},
+		{Command: humanizeCmd, DiscoveryOrder: 7},
+		{Command: titleCmd, DiscoveryOrder: 8},
+		{Command: testHTMLCmd, WechatAccount: true, DiscoveryOrder: 16},
+		{Command: createImagePostCmd, WechatAccount: true, DiscoveryOrder: 15},
+		{Command: layoutCmd, DiscoveryOrder: 20},
+		{Command: brandCmd, DiscoveryOrder: 21},
+		{Command: doctorCmd, DiscoveryOrder: 22},
+		{Command: skillsCmd, DiscoveryOrder: 23},
 	}
 }
 

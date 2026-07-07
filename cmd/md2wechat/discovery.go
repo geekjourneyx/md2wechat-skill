@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	articleadvise "github.com/geekjourneyx/md2wechat-skill/internal/advise"
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 	"github.com/geekjourneyx/md2wechat-skill/internal/converter"
 	"github.com/geekjourneyx/md2wechat-skill/internal/image"
@@ -335,12 +336,32 @@ func buildCapabilitiesData() (map[string]any, error) {
 		"providers":         providers,
 		"image_generation":  buildImageGenerationCapabilityData(),
 		"title_generation":  buildTitleGenerationCapabilityData(),
+		"article_advice":    buildArticleAdviceCapabilityData(),
 		"themes":            themes,
 		"layout":            buildLayoutCapabilityData(),
 		"prompts":           allPrompts,
 		"prompt_kinds":      sortedPromptKinds(allPrompts),
 		"prompt_archetypes": sortedPromptArchetypes(allPrompts),
 	}, nil
+}
+
+func buildArticleAdviceCapabilityData() map[string]any {
+	return map[string]any{
+		"available":          true,
+		"command":            "advise",
+		"requires_json":      true,
+		"side_effects":       false,
+		"deterministic":      true,
+		"max_actions":        3,
+		"max_layout_modules": 3,
+		"tools": []string{
+			articleadvise.ToolTitle,
+			articleadvise.ToolCover,
+			articleadvise.ToolLayout,
+			articleadvise.ToolMicroEdit,
+		},
+		"response_code": codeAdviseCompleted,
+	}
 }
 
 func buildImageGenerationCapabilityData() map[string]any {
