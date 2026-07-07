@@ -339,6 +339,8 @@ md2wechat inspect article.md --json
 
 Agent 应优先检查 `data.readiness.targets` 来决定是否可以继续，`blocked` 时读取 `data.readiness.blockers` 中 `blocks` 包含对应目标的检查项。
 
+当用户已有文章或初稿，但没有指定标题、封面或排版模块时，先运行 `md2wechat advise <article.md> --json`。把它当成可选增强建议，不要把它当成发布 readiness；发布前仍以 `inspect --json data.readiness.targets/blockers` 为准。
+
 #### Inspect Readiness 契约
 
 - `inspect --json` 的唯一机器契约是 `data.readiness`；不要创建或读取 `data.agent_readiness`、`data.target_readiness` 或 `ArticleState`。

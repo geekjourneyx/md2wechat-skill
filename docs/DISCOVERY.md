@@ -12,6 +12,7 @@
 - API、草稿、上传或配置 readiness：`md2wechat doctor --json`，必要时再 `md2wechat config show --format json`
 - 多公众号本地配置检查：`md2wechat config wechat-accounts --json`
 - 文章排版且用户未指定主题或模块：`md2wechat themes list --json`、`md2wechat layout list --json`
+- 已有文章或初稿，不确定下一步是否需要标题、封面或排版：`md2wechat advise <article.md> --json`
 - 已指定某个资源：使用对应的 `providers show`、`themes show`、`prompts show` 或 `layout show`
 - 图片生成或图片 prompt 选择：`md2wechat providers list --json`、`md2wechat prompts list --kind image --json`
 - 公众号标题建议：`md2wechat title suggest <article.md> --json`，必要时再 `md2wechat prompts show wechat-title-expert --kind title --json`
@@ -33,6 +34,7 @@ md2wechat capabilities --json
 - `title_generation` 的 host-Agent handoff 边界
 - 当前可枚举的 theme
 - 当前可枚举的 prompt catalog
+- `data.article_advice` 是否可用、命令名、建议工具、响应 code、是否要求 JSON、是否有副作用
 - `layout` catalog 是否可用、模块数量、schema version、是否仅 API 模式渲染
 - `skills` 是否作为当前二进制的内置 Agent SOP 入口开放
 
@@ -40,6 +42,14 @@ md2wechat capabilities --json
 
 ```json
 {
+  "article_advice": {
+    "available": true,
+    "command": "advise",
+    "tools": ["title", "cover", "layout", "micro_edit"],
+    "response_code": "ADVISE_COMPLETED",
+    "requires_json": true,
+    "side_effects": false
+  },
   "layout": {
     "available": true,
     "module_count": 43,
@@ -47,7 +57,7 @@ md2wechat capabilities --json
     "api_mode_only": true,
     "schema_version": "1"
   },
-  "commands": ["convert", "inspect", "preview", "layout", "themes", "skills"]
+  "commands": ["convert", "inspect", "advise", "preview", "layout", "themes", "skills"]
 }
 ```
 
@@ -104,6 +114,16 @@ md2wechat preview article.md --json
 - `preview` 第一版会生成本地 HTML 预览文件；`--json` 返回输出路径和 render metadata。
 - `preview --mode ai` 不会声称展示最终视觉稿，只会明确降级为确认页。
 - `--json` 走稳定 machine-readable contract；stdout 只保留 JSON，便于 Agent 和脚本直接解析。
+
+## Article Advice
+
+```bash
+md2wechat advise article.md --json
+```
+
+`advise --json` 是只读决策路由器。它根据文章内可观察信号推荐是否调用 `title suggest`、`generate_cover --plan --json`，或检查/应用合适的 layout modules；也可能建议人工确认的 `micro_edit`。
+
+它不生成内容、不写回文件、不上传、不创建草稿。发布前是否可执行仍以 `inspect --json` 的 `data.readiness.targets/blockers` 为准。
 
 ## 图片 Provider
 

@@ -146,6 +146,16 @@ md2wechat title suggest article.md --json --hook-level 3
 
 完整工作流、`--hook-level` 选择建议、模型返回 JSON 字段和 Agent 使用边界见 [公众号标题建议](TITLE_SUGGEST.md)。
 
+### 文章建议
+
+当你已有文章或初稿，但不确定是否需要标题、封面或高级排版时，先运行：
+
+```bash
+md2wechat advise article.md --json
+```
+
+`advise` 只返回可选增强建议，不修改 Markdown，不生成标题或封面，不插入 layout 模块，不上传图片，不创建草稿，也不写任何文件。发布前 readiness 仍然使用 `inspect --json` 判断。
+
 ### 确认层命令
 
 ```bash

@@ -615,6 +615,10 @@ md2wechat generate_cover --article article.md --plan --json
 
 返回里的 `requires_provider:false` 和 `requires_image_api_key:false` 表示 md2wechat 这一侧不需要图片服务配置。真正的图片文件只有在宿主 Agent 调用 Image Gen 并保存后才会出现。完整流程见 [Agent 图片计划模式](AGENT_IMAGE_GEN.md)。
 
+### Q14.2：`advise` 和 `inspect` 有什么区别？
+
+`inspect` 是发布前 readiness 真相源，回答“能不能继续 convert/upload/draft”。`advise` 是可选增强建议，回答“这篇已有文章是否值得最小改动地加标题建议、封面计划、layout 模块或微调”。如果 `inspect` 的目标是 `blocked`，先修 blocker，不要用 `advise` 绕过发布前检查。
+
 ---
 
 ## 微信与草稿

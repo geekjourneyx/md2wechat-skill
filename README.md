@@ -197,6 +197,7 @@ md2wechat layout validate --file article.md --json
 | 命令 | 用途 |
 |---|---|
 | `inspect` | 检查文章元数据和发布 readiness |
+| `advise` | 为已有文章推荐可选的最小增强动作 |
 | `preview` | 本地预览，不上传、不创建草稿 |
 | `convert` | Markdown 转微信 HTML，可选创建草稿 |
 | `write` | 从想法生成文章 |
@@ -217,6 +218,7 @@ md2wechat layout validate --file article.md --json
 | [QUICKSTART](docs/QUICKSTART.md) | 新手主路径 |
 | [USAGE](docs/USAGE.md) | 命令完整说明 |
 | [DISCOVERY](docs/DISCOVERY.md) | Agent discovery 契约 |
+| [ADVISE](docs/ADVISE.md) | 已有文章的可选增强建议 |
 | [LAYOUT](docs/LAYOUT.md) | 43 个高级排版模块 |
 | [HUMANIZE](docs/HUMANIZE.md) | AI 去痕与 authentic 写作 |
 | [AGENT_IMAGE_GEN](docs/AGENT_IMAGE_GEN.md) | 宿主 Agent Image Gen 工作流 |
