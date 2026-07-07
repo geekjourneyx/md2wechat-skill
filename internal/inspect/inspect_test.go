@@ -127,6 +127,7 @@ func TestRunMarksLocalImageExists(t *testing.T) {
 		MarkdownFile: filepath.Join(dir, "article.md"),
 		Markdown:     "![ok](images/ok.png)\n",
 		Mode:         "ai",
+		Theme:        "autumn-warm",
 	})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
@@ -428,6 +429,7 @@ func TestRunReadinessMatrix(t *testing.T) {
 				MarkdownFile:    filepath.Join(t.TempDir(), "article.md"),
 				Markdown:        "# 标题\n",
 				Mode:            "ai",
+				Theme:           "autumn-warm",
 				DraftRequested:  true,
 				UploadRequested: true,
 				Config:          &config.Config{},
@@ -634,6 +636,76 @@ func TestRunMakesReadinessFalseForBlockingChecks(t *testing.T) {
 	})
 }
 
+func TestRunBlocksConvertForThemeCompatibilityErrors(t *testing.T) {
+	fullCfg := &config.Config{
+		MD2WechatAPIKey: "api-key",
+		WechatAppID:     "appid",
+		WechatSecret:    "secret",
+	}
+
+	cases := []struct {
+		name  string
+		theme string
+		code  string
+	}{
+		{
+			name:  "api mode with ai theme",
+			theme: "autumn-warm",
+			code:  "THEME_MODE_MISMATCH",
+		},
+		{
+			name:  "api mode with missing theme",
+			theme: "missing-theme",
+			code:  "THEME_NOT_FOUND",
+		},
+		{
+			name:  "api mode with non-selectable api collection",
+			theme: "api-collection",
+			code:  "THEME_NOT_SELECTABLE",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := Run(&Input{
+				MarkdownFile:    filepath.Join(t.TempDir(), "article.md"),
+				Markdown:        "# 标题\n",
+				Mode:            "api",
+				Theme:           tc.theme,
+				UploadRequested: true,
+				DraftRequested:  true,
+				CoverMediaID:    "existing-cover-id",
+				Config:          fullCfg,
+			})
+			if err != nil {
+				t.Fatalf("Run() error = %v", err)
+			}
+
+			check, ok := findCheck(result.Checks, tc.code)
+			if !ok {
+				t.Fatalf("missing check %s in %#v", tc.code, result.Checks)
+			}
+			if check.Level != LevelError || check.Field != "theme" {
+				t.Fatalf("theme check = %#v", check)
+			}
+			if result.Readiness.ConvertReady {
+				t.Fatal("expected convert_ready false when theme compatibility fails")
+			}
+			if result.Readiness.Targets.Convert != ReadinessTargetBlocked {
+				t.Fatalf("convert target = %q", result.Readiness.Targets.Convert)
+			}
+
+			blocker, ok := findReadinessBlocker(result.Readiness.Blockers, tc.code)
+			if !ok {
+				t.Fatalf("missing blocker %s in %#v", tc.code, result.Readiness.Blockers)
+			}
+			if !slices.Equal(blocker.Blocks, []string{"convert", "upload", "draft"}) {
+				t.Fatalf("%s blocks = %#v", tc.code, blocker.Blocks)
+			}
+		})
+	}
+}
+
 func TestRunRejectsInvalidMode(t *testing.T) {
 	_, err := Run(&Input{
 		MarkdownFile: filepath.Join(t.TempDir(), "article.md"),
@@ -706,6 +778,7 @@ func TestRunAddsMetadataAndImageIntentChecks(t *testing.T) {
 		MarkdownFile: filepath.Join(dir, "article.md"),
 		Markdown:     markdown,
 		Mode:         "ai",
+		Theme:        "autumn-warm",
 	})
 	if err != nil {
 		t.Fatalf("Run() error = %v", err)
@@ -733,6 +806,15 @@ func hasCheckCode(checks []Check, code string) bool {
 		}
 	}
 	return false
+}
+
+func findCheck(checks []Check, code string) (Check, bool) {
+	for _, check := range checks {
+		if check.Code == code {
+			return check, true
+		}
+	}
+	return Check{}, false
 }
 
 func findReadinessBlocker(blockers []ReadinessBlocker, code string) (ReadinessBlocker, bool) {

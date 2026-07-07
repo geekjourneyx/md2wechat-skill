@@ -426,6 +426,8 @@ func buildChecks(input *Input, result *Result) []Check {
 		})
 	}
 
+	appendThemeCompatibilityCheck(result, &checks)
+
 	if result.Context.Mode == "ai" {
 		checks = append(checks, Check{
 			Level:        LevelInfo,
@@ -490,6 +492,38 @@ func buildChecks(input *Input, result *Result) []Check {
 	return checks
 }
 
+func appendThemeCompatibilityCheck(result *Result, checks *[]Check) {
+	mode := converter.ConvertMode(strings.TrimSpace(result.Context.Mode))
+	if mode == "" {
+		mode = converter.ModeAPI
+	}
+	theme := strings.TrimSpace(result.Context.Theme)
+	if theme == "" {
+		theme = "default"
+	}
+
+	themeManager := converter.NewThemeManager()
+	if _, err := themeManager.ResolveThemeForMode(mode, theme); err != nil {
+		code := "THEME_INVALID"
+		switch {
+		case converter.IsThemeNotFound(err):
+			code = "THEME_NOT_FOUND"
+		case converter.IsThemeNotSelectable(err):
+			code = "THEME_NOT_SELECTABLE"
+		case converter.IsThemeModeMismatch(err):
+			code = "THEME_MODE_MISMATCH"
+		}
+
+		*checks = append(*checks, Check{
+			Level:        LevelError,
+			Code:         code,
+			Message:      err.Error(),
+			Field:        "theme",
+			SuggestedFix: "run md2wechat themes list --json and choose a selectable theme for the selected mode",
+		})
+	}
+}
+
 func hasBlockingCheck(checks []Check, blocks func(string) bool) bool {
 	for _, check := range checks {
 		if check.Level == LevelError && blocks(check.Code) {
@@ -501,7 +535,8 @@ func hasBlockingCheck(checks []Check, blocks func(string) bool) bool {
 
 func blocksConvert(code string) bool {
 	switch code {
-	case "TITLE_TOO_LONG", "AUTHOR_TOO_LONG", "DIGEST_TOO_LONG", "MISSING_API_KEY":
+	case "TITLE_TOO_LONG", "AUTHOR_TOO_LONG", "DIGEST_TOO_LONG", "MISSING_API_KEY",
+		"THEME_NOT_FOUND", "THEME_NOT_SELECTABLE", "THEME_MODE_MISMATCH", "THEME_INVALID":
 		return true
 	default:
 		return false
