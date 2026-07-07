@@ -193,6 +193,10 @@ func TestBlockedReadinessTargetsContract(t *testing.T) {
 		{code: "AUTHOR_TOO_LONG", want: []string{"convert", "upload", "draft"}},
 		{code: "DIGEST_TOO_LONG", want: []string{"convert", "upload", "draft"}},
 		{code: "MISSING_API_KEY", want: []string{"convert", "upload", "draft"}},
+		{code: "THEME_NOT_FOUND", want: []string{"convert", "upload", "draft"}},
+		{code: "THEME_NOT_SELECTABLE", want: []string{"convert", "upload", "draft"}},
+		{code: "THEME_MODE_MISMATCH", want: []string{"convert", "upload", "draft"}},
+		{code: "THEME_INVALID", want: []string{"convert", "upload", "draft"}},
 		{code: "LOCAL_IMAGE_MISSING", want: []string{"upload", "draft"}},
 		{code: "MISSING_WECHAT_CONFIG", want: []string{"upload", "draft"}},
 		{code: "MISSING_COVER", want: []string{"draft"}},
@@ -207,6 +211,147 @@ func TestBlockedReadinessTargetsContract(t *testing.T) {
 		t.Run(tc.code, func(t *testing.T) {
 			if got := blockedReadinessTargets(tc.code); !slices.Equal(got, tc.want) {
 				t.Fatalf("blockedReadinessTargets(%q) = %#v, want %#v", tc.code, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestRunReadinessTargetsAndBlockersStayAligned(t *testing.T) {
+	fullCfg := &config.Config{
+		MD2WechatAPIKey: "api-key",
+		WechatAppID:     "appid",
+		WechatSecret:    "secret",
+	}
+
+	cases := []struct {
+		name              string
+		input             Input
+		wantTargets       ReadinessTargets
+		wantBlockerCode   string
+		wantBlockerBlocks []string
+	}{
+		{
+			name: "metadata limit blocks all publish targets via TITLE_TOO_LONG",
+			input: Input{
+				MarkdownFile:    filepath.Join(t.TempDir(), "article.md"),
+				Markdown:        "# 标题\n",
+				Mode:            "api",
+				TitleOverride:   strings.Repeat("标", 33),
+				UploadRequested: true,
+				DraftRequested:  true,
+				CoverMediaID:    "existing-cover-id",
+				Config:          fullCfg,
+			},
+			wantTargets: ReadinessTargets{
+				Preview: ReadinessTargetReady,
+				Convert: ReadinessTargetBlocked,
+				Upload:  ReadinessTargetBlocked,
+				Draft:   ReadinessTargetBlocked,
+			},
+			wantBlockerCode:   "TITLE_TOO_LONG",
+			wantBlockerBlocks: []string{"convert", "upload", "draft"},
+		},
+		{
+			name: "theme mismatch blocks all publish targets via THEME_MODE_MISMATCH",
+			input: Input{
+				MarkdownFile:    filepath.Join(t.TempDir(), "article.md"),
+				Markdown:        "# 标题\n",
+				Mode:            "api",
+				Theme:           "autumn-warm",
+				UploadRequested: true,
+				DraftRequested:  true,
+				CoverMediaID:    "existing-cover-id",
+				Config:          fullCfg,
+			},
+			wantTargets: ReadinessTargets{
+				Preview: ReadinessTargetReady,
+				Convert: ReadinessTargetBlocked,
+				Upload:  ReadinessTargetBlocked,
+				Draft:   ReadinessTargetBlocked,
+			},
+			wantBlockerCode:   "THEME_MODE_MISMATCH",
+			wantBlockerBlocks: []string{"convert", "upload", "draft"},
+		},
+		{
+			name: "missing local image blocks upload and draft only via LOCAL_IMAGE_MISSING",
+			input: Input{
+				MarkdownFile:    filepath.Join(t.TempDir(), "article.md"),
+				Markdown:        "# 标题\n\n![missing](images/missing.png)\n",
+				Mode:            "api",
+				UploadRequested: true,
+				DraftRequested:  true,
+				CoverMediaID:    "existing-cover-id",
+				Config:          fullCfg,
+			},
+			wantTargets: ReadinessTargets{
+				Preview: ReadinessTargetReady,
+				Convert: ReadinessTargetReady,
+				Upload:  ReadinessTargetBlocked,
+				Draft:   ReadinessTargetBlocked,
+			},
+			wantBlockerCode:   "LOCAL_IMAGE_MISSING",
+			wantBlockerBlocks: []string{"upload", "draft"},
+		},
+		{
+			name: "missing cover blocks draft only via MISSING_COVER",
+			input: Input{
+				MarkdownFile:   filepath.Join(t.TempDir(), "article.md"),
+				Markdown:       "# 标题\n",
+				Mode:           "api",
+				DraftRequested: true,
+				Config:         fullCfg,
+			},
+			wantTargets: ReadinessTargets{
+				Preview: ReadinessTargetReady,
+				Convert: ReadinessTargetReady,
+				Upload:  ReadinessTargetReady,
+				Draft:   ReadinessTargetBlocked,
+			},
+			wantBlockerCode:   "MISSING_COVER",
+			wantBlockerBlocks: []string{"draft"},
+		},
+		{
+			name: "not requested upload and draft remain not_requested",
+			input: Input{
+				MarkdownFile: filepath.Join(t.TempDir(), "article.md"),
+				Markdown:     "# 标题\n",
+				Mode:         "api",
+				Config:       &config.Config{MD2WechatAPIKey: "api-key"},
+			},
+			wantTargets: ReadinessTargets{
+				Preview: ReadinessTargetReady,
+				Convert: ReadinessTargetReady,
+				Upload:  ReadinessTargetNotRequested,
+				Draft:   ReadinessTargetNotRequested,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := Run(&tc.input)
+			if err != nil {
+				t.Fatalf("Run() error = %v", err)
+			}
+
+			if result.Readiness.Targets != tc.wantTargets {
+				t.Fatalf("targets = %#v, want %#v", result.Readiness.Targets, tc.wantTargets)
+			}
+			assertReadinessLegacyFieldsMatchTargets(t, result.Readiness)
+
+			if tc.wantBlockerCode == "" {
+				if len(result.Readiness.Blockers) != 0 {
+					t.Fatalf("blockers = %#v", result.Readiness.Blockers)
+				}
+				return
+			}
+
+			blocker, ok := findReadinessBlocker(result.Readiness.Blockers, tc.wantBlockerCode)
+			if !ok {
+				t.Fatalf("missing blocker %s in %#v", tc.wantBlockerCode, result.Readiness.Blockers)
+			}
+			if !slices.Equal(blocker.Blocks, tc.wantBlockerBlocks) {
+				t.Fatalf("%s blocks = %#v, want %#v", tc.wantBlockerCode, blocker.Blocks, tc.wantBlockerBlocks)
 			}
 		})
 	}
@@ -824,4 +969,28 @@ func findReadinessBlocker(blockers []ReadinessBlocker, code string) (ReadinessBl
 		}
 	}
 	return ReadinessBlocker{}, false
+}
+
+func assertReadinessLegacyFieldsMatchTargets(t *testing.T, readiness Readiness) {
+	t.Helper()
+
+	if got, want := readiness.Targets.Preview, previewReadinessTarget(readiness.PreviewFidelity); got != want {
+		t.Fatalf("preview target = %q, want %q for preview_fidelity %q", got, want, readiness.PreviewFidelity)
+	}
+	if got, want := readiness.Targets.Convert, readyReadinessTarget(readiness.ConvertReady); got != want {
+		t.Fatalf("convert target = %q, want %q for convert_ready %t", got, want, readiness.ConvertReady)
+	}
+	assertRequestedReadinessTargetMatchesLegacy(t, "upload", readiness.Targets.Upload, readiness.UploadReady)
+	assertRequestedReadinessTargetMatchesLegacy(t, "draft", readiness.Targets.Draft, readiness.DraftReady)
+}
+
+func assertRequestedReadinessTargetMatchesLegacy(t *testing.T, name, target string, ready bool) {
+	t.Helper()
+
+	if target == ReadinessTargetNotRequested {
+		return
+	}
+	if got, want := target, readyReadinessTarget(ready); got != want {
+		t.Fatalf("%s target = %q, want %q for legacy ready %t", name, got, want, ready)
+	}
 }
