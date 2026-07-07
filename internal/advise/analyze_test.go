@@ -52,6 +52,23 @@ func TestAnalyzeRecommendsTitleWhenTitleMissing(t *testing.T) {
 	}
 }
 
+func TestAnalyzeCoverCommandHintIncludesCLIName(t *testing.T) {
+	result, err := Analyze(Input{
+		SourceFile: filepath.Join(t.TempDir(), "feature.md"),
+		Markdown:   "# 标题\n\n## 背景\n\n正文。\n\n## 方案\n\n正文。",
+	})
+	if err != nil {
+		t.Fatalf("Analyze() error = %v", err)
+	}
+	action := findAction(result.Actions, ToolCover)
+	if action == nil {
+		t.Fatalf("missing cover action in %#v", result.Actions)
+	}
+	if action.CommandHint != "md2wechat generate_cover --article feature.md --plan --json" {
+		t.Fatalf("command_hint = %q", action.CommandHint)
+	}
+}
+
 func TestAnalyzeRecommendsBoundedLayoutModules(t *testing.T) {
 	markdown := "# 教程\n\n## 背景\n\n正文。\n\n## 步骤\n\n1. 第一步\n2. 第二步\n\n## 结果\n\n> 这是一句可以引用的金句。\n\n## 总结\n\n正文。"
 	result, err := Analyze(Input{
@@ -78,6 +95,91 @@ func TestAnalyzeRecommendsBoundedLayoutModules(t *testing.T) {
 		if len(module.Evidence) == 0 {
 			t.Fatalf("%s evidence = %#v", name, module.Evidence)
 		}
+	}
+}
+
+func TestAnalyzeDoesNotTreatVersionsOrDatesAsMetrics(t *testing.T) {
+	result, err := Analyze(Input{
+		SourceFile: filepath.Join(t.TempDir(), "article.md"),
+		Markdown:   "# 发布说明\n\n版本 v2.9.0 在 2026 年发布。\n\n这只是日期和版本号，不是业务指标。",
+	})
+	if err != nil {
+		t.Fatalf("Analyze() error = %v", err)
+	}
+	if hasSignal(result.Article.Signals, "has_metrics") {
+		t.Fatalf("signals = %#v", result.Article.Signals)
+	}
+	if findModule(result.Layout.Recommended, "metrics") != nil {
+		t.Fatalf("unexpected metrics recommendation: %#v", result.Layout.Recommended)
+	}
+	if !hasRejectedModule(result.Layout.Rejected, "metrics") {
+		t.Fatalf("expected metrics rejection: %#v", result.Layout.Rejected)
+	}
+	if result.Article.Type == ArticleTypeReport {
+		t.Fatalf("article type = %q", result.Article.Type)
+	}
+}
+
+func TestAnalyzeIgnoresFencedCodeBlocksForSemanticDetection(t *testing.T) {
+	markdown := "# 标题\n\n```markdown\n## 代码里的标题\n1. 第一步\n2. 第二步\n> 代码里的引用\n点击下载\n增长 30%\n![cover](cover.png)\n```\n\n正文。"
+	result, err := Analyze(Input{
+		SourceFile: filepath.Join(t.TempDir(), "article.md"),
+		Markdown:   markdown,
+	})
+	if err != nil {
+		t.Fatalf("Analyze() error = %v", err)
+	}
+	if result.Article.Stats.H2Count != 0 || result.Article.Stats.OrderedListCount != 0 || result.Article.Stats.BlockquoteCount != 0 || result.Article.Stats.ImageCount != 0 {
+		t.Fatalf("stats counted fenced content: %#v", result.Article.Stats)
+	}
+	for _, signal := range []string{"has_steps", "has_quotes", "has_cta", "has_metrics"} {
+		if hasSignal(result.Article.Signals, signal) {
+			t.Fatalf("unexpected signal %q in %#v", signal, result.Article.Signals)
+		}
+	}
+	if len(result.Layout.Recommended) != 0 {
+		t.Fatalf("unexpected layout recommendations from fenced content: %#v", result.Layout.Recommended)
+	}
+}
+
+func TestAnalyzeCTAAllowsNoRegistrationCopy(t *testing.T) {
+	result, err := Analyze(Input{
+		SourceFile: filepath.Join(t.TempDir(), "article.md"),
+		Markdown:   "# 标题\n\n无需注册，点击下载完整清单。",
+	})
+	if err != nil {
+		t.Fatalf("Analyze() error = %v", err)
+	}
+	if !hasSignal(result.Article.Signals, "has_cta") {
+		t.Fatalf("signals = %#v", result.Article.Signals)
+	}
+	module := findModule(result.Layout.Recommended, "cta")
+	if module == nil {
+		t.Fatalf("missing cta recommendation: %#v", result.Layout.Recommended)
+	}
+	if module.State != ActionStateRecommended {
+		t.Fatalf("cta state = %q", module.State)
+	}
+}
+
+func TestAnalyzeOmitsBodyRelativeEvidenceLineNumbersAfterFrontmatter(t *testing.T) {
+	markdown := "---\ntitle: Frontmatter Title\n---\n\n## 背景\n\n正文。\n\n## 方案\n\n正文。\n\n## 结果\n\n正文。"
+	result, err := Analyze(Input{
+		SourceFile: filepath.Join(t.TempDir(), "article.md"),
+		Markdown:   markdown,
+	})
+	if err != nil {
+		t.Fatalf("Analyze() error = %v", err)
+	}
+	module := findModule(result.Layout.Recommended, "toc")
+	if module == nil {
+		t.Fatalf("missing toc recommendation: %#v", result.Layout.Recommended)
+	}
+	if len(module.Evidence) == 0 {
+		t.Fatalf("toc evidence = %#v", module.Evidence)
+	}
+	if module.Evidence[0].Location != nil && module.Evidence[0].Location.Line != 0 {
+		t.Fatalf("misleading body-relative evidence location: %#v", module.Evidence[0].Location)
 	}
 }
 
@@ -211,6 +313,15 @@ func findModule(modules []ModuleAdvice, name string) *ModuleAdvice {
 func hasRejectedModule(modules []ModuleAdvice, name string) bool {
 	for _, module := range modules {
 		if module.Name == name && module.State == ActionStateSkip {
+			return true
+		}
+	}
+	return false
+}
+
+func hasSignal(signals []string, name string) bool {
+	for _, signal := range signals {
+		if signal == name {
 			return true
 		}
 	}
