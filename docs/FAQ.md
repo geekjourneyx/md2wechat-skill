@@ -634,7 +634,7 @@ md2wechat preview article.md
 
 区别是：
 
-- `inspect`：解释系统最终会怎么理解你的文章，包括标题/作者/摘要来源、H1 风险；`--json` 会在 `data.readiness.targets/blockers` 输出机器可读的 `upload/draft` 目标状态和 blocker 映射。
+- `inspect`：解释系统最终会怎么理解你的文章，包括标题/作者/摘要来源、H1 风险；`--json` 会在 `data.readiness.targets/blockers` 输出机器可读的 `convert/upload/draft` 目标状态和 blocker 映射，是发布前能否继续的真相源。
 - `preview`：生成一个本地 HTML 预览文件，用来确认当前上下文下能否拿到可信预览。
 
 第一版 `preview` 不是可编辑工作台，也不会触发上传、草稿或写回 Markdown。

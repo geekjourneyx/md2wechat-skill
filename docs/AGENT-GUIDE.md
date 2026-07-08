@@ -344,11 +344,12 @@ Agent 应优先检查 `data.readiness.targets` 来决定是否可以继续，`bl
 #### Inspect Readiness 契约
 
 - `inspect --json` 的唯一机器契约是 `data.readiness`；不要创建或读取 `data.agent_readiness`、`data.target_readiness` 或 `ArticleState`。
-- `convert_ready`、`upload_ready`、`draft_ready`、`preview_fidelity` 是保留字段；新 Agent 决策应优先使用 `targets/blockers`。
-- `targets.convert` 只使用 `ready` / `blocked`。
-- `targets.upload` 和 `targets.draft` 使用 `ready` / `blocked` / `not_requested`。
-- `targets.preview` 表示预览保真度，只使用 `ready` / `degraded`，不是发布阻断状态。
+- `convert_ready`、`upload_ready`、`draft_ready`、`preview_fidelity` 等 legacy booleans 会保留；新 Agent 决策使用 `targets/blockers`。
+- `targets.convert` 只使用 `ready` / `blocked`；如果是 `blocked`，不要继续 `convert` / `upload` / `draft`。
+- `targets.upload` 和 `targets.draft` 使用 `ready` / `blocked` / `not_requested`；如果用户请求 upload/draft 但目标是 `not_requested`，说明 inspect 运行时没有包含对应目标参数，应重新运行 `md2wechat inspect <article.md> --upload --json` 或 `md2wechat inspect <article.md> --draft --cover ... --json`，再根据 `ready` / `blocked` 决策。
+- `targets.preview` 表示预览保真度，只使用 `ready` / `degraded`，不是发布 blocker。
 - `blockers` 只包含会阻断至少一个目标的 error-level check；warn/info 仍只留在 `data.checks`。
+- `inspect readiness` 覆盖 metadata length、API key、theme/mode compatibility、本地图片、WeChat config、cover inputs。
 
 ### 5.3 预览文章
 

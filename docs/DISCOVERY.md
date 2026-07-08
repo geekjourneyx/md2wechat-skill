@@ -103,13 +103,15 @@ md2wechat config wechat-accounts --json
 
 ```bash
 md2wechat inspect article.md --json
+md2wechat inspect article.md --upload --json
+md2wechat inspect article.md --draft --cover ./cover.jpg --json
 md2wechat preview article.md --json
 ```
 
 其中：
 
-- `inspect` 用来确认最终标题、作者、摘要来源，以及 `data.readiness.targets/blockers` 中的 `upload/draft` 目标状态。
-- `inspect --json` 的 `data.readiness.targets` 和 `data.readiness.blockers` 会把 `checks` 投影为机器可读的执行目标状态和 blocker 映射。
+- `inspect` 用来确认最终标题、作者、摘要来源，以及 `data.readiness.targets/blockers` 中的 `convert/upload/draft` 目标状态。
+- Agent 在决定是否继续 `convert`、`upload`、`draft` 前，必须用即将执行的 same publish target 运行 `inspect`，并读取 `inspect --json` 的 `data.readiness.targets` 和 `data.readiness.blockers`。
 - `inspect` 的 `checks` 会直接暴露语义边界，例如 `TITLE_BODY_MISMATCH`、`DIGEST_METADATA_ONLY`、`IMAGE_REPLACEMENT_REQUIRES_UPLOAD_OR_DRAFT`。
 - `preview` 第一版会生成本地 HTML 预览文件；`--json` 返回输出路径和 render metadata。
 - `preview --mode ai` 不会声称展示最终视觉稿，只会明确降级为确认页。
