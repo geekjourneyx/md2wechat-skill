@@ -11,6 +11,22 @@ This repository is a Go CLI project in stabilization. Treat documentation and ex
 5. Preserve CLI and documentation compatibility unless the task explicitly calls for a breaking change.
 6. When a task depends on providers, themes, or prompt templates, prefer CLI discovery output over guessing or stale docs.
 
+## Anti-Noise Agent Decision Rules
+
+Agent-facing commands must stay deterministic, observable, and explainable. Do not add hardcoded phrase lists, style word lists, or subjective quality heuristics to drive Agent decisions in commands such as `advise`, `inspect`, `preview`, `convert`, `upload`, or `draft`.
+
+Allowed deterministic rules must be based on observable structure, explicit CLI/config state, or platform constraints, such as headings, images, metadata limits, local asset existence, credentials, supported themes, layout syntax, and command capabilities.
+
+If a decision requires judging tone, naturalness, AI traces, writing quality, or editorial taste, keep it outside deterministic CLI routing. Require explicit user intent, host-Agent judgment, or an existing dedicated command. Do not make `advise` or readiness commands infer those judgments from hardcoded text patterns.
+
+Every Agent-facing rule should pass these checks:
+
+1. Is the signal observable without subjective interpretation?
+2. Would two agents reach the same result from the same inputs?
+3. Is the recommendation explainable from concrete evidence?
+4. Does it avoid writing, rewriting, uploading, or publishing as a side effect?
+5. Is it preventing a real wrong next step rather than adding a nice-to-have suggestion?
+
 ## Discovery-First Workflow
 
 Before assuming a feature, resource, or prompt exists, inspect the running CLI:

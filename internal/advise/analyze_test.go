@@ -260,6 +260,25 @@ func TestAnalyzeKeepsMicroEditsSeparateFromCommandActions(t *testing.T) {
 	}
 }
 
+func TestAnalyzeDoesNotRouteFormulaicPhrasesToHumanize(t *testing.T) {
+	result, err := Analyze(Input{
+		SourceFile: filepath.Join(t.TempDir(), "article.md"),
+		Markdown: "# 标题\n\n值得注意的是，这里有常见过渡句。\n\n" +
+			"从某种程度上，这些短语本身不足以证明文章需要去痕。",
+	})
+	if err != nil {
+		t.Fatalf("Analyze() error = %v", err)
+	}
+	if findAction(result.Actions, "humanize") != nil {
+		t.Fatalf("formulaic phrases should not create a humanize action: %#v", result.Actions)
+	}
+	for _, edit := range result.MicroEdits {
+		if edit.Kind == "reduce_formulaic_language" {
+			t.Fatalf("formulaic phrases should not create humanize micro edit: %#v", result.MicroEdits)
+		}
+	}
+}
+
 func TestAnalyzeDoesNotWriteFiles(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "article.md")
