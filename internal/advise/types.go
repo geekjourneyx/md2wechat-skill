@@ -69,6 +69,7 @@ type Action struct {
 	Reason               string     `json:"reason"`
 	Evidence             []Evidence `json:"evidence"`
 	CommandHint          string     `json:"command_hint,omitempty"`
+	CommandArgs          []string   `json:"command_args,omitempty"`
 	RequiresConfirmation bool       `json:"requires_confirmation"`
 }
 

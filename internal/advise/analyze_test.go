@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -27,8 +28,9 @@ func TestAnalyzeShortArticleNeedsNoEnhancement(t *testing.T) {
 }
 
 func TestAnalyzeRecommendsTitleWhenTitleMissing(t *testing.T) {
+	source := filepath.Join(t.TempDir(), "article.md")
 	result, err := Analyze(Input{
-		SourceFile: filepath.Join(t.TempDir(), "article.md"),
+		SourceFile: source,
 		Markdown:   "正文第一段。\n\n正文第二段。",
 	})
 	if err != nil {
@@ -41,8 +43,12 @@ func TestAnalyzeRecommendsTitleWhenTitleMissing(t *testing.T) {
 	if action.State != ActionStateRecommended {
 		t.Fatalf("title state = %q", action.State)
 	}
-	if action.CommandHint != "md2wechat title suggest article.md --json" {
+	if action.CommandHint != "md2wechat title suggest "+shellQuote(source)+" --json" {
 		t.Fatalf("command_hint = %q", action.CommandHint)
+	}
+	wantArgs := []string{"md2wechat", "title", "suggest", source, "--json"}
+	if !reflect.DeepEqual(action.CommandArgs, wantArgs) {
+		t.Fatalf("command_args = %#v, want %#v", action.CommandArgs, wantArgs)
 	}
 	if !action.RequiresConfirmation {
 		t.Fatal("title action should require confirmation")
@@ -52,9 +58,30 @@ func TestAnalyzeRecommendsTitleWhenTitleMissing(t *testing.T) {
 	}
 }
 
-func TestAnalyzeCoverCommandHintIncludesCLIName(t *testing.T) {
+func TestAnalyzeRecommendsTitleWhenOnlyH2Exists(t *testing.T) {
 	result, err := Analyze(Input{
-		SourceFile: filepath.Join(t.TempDir(), "feature.md"),
+		SourceFile: filepath.Join(t.TempDir(), "article.md"),
+		Markdown:   "## 背景\n\n正文第一段。\n\n正文第二段。",
+	})
+	if err != nil {
+		t.Fatalf("Analyze() error = %v", err)
+	}
+	action := findAction(result.Actions, ToolTitle)
+	if action == nil {
+		t.Fatalf("missing title action in %#v", result.Actions)
+	}
+	if !hasSignal(result.Article.Uncertainties, "title_missing") {
+		t.Fatalf("uncertainties = %#v", result.Article.Uncertainties)
+	}
+	if hasSignal(result.Article.Signals, "has_title") {
+		t.Fatalf("signals = %#v", result.Article.Signals)
+	}
+}
+
+func TestAnalyzeCoverCommandHintIncludesCLIName(t *testing.T) {
+	source := filepath.Join(t.TempDir(), "drafts", "feature article.md")
+	result, err := Analyze(Input{
+		SourceFile: source,
 		Markdown:   "# 标题\n\n## 背景\n\n正文。\n\n## 方案\n\n正文。",
 	})
 	if err != nil {
@@ -64,8 +91,12 @@ func TestAnalyzeCoverCommandHintIncludesCLIName(t *testing.T) {
 	if action == nil {
 		t.Fatalf("missing cover action in %#v", result.Actions)
 	}
-	if action.CommandHint != "md2wechat generate_cover --article feature.md --plan --json" {
+	if action.CommandHint != "md2wechat generate_cover --article "+shellQuote(source)+" --plan --json" {
 		t.Fatalf("command_hint = %q", action.CommandHint)
+	}
+	wantArgs := []string{"md2wechat", "generate_cover", "--article", source, "--plan", "--json"}
+	if !reflect.DeepEqual(action.CommandArgs, wantArgs) {
+		t.Fatalf("command_args = %#v, want %#v", action.CommandArgs, wantArgs)
 	}
 }
 
@@ -196,6 +227,25 @@ func TestAnalyzeRejectsUnsupportedModulesWithoutEvidence(t *testing.T) {
 	}
 	if !hasRejectedModule(result.Layout.Rejected, "cta") {
 		t.Fatalf("expected cta rejection: %#v", result.Layout.Rejected)
+	}
+}
+
+func TestAnalyzeKeepsMicroEditsSeparateFromCommandActions(t *testing.T) {
+	result, err := Analyze(Input{
+		SourceFile: filepath.Join(t.TempDir(), "article.md"),
+		Markdown:   "# 标题\n\n第一段。\n\n第二段。\n\n第三段。\n\n第四段。",
+	})
+	if err != nil {
+		t.Fatalf("Analyze() error = %v", err)
+	}
+	if len(result.MicroEdits) == 0 {
+		t.Fatalf("expected micro edits")
+	}
+	if findAction(result.Actions, ToolMicroEdit) != nil {
+		t.Fatalf("micro_edit should live in micro_edits, not command actions: %#v", result.Actions)
+	}
+	if !result.MicroEdits[0].RequiresConfirmation {
+		t.Fatalf("micro edit should require confirmation: %#v", result.MicroEdits[0])
 	}
 }
 

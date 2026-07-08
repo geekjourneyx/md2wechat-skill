@@ -22,4 +22,6 @@ Recommended tools may include:
 - `layout`: inspect and apply suitable layout modules separately.
 - `micro_edit`: make a small human-confirmed edit outside `advise`.
 
+`data.actions` contains command-level recommendations and may include both `command_hint` and structured `command_args`. `data.micro_edits` is a separate list for small human-confirmed wording or structure changes; it is not an execution command.
+
 Use `inspect` before publish decisions. `inspect --json` blocks publish targets through `data.readiness.targets/blockers`; `advise --json` only recommends optional enhancement.

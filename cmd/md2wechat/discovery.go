@@ -354,6 +354,7 @@ func buildArticleAdviceCapabilityData() map[string]any {
 		"deterministic":      true,
 		"max_actions":        3,
 		"max_layout_modules": 3,
+		"actions_scope":      "command-level recommendations only; micro_edit details are returned in data.micro_edits",
 		"tools": []string{
 			articleadvise.ToolTitle,
 			articleadvise.ToolCover,

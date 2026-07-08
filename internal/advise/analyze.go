@@ -3,12 +3,12 @@ package advise
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"unicode"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/converter"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -31,11 +31,10 @@ func Analyze(input Input) (*Result, error) {
 	if source == "" {
 		source = defaultSourceFile
 	}
-	sourceBase := filepath.Base(source)
 
 	doc := converter.ParseArticleDocument(input.Markdown)
 	stats, facts := analyzeBody(doc.Body)
-	hasTitle := facts.h1Count > 0 || hasMetadataTitle(doc.Metadata.Title)
+	hasTitle := facts.h1Count > 0 || hasFrontmatterTitle(input.Markdown)
 
 	result := &Result{
 		SchemaVersion: SchemaVersion,
@@ -61,7 +60,8 @@ func Analyze(input Input) (*Result, error) {
 			State:                ActionStateRecommended,
 			Reason:               "article has no observable title",
 			Evidence:             []Evidence{messageEvidence("missing_title", "No H1 heading or frontmatter title was found.")},
-			CommandHint:          fmt.Sprintf("md2wechat title suggest %s --json", sourceBase),
+			CommandHint:          fmt.Sprintf("md2wechat title suggest %s --json", shellQuote(source)),
+			CommandArgs:          []string{"md2wechat", "title", "suggest", source, "--json"},
 			RequiresConfirmation: true,
 		})
 	}
@@ -83,7 +83,8 @@ func Analyze(input Input) (*Result, error) {
 			State:                ActionStateOptional,
 			Reason:               "article has enough content for a planned cover but no image",
 			Evidence:             []Evidence{messageEvidence("no_images", "No Markdown image references were found in the parsed article body.")},
-			CommandHint:          fmt.Sprintf("md2wechat generate_cover --article %s --plan --json", sourceBase),
+			CommandHint:          fmt.Sprintf("md2wechat generate_cover --article %s --plan --json", shellQuote(source)),
+			CommandArgs:          []string{"md2wechat", "generate_cover", "--article", source, "--plan", "--json"},
 			RequiresConfirmation: true,
 		})
 	}
@@ -277,9 +278,35 @@ func appendModule(modules []ModuleAdvice, module ModuleAdvice) []ModuleAdvice {
 	return append(modules, module)
 }
 
-func hasMetadataTitle(title string) bool {
-	title = strings.TrimSpace(title)
-	return title != "" && title != "未命名文章"
+func hasFrontmatterTitle(markdown string) bool {
+	type frontMatter struct {
+		Title string `yaml:"title"`
+	}
+
+	normalized := normalizeNewlines(strings.TrimPrefix(markdown, "\uFEFF"))
+	lines := strings.Split(normalized, "\n")
+	if len(lines) < 3 || strings.TrimSpace(lines[0]) != "---" {
+		return false
+	}
+
+	for i := 1; i < len(lines); i++ {
+		if strings.TrimSpace(lines[i]) != "---" {
+			continue
+		}
+		var fm frontMatter
+		if err := yaml.Unmarshal([]byte(strings.Join(lines[1:i], "\n")), &fm); err != nil {
+			return false
+		}
+		return strings.TrimSpace(fm.Title) != ""
+	}
+	return false
+}
+
+func shellQuote(value string) string {
+	if value == "" {
+		return "''"
+	}
+	return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'"
 }
 
 func isH1Line(line string) bool {
