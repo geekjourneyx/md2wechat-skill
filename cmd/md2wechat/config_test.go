@@ -290,7 +290,7 @@ func TestConfigInitWritesSampleVolcengineImageSettings(t *testing.T) {
 		"md2wechat_base_url: https://www.md2wechat.cn",
 		"image_provider: volcengine",
 		"image_base_url: https://ark.cn-beijing.volces.com/api/v3",
-		"image_model: doubao-seedream-5-0-260128",
+		"image_model: doubao-seedream-5-0-pro-260628",
 		"image_size: 2K",
 	}
 	for _, snippet := range expectedSnippets {

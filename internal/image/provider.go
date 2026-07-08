@@ -112,9 +112,10 @@ var providerRegistry = []ProviderMeta{
 		RequiredConfig: []string{"IMAGE_API_KEY"},
 		OptionalConfig: []string{"IMAGE_API_BASE", "IMAGE_MODEL", "IMAGE_SIZE"},
 		DefaultBaseURL: "https://ark.cn-beijing.volces.com/api/v3",
-		DefaultModel:   "doubao-seedream-5-0-260128",
+		DefaultModel:   "doubao-seedream-5-0-pro-260628",
 		SupportedModels: []ProviderModelMeta{
-			{Name: "doubao-seedream-5-0-260128", Description: "Doubao Seedream 5.0", Default: true},
+			{Name: "doubao-seedream-5-0-pro-260628", Description: "Doubao Seedream 5.0 Pro", Default: true},
+			{Name: "doubao-seedream-5-0-260128", Description: "Doubao Seedream 5.0"},
 			{Name: "doubao-seedream-5-0-lite-260128", Description: "Doubao Seedream 5.0 Lite"},
 		},
 		SupportsSize: true,

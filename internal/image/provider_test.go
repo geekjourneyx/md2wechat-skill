@@ -10,7 +10,7 @@ func TestLookupProviderMetaSupportsVolcengineAlias(t *testing.T) {
 	if meta.Name != "volcengine" {
 		t.Fatalf("Name = %q", meta.Name)
 	}
-	if meta.DefaultModel != "doubao-seedream-5-0-260128" {
+	if meta.DefaultModel != "doubao-seedream-5-0-pro-260628" {
 		t.Fatalf("DefaultModel = %q", meta.DefaultModel)
 	}
 }

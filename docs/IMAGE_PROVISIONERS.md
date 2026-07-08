@@ -92,7 +92,7 @@ api:
   image_provider: "volcengine" # 或 "volc"
   image_key: "volc-..."
   image_base_url: "https://ark.cn-beijing.volces.com/api/v3"
-  image_model: "doubao-seedream-5-0-260128"
+  image_model: "doubao-seedream-5-0-pro-260628"
   image_size: "2K"
 ```
 
@@ -102,7 +102,7 @@ api:
 export IMAGE_PROVIDER="volcengine"
 export IMAGE_API_KEY="volc-..."
 export IMAGE_API_BASE="https://ark.cn-beijing.volces.com/api/v3"
-export IMAGE_MODEL="doubao-seedream-5-0-260128"
+export IMAGE_MODEL="doubao-seedream-5-0-pro-260628"
 export IMAGE_SIZE="2K"
 ```
 
@@ -110,7 +110,8 @@ export IMAGE_SIZE="2K"
 
 | 模型 | 说明 |
 |------|------|
-| `doubao-seedream-5-0-260128` | 豆包 Seedream 5.0（默认，推荐） |
+| `doubao-seedream-5-0-pro-260628` | 豆包 Seedream 5.0 Pro（默认，推荐） |
+| `doubao-seedream-5-0-260128` | 豆包 Seedream 5.0 |
 | `doubao-seedream-5-0-lite-260128` | 豆包 Seedream 5.0 Lite |
 
 #### 开通入口
@@ -131,7 +132,7 @@ export IMAGE_SIZE="2K"
 
 | 尺寸等级 | 说明 |
 |----------|------|
-| `2K` | Volcengine Seedream 5.0 / 5.0 Lite 通用默认值 |
+| `2K` | Volcengine Seedream 5.0 Pro / 5.0 / 5.0 Lite 通用默认值 |
 | `3K` | Seedream 5.0 Lite 支持的更高分辨率等级 |
 
 补充说明：
@@ -145,7 +146,7 @@ export IMAGE_SIZE="2K"
 如果接口返回类似：
 
 ```json
-{"error":{"code":"ModelNotOpen","message":"Your account ... has not activated the model doubao-seedream-5-0-260128."}}
+{"error":{"code":"ModelNotOpen","message":"Your account ... has not activated the model doubao-seedream-5-0-pro-260628."}}
 ```
 
 表示当前账号还没有开通该 Seedream 模型服务，不是提示词问题。请前往火山引擎豆包大模型控制台：

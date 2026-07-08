@@ -240,7 +240,7 @@ func applyImageProviderDefaults(cfg *Config) {
 			cfg.ImageAPIBase = "https://ark.cn-beijing.volces.com/api/v3"
 		}
 		if cfg.ImageModel == "" {
-			cfg.ImageModel = "doubao-seedream-5-0-260128"
+			cfg.ImageModel = "doubao-seedream-5-0-pro-260628"
 		}
 		if cfg.ImageSize == "" {
 			cfg.ImageSize = "2K"

@@ -143,7 +143,7 @@ func TestBuildProviderViewsUsesCurrentRuntimeDefaults(t *testing.T) {
 	defaults := map[string]string{
 		"openrouter": "google/gemini-3-pro-image-preview",
 		"gemini":     "gemini-3.1-flash-image-preview",
-		"volcengine": "doubao-seedream-5-0-260128",
+		"volcengine": "doubao-seedream-5-0-pro-260628",
 	}
 
 	for name, wantModel := range defaults {

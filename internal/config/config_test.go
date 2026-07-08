@@ -474,7 +474,7 @@ api:
 	if cfg.ImageAPIBase != "https://ark.cn-beijing.volces.com/api/v3" {
 		t.Fatalf("ImageAPIBase = %q", cfg.ImageAPIBase)
 	}
-	if cfg.ImageModel != "doubao-seedream-5-0-260128" {
+	if cfg.ImageModel != "doubao-seedream-5-0-pro-260628" {
 		t.Fatalf("ImageModel = %q", cfg.ImageModel)
 	}
 	if cfg.ImageSize != "2K" {

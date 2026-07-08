@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.1] - 2026-07-08
+
+### Changed
+- Updated the Volcengine image provider default model to `doubao-seedream-5-0-pro-260628` and exposed the refreshed Seedream 5.0 model catalog in provider discovery.
+
 ## [2.10.0] - 2026-07-08
 
 ### Added

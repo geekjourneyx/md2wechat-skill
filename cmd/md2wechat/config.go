@@ -271,7 +271,7 @@ func initConfigFile(outputFile string) error {
 		ImageProvider:         "volcengine",
 		ImageAPIKey:           "your_image_api_key",
 		ImageAPIBase:          "https://ark.cn-beijing.volces.com/api/v3",
-		ImageModel:            "doubao-seedream-5-0-260128",
+		ImageModel:            "doubao-seedream-5-0-pro-260628",
 		ImageSize:             "2K",
 		DefaultConvertMode:    "api",
 		DefaultTheme:          "default",

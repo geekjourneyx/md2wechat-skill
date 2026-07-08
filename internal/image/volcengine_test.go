@@ -24,7 +24,7 @@ func TestNewVolcengineProviderDefaults(t *testing.T) {
 	if p.baseURL != "https://ark.cn-beijing.volces.com/api/v3" {
 		t.Fatalf("baseURL = %q", p.baseURL)
 	}
-	if p.model != "doubao-seedream-5-0-260128" {
+	if p.model != "doubao-seedream-5-0-pro-260628" {
 		t.Fatalf("model = %q", p.model)
 	}
 	if p.size != "2K" {
@@ -39,7 +39,7 @@ func TestVolcengineProviderGenerate(t *testing.T) {
 	cfg := &config.Config{
 		ImageAPIKey:  "test-key",
 		ImageAPIBase: "https://mock.local/api/v3",
-		ImageModel:   "doubao-seedream-5-0-260128",
+		ImageModel:   "doubao-seedream-5-0-pro-260628",
 		ImageSize:    "2K",
 	}
 
@@ -63,7 +63,7 @@ func TestVolcengineProviderGenerate(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
 			t.Fatalf("decode request: %v", err)
 		}
-		if reqBody["model"] != "doubao-seedream-5-0-260128" {
+		if reqBody["model"] != "doubao-seedream-5-0-pro-260628" {
 			t.Fatalf("model = %v", reqBody["model"])
 		}
 		if reqBody["size"] != "2K" {
@@ -77,7 +77,7 @@ func TestVolcengineProviderGenerate(t *testing.T) {
 		}
 
 		return jsonResponse(http.StatusOK, map[string]any{
-			"model": "doubao-seedream-5-0-260128",
+			"model": "doubao-seedream-5-0-pro-260628",
 			"data": []map[string]any{
 				{
 					"url":  "https://example.com/generated.png",
@@ -94,7 +94,7 @@ func TestVolcengineProviderGenerate(t *testing.T) {
 	if result.URL != "https://example.com/generated.png" {
 		t.Fatalf("url = %q", result.URL)
 	}
-	if result.Model != "doubao-seedream-5-0-260128" {
+	if result.Model != "doubao-seedream-5-0-pro-260628" {
 		t.Fatalf("model = %q", result.Model)
 	}
 	if result.Size != "1664x2496" {
@@ -106,7 +106,7 @@ func TestVolcengineProviderGenerateModelNotOpen(t *testing.T) {
 	cfg := &config.Config{
 		ImageAPIKey:  "test-key",
 		ImageAPIBase: "https://mock.local/api/v3",
-		ImageModel:   "doubao-seedream-5-0-260128",
+		ImageModel:   "doubao-seedream-5-0-pro-260628",
 	}
 
 	p, err := NewVolcengineProvider(cfg)
@@ -118,7 +118,7 @@ func TestVolcengineProviderGenerateModelNotOpen(t *testing.T) {
 		return jsonResponse(http.StatusNotFound, map[string]any{
 			"error": map[string]any{
 				"code":    "ModelNotOpen",
-				"message": "Your account has not activated the model doubao-seedream-5-0-260128.",
+				"message": "Your account has not activated the model doubao-seedream-5-0-pro-260628.",
 				"type":    "Not Found",
 			},
 		}), nil
@@ -145,7 +145,7 @@ func TestVolcengineProviderGenerateModelNotOpen(t *testing.T) {
 	if !strings.Contains(genErr.Hint, "开通管理") {
 		t.Fatalf("hint = %q", genErr.Hint)
 	}
-	if !strings.Contains(genErr.Hint, "doubao-seedream-5-0-260128") {
+	if !strings.Contains(genErr.Hint, "doubao-seedream-5-0-pro-260628") {
 		t.Fatalf("hint = %q", genErr.Hint)
 	}
 }
