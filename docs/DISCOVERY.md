@@ -187,12 +187,12 @@ md2wechat themes show autumn-warm --json
 
 Collection descriptor 也会出现在发现结果里。例如 `api-collection` 用于描述 API 主题集合，但它不是可执行主题，所以 `selectable: false`。`api.yaml` 中的分组条目会展开为可执行 API 主题。Agent 必须选择 `selectable: true` 且 `type` 匹配当前模式的主题。
 
-`convert` 现在会 fail closed：
+`convert` 和 `inspect` readiness 现在会 fail closed：
 
 - `--mode api` 不能选择 AI 主题；
 - `--mode ai` 不能选择 API 主题；
 - `selectable: false` 的主题不能用于转换；
-- `--mode ai --custom-prompt` 是例外路径，custom prompt 本身就是排版提示词来源，不要求主题匹配。
+- `--mode ai --custom-prompt` 是例外路径，custom prompt 本身就是排版提示词来源，不要求主题匹配；检查这个路径时，`inspect` 也要带同样的 `--custom-prompt`。
 
 ## Prompt Catalog
 

@@ -109,6 +109,7 @@ Prefer a confirm-first workflow for article work:
 4. Add `--upload`, `--draft`, `--cover`, or `--cover-media-id` only when the user explicitly asks for upload or draft creation.
 
 `inspect` is the source-of-truth command for resolved metadata, readiness, and publish checks. In `--json` output, read `data.readiness.targets` and `data.readiness.blockers` before deciding whether `convert`, `upload`, or `draft` is blocked. If the requested target is blocked, stop and report the matching blockers; do not continue by guessing from legacy booleans or `checks` alone. Do not invent `data.agent_readiness`, `data.target_readiness`, `ArticleState`, state files, or a second readiness/state object. `preview` is a local preview artifact. It does not upload images, create drafts, or write back to Markdown. `convert --preview` is the convert-path preview flag and is not the same as the standalone `preview` command. `preview --mode ai` is degraded confirmation only and must not be treated as final AI-generated layout.
+When the intended execution path is `convert --mode ai --custom-prompt ...`, run `inspect` with the same `--mode ai --custom-prompt ...` before trusting readiness.
 
 ## Formatting Protocol
 

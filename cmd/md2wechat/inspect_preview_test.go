@@ -540,6 +540,87 @@ func TestInspectCommandJSONBlocksConvertForThemeMismatch(t *testing.T) {
 	t.Fatalf("THEME_MODE_MISMATCH blocker not found: %#v", response.Data.Readiness.Blockers)
 }
 
+func TestInspectCommandAICustomPromptAllowsDefaultTheme(t *testing.T) {
+	oldCfg, oldJSON, oldStrict := cfg, jsonOutput, inspectStrict
+	oldExit := exitFunc
+	oldMode, oldTheme := inspectMode, inspectTheme
+	oldFont, oldBackground := inspectFontSize, inspectBackgroundType
+	oldCustomPrompt := inspectCustomPrompt
+	oldTitle, oldAuthor, oldDigest := inspectTitle, inspectAuthor, inspectDigest
+	oldCover, oldCoverMediaID := inspectCover, inspectCoverMediaID
+	oldUpload, oldDraft := inspectUpload, inspectDraft
+	t.Cleanup(func() {
+		cfg, jsonOutput, inspectStrict = oldCfg, oldJSON, oldStrict
+		exitFunc = oldExit
+		inspectMode, inspectTheme = oldMode, oldTheme
+		inspectFontSize, inspectBackgroundType = oldFont, oldBackground
+		inspectCustomPrompt = oldCustomPrompt
+		inspectTitle, inspectAuthor, inspectDigest = oldTitle, oldAuthor, oldDigest
+		inspectCover, inspectCoverMediaID = oldCover, oldCoverMediaID
+		inspectUpload, inspectDraft = oldUpload, oldDraft
+	})
+
+	cfg = &config.Config{}
+	jsonOutput = true
+	inspectStrict = false
+	inspectMode = "ai"
+	inspectTheme = "default"
+	inspectFontSize = "medium"
+	inspectBackgroundType = "none"
+	inspectCustomPrompt = "Use a compact editorial layout."
+	inspectTitle = ""
+	inspectAuthor = ""
+	inspectDigest = ""
+	inspectCover = ""
+	inspectCoverMediaID = ""
+	inspectUpload = false
+	inspectDraft = false
+	exitFunc = func(code int) {
+		t.Fatalf("unexpected exitFunc(%d)", code)
+	}
+
+	markdownPath := filepath.Join(t.TempDir(), "article.md")
+	if err := os.WriteFile(markdownPath, []byte("# 标题\n\n正文"), 0600); err != nil {
+		t.Fatalf("write markdown: %v", err)
+	}
+
+	stdout := captureStdout(t, func() {
+		if err := inspectCmd.RunE(inspectCmd, []string{markdownPath}); err != nil {
+			t.Fatalf("RunE() error = %v", err)
+		}
+	})
+
+	var response struct {
+		Data struct {
+			Context struct {
+				CustomPrompt bool `json:"custom_prompt"`
+			} `json:"context"`
+			Readiness struct {
+				Targets struct {
+					Convert string `json:"convert"`
+				} `json:"targets"`
+				Blockers []struct {
+					Code string `json:"code"`
+				} `json:"blockers"`
+			} `json:"readiness"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(stdout, &response); err != nil {
+		t.Fatalf("unmarshal response: %v\n%s", err, stdout)
+	}
+	if !response.Data.Context.CustomPrompt {
+		t.Fatal("context.custom_prompt = false")
+	}
+	if response.Data.Readiness.Targets.Convert != "ready" {
+		t.Fatalf("readiness.targets.convert = %q, blockers = %#v", response.Data.Readiness.Targets.Convert, response.Data.Readiness.Blockers)
+	}
+	for _, blocker := range response.Data.Readiness.Blockers {
+		if blocker.Code == "THEME_MODE_MISMATCH" {
+			t.Fatalf("unexpected THEME_MODE_MISMATCH blocker: %#v", response.Data.Readiness.Blockers)
+		}
+	}
+}
+
 func TestInspectCommandStrictDoesNotExitTwoForWarnOnlyChecks(t *testing.T) {
 	oldCfg, oldJSON, oldStrict := cfg, jsonOutput, inspectStrict
 	oldExit := exitFunc

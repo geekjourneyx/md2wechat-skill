@@ -350,6 +350,7 @@ Agent 应优先检查 `data.readiness.targets` 来决定是否可以继续，`bl
 - `targets.preview` 表示预览保真度，只使用 `ready` / `degraded`，不是发布 blocker。
 - `blockers` 只包含会阻断至少一个目标的 error-level check；warn/info 仍只留在 `data.checks`。
 - `inspect readiness` 覆盖 metadata length、API key、theme/mode compatibility、本地图片、WeChat config、cover inputs。
+- 如果执行路径是 `convert --mode ai --custom-prompt ...`，inspect 必须带同样的 `--mode ai --custom-prompt ...`，因为 custom prompt 会替代主题作为 AI 排版提示来源。
 
 ### 5.3 预览文章
 

@@ -28,7 +28,7 @@ func TestAnalyzeShortArticleNeedsNoEnhancement(t *testing.T) {
 }
 
 func TestAnalyzeRecommendsTitleWhenTitleMissing(t *testing.T) {
-	source := filepath.Join(t.TempDir(), "article.md")
+	source := filepath.Join(t.TempDir(), "article.md ")
 	result, err := Analyze(Input{
 		SourceFile: source,
 		Markdown:   "正文第一段。\n\n正文第二段。",
@@ -55,6 +55,9 @@ func TestAnalyzeRecommendsTitleWhenTitleMissing(t *testing.T) {
 	}
 	if len(action.Evidence) == 0 {
 		t.Fatalf("title evidence = %#v", action.Evidence)
+	}
+	if result.Source != source {
+		t.Fatalf("source = %q, want %q", result.Source, source)
 	}
 }
 
@@ -126,6 +129,14 @@ func TestAnalyzeRecommendsBoundedLayoutModules(t *testing.T) {
 		if len(module.Evidence) == 0 {
 			t.Fatalf("%s evidence = %#v", name, module.Evidence)
 		}
+	}
+	action := findAction(result.Actions, ToolLayout)
+	if action == nil {
+		t.Fatalf("missing layout action in %#v", result.Actions)
+	}
+	wantArgs := []string{"md2wechat", "layout", "list", "--json"}
+	if !reflect.DeepEqual(action.CommandArgs, wantArgs) {
+		t.Fatalf("layout command_args = %#v, want %#v", action.CommandArgs, wantArgs)
 	}
 }
 

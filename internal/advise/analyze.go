@@ -27,8 +27,8 @@ func Analyze(input Input) (*Result, error) {
 		return nil, errors.New("markdown is required")
 	}
 
-	source := strings.TrimSpace(input.SourceFile)
-	if source == "" {
+	source := input.SourceFile
+	if strings.TrimSpace(source) == "" {
 		source = defaultSourceFile
 	}
 
@@ -73,6 +73,7 @@ func Analyze(input Input) (*Result, error) {
 			Reason:               "article structure can support a small number of layout modules",
 			Evidence:             []Evidence{messageEvidence("layout_candidates", "Observable structure supports deterministic layout advice.")},
 			CommandHint:          "md2wechat layout list --json",
+			CommandArgs:          []string{"md2wechat", "layout", "list", "--json"},
 			RequiresConfirmation: true,
 		})
 	}

@@ -14,6 +14,7 @@ var (
 	inspectTheme          string
 	inspectFontSize       string
 	inspectBackgroundType string
+	inspectCustomPrompt   string
 	inspectTitle          string
 	inspectAuthor         string
 	inspectDigest         string
@@ -53,6 +54,7 @@ func init() {
 	inspectCmd.Flags().StringVar(&inspectTheme, "theme", "default", "Theme name")
 	inspectCmd.Flags().StringVar(&inspectFontSize, "font-size", "medium", "Font size: small/medium/large")
 	inspectCmd.Flags().StringVar(&inspectBackgroundType, "background-type", "none", "Background type: default/grid/none")
+	inspectCmd.Flags().StringVar(&inspectCustomPrompt, "custom-prompt", "", "Custom AI prompt context; mirrors convert AI custom-prompt theme handling")
 	inspectCmd.Flags().StringVar(&inspectTitle, "title", "", "Override article title")
 	inspectCmd.Flags().StringVar(&inspectAuthor, "author", "", "Override article author")
 	inspectCmd.Flags().StringVar(&inspectDigest, "digest", "", "Override article digest")
@@ -80,6 +82,7 @@ func runInspect(markdownFile string) (*inspectpkg.Result, error) {
 		Theme:           inspectTheme,
 		FontSize:        inspectFontSize,
 		BackgroundType:  inspectBackgroundType,
+		CustomPrompt:    inspectCustomPrompt,
 		TitleOverride:   inspectTitle,
 		AuthorOverride:  inspectAuthor,
 		DigestOverride:  inspectDigest,

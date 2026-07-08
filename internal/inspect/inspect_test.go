@@ -184,6 +184,32 @@ func TestRunIncludesReadinessTargets(t *testing.T) {
 	}
 }
 
+func TestRunAICustomPromptMirrorsConvertThemeException(t *testing.T) {
+	result, err := Run(&Input{
+		MarkdownFile: filepath.Join(t.TempDir(), "article.md"),
+		Markdown:     "# 标题\n\n正文",
+		Mode:         "ai",
+		Theme:        "default",
+		CustomPrompt: "Use a compact editorial layout.",
+		FontSize:     "medium",
+		Config:       &config.Config{},
+	})
+	if err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if result.Context.CustomPrompt != true {
+		t.Fatalf("context.custom_prompt = %t", result.Context.CustomPrompt)
+	}
+	if result.Readiness.Targets.Convert != ReadinessTargetReady {
+		t.Fatalf("convert target = %q, checks = %#v", result.Readiness.Targets.Convert, result.Checks)
+	}
+	for _, check := range result.Checks {
+		if check.Code == "THEME_MODE_MISMATCH" {
+			t.Fatalf("unexpected theme mismatch with custom prompt: %#v", result.Checks)
+		}
+	}
+}
+
 func TestBlockedReadinessTargetsContract(t *testing.T) {
 	cases := []struct {
 		code string

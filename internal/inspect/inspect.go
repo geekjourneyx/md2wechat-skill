@@ -34,6 +34,7 @@ type Input struct {
 	Theme           string
 	FontSize        string
 	BackgroundType  string
+	CustomPrompt    string
 	TitleOverride   string
 	AuthorOverride  string
 	DigestOverride  string
@@ -61,6 +62,7 @@ type Context struct {
 	Theme          string `json:"theme"`
 	FontSize       string `json:"font_size"`
 	BackgroundType string `json:"background_type"`
+	CustomPrompt   bool   `json:"custom_prompt"`
 	Upload         bool   `json:"upload"`
 	Draft          bool   `json:"draft"`
 }
@@ -175,6 +177,7 @@ func Run(input *Input) (*Result, error) {
 			Theme:          theme,
 			FontSize:       fontSize,
 			BackgroundType: backgroundType,
+			CustomPrompt:   strings.TrimSpace(input.CustomPrompt) != "",
 			Upload:         input.UploadRequested,
 			Draft:          input.DraftRequested,
 		},
@@ -500,6 +503,9 @@ func appendThemeCompatibilityCheck(result *Result, checks *[]Check) {
 	theme := strings.TrimSpace(result.Context.Theme)
 	if theme == "" {
 		theme = "default"
+	}
+	if mode == converter.ModeAI && result.Context.CustomPrompt {
+		return
 	}
 
 	themeManager := converter.NewThemeManager()
