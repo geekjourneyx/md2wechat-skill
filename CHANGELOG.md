@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.10.0] - 2026-07-08
+
+### Added
+- Added `md2wechat advise <article.md> --json`, a deterministic, side-effect-free article enhancement router for optional title, cover, layout, and micro-edit recommendations.
+- Added `article_advice` to `capabilities --json` so Agents can discover the `advise` command contract, supported recommendation tools, action limits, and no-side-effect boundary.
+- Added stricter `inspect --json` readiness coverage for theme compatibility and custom AI prompt execution paths.
+
+### Changed
+- Documented `inspect --json data.readiness.targets/blockers` as the publish preflight truth source, while keeping `advise --json` scoped to optional enhancement decisions.
+- Tightened Agent-facing repository rules to keep deterministic routing free of subjective hardcoded phrase lists and style-quality heuristics.
+
 ## [2.9.0] - 2026-06-26
 
 ### Added
