@@ -1,0 +1,50 @@
+schema_version: "1"
+name: svg-reveal
+body_format: fields
+version: "1.0.0"
+since: "1.5.0"
+category: interactive
+serves: [attention, memorability]
+content_types: [tutorial, announcement]
+industry: [general]
+tags: [interactive, svg, reveal, answer]
+position: body
+when_to_use: |
+  点击揭晓答案，适合悬念卡、答案卡、互动提示。
+  保持一问一答且内容简短，确保静态回退仍可读。
+when_not_to_use: |
+  长答案用普通正文或 callout；
+  不需要互动时使用静态内容模块。
+pairs_well_with: [question, callout, summary]
+avoid_combining_with: []
+anti_pattern: |
+  缺少 question 或 answer 会导致渲染失败；
+  svg_fallback=static 时渲染静态可读 HTML。
+opener:
+  param_style: braces
+  params:
+    - name: accent
+      description: 强调色
+      enum: [brand, muted]
+      default: brand
+    - name: svg_fallback
+      description: SVG 不可用时的回退策略
+      enum: [first-layer, static]
+      default: first-layer
+fields:
+  required:
+    - name: question
+      description: 揭晓前显示的问题
+      example: "点击查看答案"
+    - name: answer
+      description: 点击后显示的答案
+      example: "42"
+example: |
+  :::svg-reveal{accent=brand}
+  question: 点击查看答案
+  answer: 42
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#svg-reveal"

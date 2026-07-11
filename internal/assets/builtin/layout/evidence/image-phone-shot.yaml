@@ -1,0 +1,44 @@
+schema_version: "1"
+name: image-phone-shot
+body_format: markdown_images
+version: "1.0.0"
+since: "1.5.0"
+category: evidence
+serves: [attention, readability]
+content_types: [tutorial, report, announcement, product-launch]
+industry: [general]
+tags: [evidence, image, phone, screenshot, mobile]
+position: body
+when_to_use: |
+  移动端界面截图组，适合 App、小程序、H5、SaaS 移动端流程展示。
+  图片应提前准备成真实手机截图比例。
+when_not_to_use: |
+  宽屏截图、产品图、人物图或普通海报用其他图片模块；
+  需要逐步教学时用 image-steps。
+pairs_well_with: [image-steps, image-text, figure-caption]
+avoid_combining_with: []
+anti_pattern: |
+  没有任何有效 Markdown 图片会导致渲染失败；
+  image_shape 只是微信安全外观提示，不会强制裁剪图片比例。
+opener:
+  param_style: braces
+  params:
+    - name: columns
+      description: 截图列数
+      enum: ["1", "2", "3"]
+      default: "2"
+    - name: image_shape
+      description: 移动端截图外观提示
+      enum: [phone]
+      default: phone
+body:
+  min_images: 1
+example: |
+  :::image-phone-shot{columns=2 image_shape=phone}
+  ![首页](https://example.com/home.jpg) | 首页截图
+  ![详情](https://example.com/detail.jpg) | 详情截图
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#image-phone-shot"

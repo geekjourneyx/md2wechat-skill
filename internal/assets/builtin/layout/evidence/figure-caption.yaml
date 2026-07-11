@@ -1,0 +1,51 @@
+schema_version: "1"
+name: figure-caption
+body_format: markdown_fields
+version: "1.0.0"
+since: "1.5.0"
+category: evidence
+serves: [readability, memorability]
+content_types: [tutorial, report]
+industry: [general]
+tags: [evidence, image, figure, caption, source]
+position: body
+when_to_use: |
+  图注说明，适合图表、研究截图、数据图。
+  图片需要正式图注或来源时使用。
+when_not_to_use: |
+  多张同级图片用 gallery-grid；
+  图片与长段解释并列时用 image-text。
+pairs_well_with: [gallery-grid, metrics, quote]
+avoid_combining_with: []
+anti_pattern: |
+  缺少图片或 caption 会导致渲染失败；
+  一个模块只放一张 Markdown 图片。
+opener:
+  param_style: braces
+  params:
+    - name: caption_style
+      description: 图注样式
+      enum: [minimal, numbered]
+      default: minimal
+fields:
+  required:
+    - name: caption
+      description: 图片说明
+      example: "2026 年用户增长曲线"
+  optional:
+    - name: source
+      description: 图片或数据来源
+      example: "内部实验数据"
+body:
+  min_images: 1
+  max_images: 1
+example: |
+  :::figure-caption{caption_style=numbered}
+  ![增长曲线](https://example.com/chart.jpg)
+  caption: 2026 年用户增长曲线
+  source: 内部实验数据
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#figure-caption"

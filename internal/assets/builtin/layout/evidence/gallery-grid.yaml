@@ -1,0 +1,45 @@
+schema_version: "1"
+name: gallery-grid
+body_format: markdown_images
+version: "1.0.0"
+since: "1.5.0"
+category: evidence
+serves: [attention, readability]
+content_types: [tutorial, report, announcement, product-launch]
+industry: [general]
+tags: [evidence, image, gallery, grid, portfolio]
+position: body
+when_to_use: |
+  等宽图集，适合多张同级图片、作品集、产品状态展示。
+  图片之间没有明显顺序时使用。
+when_not_to_use: |
+  图片有先后叙事时用 gallery-story；
+  单张图片需要正式图注或来源时用 figure-caption。
+pairs_well_with: [figure-caption, image-text, part]
+avoid_combining_with: []
+anti_pattern: |
+  没有任何有效 Markdown 图片会导致渲染失败；
+  每行使用 Markdown 图片，图后可用竖线接标题。
+opener:
+  param_style: braces
+  params:
+    - name: columns
+      description: 图集列数
+      enum: ["1", "2", "3"]
+      default: "2"
+    - name: variant
+      description: 图集外观
+      enum: [card, plain]
+      default: card
+body:
+  min_images: 1
+example: |
+  :::gallery-grid{columns=3 variant=card}
+  ![A](https://example.com/1.jpg) | 首页状态
+  ![B](https://example.com/2.jpg) | 详情状态
+  ![C](https://example.com/3.jpg) | 结果状态
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#gallery-grid"

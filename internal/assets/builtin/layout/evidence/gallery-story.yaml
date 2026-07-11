@@ -1,0 +1,40 @@
+schema_version: "1"
+name: gallery-story
+body_format: markdown_images
+version: "1.0.0"
+since: "1.5.0"
+category: evidence
+serves: [attention, readability]
+content_types: [tutorial, report, announcement]
+industry: [general]
+tags: [evidence, image, gallery, story, journey]
+position: body
+when_to_use: |
+  故事流图集，适合旅程、过程、案例叙事。
+  图片有明确先后顺序时使用。
+when_not_to_use: |
+  多张同级图片用 gallery-grid；
+  带操作步骤的教学内容用 image-steps。
+pairs_well_with: [image-steps, figure-caption, part]
+avoid_combining_with: []
+anti_pattern: |
+  没有任何有效 Markdown 图片会导致渲染失败；
+  每行使用图片、标题、说明的顺序。
+opener:
+  param_style: braces
+  params:
+    - name: variant
+      description: 故事流外观
+      enum: [card, plain]
+      default: card
+body:
+  min_images: 1
+example: |
+  :::gallery-story{variant=card}
+  ![第一站](https://example.com/story-1.jpg) | 第一站 | 用一张图建立现场感。
+  ![第二站](https://example.com/story-2.jpg) | 第二站 | 用段落解释关键细节。
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#gallery-story"

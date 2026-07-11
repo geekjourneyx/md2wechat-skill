@@ -1,0 +1,41 @@
+schema_version: "1"
+name: svg-swipe-gallery
+body_format: markdown_images
+version: "1.0.0"
+since: "1.5.0"
+category: interactive
+serves: [attention, memorability]
+content_types: [tutorial, report, announcement, product-launch]
+industry: [general]
+tags: [interactive, svg, image, gallery, swipe]
+position: body
+when_to_use: |
+  点击切换两张图片，适合产品图、前后视觉叙事、活动图。
+  这是点击切换，不是手指拖拽轮播。
+when_not_to_use: |
+  多于两张图片的普通图集用 gallery-grid；
+  不需要互动时使用静态图片模块。
+pairs_well_with: [gallery-grid, image-compare, figure-caption]
+avoid_combining_with: []
+anti_pattern: |
+  少于两张有效 Markdown 图片会导致渲染失败；
+  只有 HTTPS mmbiz.qpic.cn 图片 URL 可进入 SVG image，其他 URL 或 svg_fallback=static 会降级为静态 HTML 图片卡；
+  默认只取前两张图片做点击切换。
+opener:
+  param_style: braces
+  params:
+    - name: svg_fallback
+      description: SVG 不可用时的回退策略
+      enum: [first-layer, static]
+      default: first-layer
+body:
+  min_images: 2
+example: |
+  :::svg-swipe-gallery
+  ![A](https://mmbiz.qpic.cn/...) | 第一张
+  ![B](https://mmbiz.qpic.cn/...) | 第二张
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#svg-swipe-gallery"

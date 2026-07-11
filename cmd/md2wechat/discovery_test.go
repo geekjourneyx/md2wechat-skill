@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
+	"github.com/geekjourneyx/md2wechat-skill/internal/layoutcatalog"
 	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
 	titlebuilder "github.com/geekjourneyx/md2wechat-skill/internal/title"
 	"github.com/spf13/cobra"
@@ -712,8 +713,13 @@ func TestBuildCapabilitiesDataIncludesLayoutWithoutUnreleasedFormat(t *testing.T
 	if layout["available"] != true {
 		t.Fatalf("layout available = %#v", layout["available"])
 	}
-	if layout["module_count"] != 43 {
-		t.Fatalf("layout module_count = %#v, want 43", layout["module_count"])
+	cat, err := layoutcatalog.DefaultCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantModuleCount := len(cat.ListFiltered(layoutcatalog.ListFilter{}))
+	if layout["module_count"] != wantModuleCount {
+		t.Fatalf("layout module_count = %#v, want %d", layout["module_count"], wantModuleCount)
 	}
 	if layout["api_mode_only"] != true {
 		t.Fatalf("layout api_mode_only = %#v", layout["api_mode_only"])
