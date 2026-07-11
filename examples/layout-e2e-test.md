@@ -32,7 +32,7 @@ body: 结构化内容让读者快速定位核心判断，减少认知负担。
 
 :::audience-fit
 fit: 内容创作者、运营、自媒体人
-not-fit: 只需纯文字输出的场景
+avoid: 只需纯文字输出的场景
 :::
 
 :::myth-fact[常见误区]
@@ -101,10 +101,10 @@ subtitle: 覆盖 AI 写作、排版系统和公众号工作流
 :::
 
 :::checklist
-已安装 md2wechat CLI
-已配置 API Key
-已确认生产 conformance 目标与身份记录
-已选择合适的排版模块
+done | 已安装 md2wechat CLI
+done | 已配置 API Key
+done | 已确认生产 conformance 目标与身份记录
+pending | 已选择合适的排版模块
 :::
 
 :::notice[适用说明]

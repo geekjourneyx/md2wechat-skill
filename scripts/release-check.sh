@@ -162,7 +162,7 @@ grep -q 'md2wechat skills read md2wechat --json' skills/md2wechat/SKILL.md || fa
 grep -q '`inspect` is the source-of-truth command' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must describe inspect as the source-of-truth command"
 grep -q '`preview --mode ai` is degraded confirmation only' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must describe degraded AI preview behavior"
 grep -q 'md2wechat skills read md2wechat --json' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must route stale-SOP checks through skills read"
-GOCACHE="${GOCACHE:-/tmp/md2wechat-go-build}" go test ./cmd/md2wechat -run '^TestLayoutDocumentationCountContract$' -count=1 >/dev/null || fail "layout documentation count contract must pass"
+GOCACHE="${GOCACHE:-/tmp/md2wechat-go-build}" go test ./cmd/md2wechat -run '^TestLayoutDocumentation' -count=1 >/dev/null || fail "layout documentation contracts must pass"
 grep -q -- '--body-file' docs/LAYOUT.md || fail "LAYOUT must document complex body input"
 grep -q 'layout list --lifecycle compatibility --json' skills/md2wechat/SKILL.md || fail "embedded skill must isolate compatibility layouts"
 grep -q 'layout list --lifecycle compatibility --json' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must isolate compatibility layouts"

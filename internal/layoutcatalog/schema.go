@@ -20,6 +20,11 @@ const (
 )
 
 const (
+	LayoutSourceBuiltin  = "builtin"
+	LayoutSourceOverride = "override"
+)
+
+const (
 	ParamStyleBraces  = "braces"
 	ParamStyleTokens  = "tokens"
 	ParamStyleBracket = "bracket"
@@ -167,6 +172,7 @@ type LayoutSpec struct {
 	ExampleAssertContains string         `yaml:"example_assert_contains,omitempty"`
 	Variants              []VariantSpec  `yaml:"variants,omitempty"`
 	Metadata              LayoutMetadata `yaml:"metadata"`
+	Source                string         `yaml:"-" json:"source,omitempty"`
 }
 
 type ListFilter struct {

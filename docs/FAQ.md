@@ -917,7 +917,7 @@ example: |
   :::
 ```
 
-Save it to `~/.config/md2wechat/layout/custom/my-module.yaml`. The CLI picks it up on next run — no restart needed.
+Save it to `~/.config/md2wechat/layout/custom/my-module.yaml`. The CLI picks it up on next run — no restart needed. YAML keys are strict, and recommended modules require the executable `example`. `layout list --json` reports the entry as `source: override` and `remote_renderer_available: false`; local validation does not deploy a remote HTML renderer.
 
 ---
 

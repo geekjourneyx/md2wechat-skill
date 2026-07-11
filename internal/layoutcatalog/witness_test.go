@@ -223,7 +223,8 @@ func TestExecutableWitnessContract(t *testing.T) {
 	c := NewCatalog()
 	c.modules["demo"] = &LayoutSpec{
 		Name: "demo", Lifecycle: LifecycleRecommended, BodyFormat: BodyFormatFields,
-		Fields: &FieldsSpec{Required: []FieldSpec{{Name: "title"}}},
+		Fields:   &FieldsSpec{Required: []FieldSpec{{Name: "title"}}, Optional: []FieldSpec{{Name: "variant"}}},
+		Variants: []VariantSpec{{Name: "compact"}},
 	}
 	canonical := ":::demo\ntitle: Canonical witness\n:::\n"
 	variant := ":::demo\nvariant: compact\ntitle: Compact witness\n:::\n"
@@ -241,7 +242,11 @@ func TestExecutableWitnessContract(t *testing.T) {
 
 func TestExecutableWitnessAcceptsDeclaredVariantAlias(t *testing.T) {
 	c := NewCatalog()
-	c.modules["demo"] = &LayoutSpec{Name: "demo", BodyFormat: BodyFormatFields}
+	c.modules["demo"] = &LayoutSpec{
+		Name: "demo", BodyFormat: BodyFormatFields,
+		Fields:   &FieldsSpec{Optional: []FieldSpec{{Name: "variant"}}},
+		Variants: []VariantSpec{{Name: "compact", Aliases: []string{"dense"}}},
+	}
 	err := c.ValidateWitness(WitnessContract{
 		Module: "demo", Variant: "compact", VariantAliases: []string{"dense"},
 		Example: ":::demo\nvariant: dense\n:::\n",
@@ -490,7 +495,7 @@ func TestValidatorIndependentNegativeBoundaries(t *testing.T) {
 		name, markdown, category string
 		spec                     *LayoutSpec
 	}{
-		{name: "missing required field", markdown: ":::demo\nother: value\n:::\n", category: "required field", spec: &LayoutSpec{Name: "demo", BodyFormat: BodyFormatFields, Fields: &FieldsSpec{Required: []FieldSpec{{Name: "title"}}}}},
+		{name: "missing required field", markdown: ":::demo\n:::\n", category: "required field", spec: &LayoutSpec{Name: "demo", BodyFormat: BodyFormatFields, Fields: &FieldsSpec{Required: []FieldSpec{{Name: "title"}}}}},
 		{name: "wrong row width", markdown: ":::demo\none\n:::\n", category: "columns", spec: &LayoutSpec{Name: "demo", BodyFormat: BodyFormatRows, Rows: &RowsSpec{Delimiter: "|", MinColumns: 2}}},
 		{name: "incomplete repeated group", markdown: ":::demo\nitem: first\n:::\n", category: "group field", spec: &LayoutSpec{Name: "demo", BodyFormat: BodyFormatMarkdownFields, Fields: &FieldsSpec{Optional: []FieldSpec{{Name: "item"}, {Name: "detail"}}}, Body: &BodySpec{Group: &FieldGroupSpec{Start: "item", Required: []string{"item", "detail"}, Min: 1}}}},
 		{name: "missing split divider", markdown: ":::demo\nleft\nright\n:::\n", category: "separator", spec: &LayoutSpec{Name: "demo", BodyFormat: BodyFormatSplit}},

@@ -41,6 +41,9 @@ serves: [attention]
 metadata:
   author: test
   provenance: override
+example: |
+  :::hero
+  :::
 `)
 	if err := os.WriteFile(filepath.Join(override, "hero.yaml"), yaml, 0o644); err != nil {
 		t.Fatal(err)
@@ -108,6 +111,9 @@ fields:
 metadata:
   author: test
   provenance: custom
+example: |
+  :::custom-current
+  :::
 `)
 			if _, err := parseLayoutSpec(yaml); err == nil || !strings.Contains(err.Error(), "invalid layout module name") {
 				t.Fatalf("parseLayoutSpec(%q) error = %v", name, err)
@@ -186,6 +192,91 @@ metadata:
 	}
 }
 
+func TestParseLayoutSpecRejectsUnknownYAMLFields(t *testing.T) {
+	yaml := []byte(`schema_version: "1"
+name: strict-yaml
+body_format: fields
+body_fomat: rows
+version: "1.0.0"
+category: opening
+serves: [attention]
+metadata:
+  author: test
+  provenance: custom
+`)
+	if _, err := parseLayoutSpec(yaml); err == nil || !strings.Contains(err.Error(), "body_fomat") {
+		t.Fatalf("parseLayoutSpec() error = %v, want unknown field rejection", err)
+	}
+}
+
+func TestLoadFromDirRequiresRecommendedExecutableWitness(t *testing.T) {
+	dir := t.TempDir()
+	yaml := []byte(`schema_version: "1"
+name: no-witness
+lifecycle: recommended
+body_format: fields
+version: "1.0.0"
+category: opening
+serves: [attention]
+fields:
+  required:
+    - name: title
+metadata:
+  author: test
+  provenance: custom
+`)
+	if err := os.WriteFile(filepath.Join(dir, "no-witness.yaml"), yaml, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c := NewCatalog()
+	if err := c.loadFromDir(dir); err == nil || !strings.Contains(err.Error(), "canonical example") {
+		t.Fatalf("loadFromDir() error = %v, want canonical witness rejection", err)
+	}
+}
+
+func TestBuiltinAndOverrideSourcesAreRuntimeFacts(t *testing.T) {
+	builtin, err := BuiltinCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	hero, ok := builtin.Get("hero")
+	if !ok || hero.Source != LayoutSourceBuiltin {
+		t.Fatalf("builtin hero source = %q, found=%v", hero.Source, ok)
+	}
+
+	dir := t.TempDir()
+	yaml := []byte(`schema_version: "1"
+name: local-card
+lifecycle: recommended
+body_format: fields
+version: "1.0.0"
+category: opening
+serves: [attention]
+fields:
+  required:
+    - name: title
+example: |
+  :::local-card
+  title: Local
+  :::
+metadata:
+  author: test
+  provenance: custom
+`)
+	if err := os.WriteFile(filepath.Join(dir, "local-card.yaml"), yaml, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c := NewCatalog()
+	c.modules = map[string]*LayoutSpec{}
+	if err := c.loadFromDir(dir); err != nil {
+		t.Fatal(err)
+	}
+	local, ok := c.Get("local-card")
+	if !ok || local.Source != LayoutSourceOverride {
+		t.Fatalf("override source = %q, found=%v", local.Source, ok)
+	}
+}
+
 func TestParseLayoutSpecDefaultsLegacyBodyFormat(t *testing.T) {
 	yaml := []byte(`schema_version: "1"
 name: legacy
@@ -218,6 +309,9 @@ name: custom-current
 version: "1.0.0"
 category: opening
 serves: [attention]
+example: |
+  :::custom-current
+  :::
 metadata:
   author: test
   provenance: custom
@@ -283,6 +377,9 @@ serves: [attention]
 metadata:
   author: local
   provenance: local
+example: |
+  :::hero
+  :::
 `)
 	if err := os.WriteFile(filepath.Join(localOpening, "hero.yaml"), localYAML, 0o644); err != nil {
 		t.Fatal(err)
@@ -301,6 +398,9 @@ serves: [attention]
 metadata:
   author: env
   provenance: env
+example: |
+  :::hero
+  :::
 `)
 	if err := os.WriteFile(filepath.Join(envOpening, "hero.yaml"), envYAML, 0o644); err != nil {
 		t.Fatal(err)

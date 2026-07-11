@@ -349,6 +349,47 @@ metadata:
 	}
 }
 
+func TestFieldsBodyRejectsUnknownAndMalformedLines(t *testing.T) {
+	spec := &LayoutSpec{
+		Name: "demo", BodyFormat: BodyFormatFields,
+		Fields: &FieldsSpec{Required: []FieldSpec{{Name: "title"}}},
+	}
+	for _, body := range [][]string{
+		{"title: Valid", "titlle: typo"},
+		{"title: Valid", "arbitrary prose"},
+	} {
+		if issues := validateBlockBody(spec, body); len(issues) == 0 {
+			t.Fatalf("validateBlockBody(%q) accepted malformed fields body", body)
+		}
+	}
+}
+
+func TestRowsBodyEnforcesDeclaredColumnSchema(t *testing.T) {
+	spec := &LayoutSpec{
+		Name: "metrics", BodyFormat: BodyFormatRows,
+		Rows: &RowsSpec{
+			Delimiter: "|", MinColumns: 2,
+			Schema: []FieldSpec{
+				{Name: "label"}, {Name: "value"},
+				{Name: "style", Enum: []string{"accent", "default"}},
+			},
+		},
+	}
+	tests := []struct {
+		name string
+		body []string
+	}{
+		{name: "invalid enum", body: []string{"Readers | 38 | bogus"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if issues := validateBlockBody(spec, tt.body); len(issues) == 0 {
+				t.Fatalf("validateBlockBody(%q) accepted invalid row", tt.body)
+			}
+		})
+	}
+}
+
 func TestParseLayoutSpecFieldShapeAndOutputOrderSchema(t *testing.T) {
 	tests := []struct {
 		name, fields, want string

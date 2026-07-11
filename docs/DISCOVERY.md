@@ -56,6 +56,9 @@ md2wechat capabilities --json
     "recommended_syntax_count": 53,
     "recommended_scenario_count": 68,
     "compatibility_module_count": 3,
+    "effective_recommended_syntax_count": 53,
+    "effective_compatibility_module_count": 3,
+    "local_override_module_count": 0,
     "base_enhancement_count": 4,
     "render_syntax_count": 60,
     "supports_validate": true,
@@ -416,7 +419,7 @@ md2wechat layout validate --file article.md --json
 md2wechat layout validate --stdin --json < article.md
 ```
 
-`layout list --json` 会在模块摘要中显示 `body_format`；`layout show --json` 会显示完整 schema、canonical `Example` 和结构不同的 `Variants[].Example`。Schema 定义合法输入；Example 是经过验证的可执行 witness，应复用而不是手猜语法。正文格式共有 `fields` / `rows` / `json_object` / `json_array` / `markdown_images` / `markdown_fields` / `split` / `lines` / `dialogue` 九种；`compatible_body_formats` 只表示模块仍接受的旧正文格式。
+`layout list --json` 会在模块摘要中显示 `body_format`、`source` 和 `remote_renderer_available`；`layout show --json` 会显示完整 schema、canonical `Example` 和结构不同的 `Variants[].Example`。Schema 定义合法输入；Example 是经过验证的可执行 witness，应复用而不是手猜语法。正文格式共有 `fields` / `rows` / `json_object` / `json_array` / `markdown_images` / `markdown_fields` / `split` / `lines` / `dialogue` 九种；`compatible_body_formats` 只表示模块仍接受的旧正文格式。
 
 默认 `layout list --json` 只返回 recommended lifecycle。旧稿迁移时才运行 `layout list --lifecycle compatibility --json`；不要把 `dialogue`、`gallery`、`longimage` 推荐给新稿。复杂正文使用 `layout render <name> --body-file <path>`（或 `--body-file -` 从 stdin 读取），opener 参数用可重复的 `--param KEY=VALUE`，方括号 caption 用 `--caption`。
 
@@ -441,6 +444,8 @@ Custom module YAMLs are merged in this order (later wins):
 4. `$MD2WECHAT_LAYOUT_DIR` — env var (highest priority)
 
 To add or override a module, create `<category>/<name>.yaml` in any override directory with `schema_version: "1"`.
+
+Builtin counts remain the deployed renderer contract: 53 recommended syntax names and 3 compatibility modules. `effective_recommended_syntax_count` and `effective_compatibility_module_count` include resolved local overrides; `local_override_module_count` reports how many effective entries came from override directories. A list item with `source: override` has `remote_renderer_available: false`: it can participate in local discovery/render/validate, but Agents must not select it for API conversion unless the target service is independently known to support it. Recommended override YAML must include a canonical executable `example`, and unknown YAML keys fail catalog loading.
 
 ### Unknown Module Strategy
 

@@ -48,6 +48,16 @@ type e2eSettings struct {
 	ExpectedBuildID string
 }
 
+const layoutConformanceRequestTimeout = 30 * time.Second
+
+func layoutConformanceCatalog() (*layoutcatalog.Catalog, error) {
+	return layoutcatalog.BuiltinCatalog()
+}
+
+func layoutConformanceHTTPClient() *http.Client {
+	return &http.Client{Timeout: layoutConformanceRequestTimeout}
+}
+
 func e2eGate(t *testing.T) e2eSettings {
 	t.Helper()
 	if os.Getenv("MD2WECHAT_E2E") != "1" {
@@ -598,7 +608,7 @@ func collectAllE2EWitnesses(c *layoutcatalog.Catalog) ([]e2eWitnessGroup, error)
 }
 
 func TestCollectAllE2EWitnessesHasStable80WitnessContract(t *testing.T) {
-	c, err := layoutcatalog.DefaultCatalog()
+	c, err := layoutConformanceCatalog()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -614,9 +624,49 @@ func TestCollectAllE2EWitnessesHasStable80WitnessContract(t *testing.T) {
 	}
 }
 
+func TestLayoutConformanceCatalogIgnoresLocalOverrides(t *testing.T) {
+	dir := t.TempDir()
+	yaml := []byte(`schema_version: "1"
+name: local-e2e
+lifecycle: recommended
+body_format: fields
+version: "1.0.0"
+category: opening
+serves: [attention]
+fields:
+  required:
+    - name: title
+example: |
+  :::local-e2e
+  title: Local
+  :::
+metadata:
+  author: test
+  provenance: custom
+`)
+	if err := os.WriteFile(filepath.Join(dir, "local-e2e.yaml"), yaml, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("MD2WECHAT_LAYOUT_DIR", dir)
+	c, err := layoutConformanceCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := c.Get("local-e2e"); ok {
+		t.Fatal("production conformance catalog included a local override")
+	}
+}
+
+func TestLayoutConformanceHTTPClientHasTimeout(t *testing.T) {
+	client := layoutConformanceHTTPClient()
+	if client.Timeout <= 0 {
+		t.Fatalf("conformance HTTP timeout = %v, want positive", client.Timeout)
+	}
+}
+
 func TestE2ELayoutConformance(t *testing.T) {
 	settings := e2eGate(t)
-	c, err := layoutcatalog.DefaultCatalog()
+	c, err := layoutConformanceCatalog()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -624,7 +674,7 @@ func TestE2ELayoutConformance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	client := http.DefaultClient
+	client := layoutConformanceHTTPClient()
 	var remoteIdentity string
 	identityInitialized := false
 	for _, group := range groups {
@@ -670,7 +720,7 @@ func TestE2EOpinionPieceFixture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := postConvert(http.DefaultClient, settings.BaseURL, settings.APIKey, string(data))
+	resp, err := postConvert(layoutConformanceHTTPClient(), settings.BaseURL, settings.APIKey, string(data))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -682,14 +732,14 @@ func TestE2EOpinionPieceFixture(t *testing.T) {
 func TestE2EValidatorVsAPIConsistency(t *testing.T) {
 	settings := e2eGate(t)
 	bad := ":::hero\neyebrow: only\n:::\n"
-	c, err := layoutcatalog.DefaultCatalog()
+	c, err := layoutConformanceCatalog()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if r := c.Validate(bad); len(r.Errors) == 0 {
 		t.Fatal("validator should flag missing title")
 	}
-	resp, err := postConvert(http.DefaultClient, settings.BaseURL, settings.APIKey, bad)
+	resp, err := postConvert(layoutConformanceHTTPClient(), settings.BaseURL, settings.APIKey, bad)
 	if err != nil {
 		t.Fatal(err)
 	}

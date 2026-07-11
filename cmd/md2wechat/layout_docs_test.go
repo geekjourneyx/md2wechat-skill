@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/geekjourneyx/md2wechat-skill/internal/layoutcatalog"
 )
 
 var layoutCountAnchorRE = regexp.MustCompile(`<!-- layout-count-contract: recommended_scenarios=(\d+) recommended_syntaxes=(\d+) compatibility_modules=(\d+) base_enhancements=(\d+) render_syntaxes=(\d+) -->`)
@@ -84,8 +86,8 @@ func TestLayoutDocumentationCountContract(t *testing.T) {
 	}
 
 	releaseCheck := readDocumentationFile(t, "../../scripts/release-check.sh")
-	if !strings.Contains(releaseCheck, "TestLayoutDocumentationCountContract") {
-		t.Error("release-check must execute the focused semantic layout documentation contract")
+	if !strings.Contains(releaseCheck, "-run '^TestLayoutDocumentation'") {
+		t.Error("release-check must execute the layout documentation contracts")
 	}
 	if strings.Contains(releaseCheck, "grep -q '53 个主推'") || strings.Contains(releaseCheck, "grep -q '68 个主推'") {
 		t.Error("release-check must not depend on locale-specific layout count prose")
@@ -111,6 +113,42 @@ func TestLayoutDocumentationBodyFormatTroubleshootingContract(t *testing.T) {
 		if !strings.Contains(section, phrase) {
 			t.Errorf("body-format troubleshooting must define %q", phrase)
 		}
+	}
+}
+
+func TestLayoutDocumentationExplainsOverrideRendererBoundary(t *testing.T) {
+	discovery := readDocumentationFile(t, "../../docs/DISCOVERY.md")
+	for _, key := range []string{
+		"effective_recommended_syntax_count",
+		"effective_compatibility_module_count",
+		"local_override_module_count",
+		"remote_renderer_available",
+	} {
+		if !strings.Contains(discovery, key) {
+			t.Errorf("docs/DISCOVERY.md must document %q", key)
+		}
+	}
+	for _, path := range []string{"../../skills/md2wechat/SKILL.md", "../../platforms/openclaw/md2wechat/SKILL.md"} {
+		text := readDocumentationFile(t, path)
+		if !strings.Contains(text, "remote_renderer_available") {
+			t.Errorf("%s must route API layout choices through remote_renderer_available", path)
+		}
+	}
+	releaseCheck := readDocumentationFile(t, "../../scripts/release-check.sh")
+	if !strings.Contains(releaseCheck, "-run '^TestLayoutDocumentation'") {
+		t.Error("release-check must execute the complete layout documentation contract set")
+	}
+}
+
+func TestLayoutDocumentationE2EFixtureMatchesCurrentCatalog(t *testing.T) {
+	markdown := readDocumentationFile(t, "../../examples/layout-e2e-test.md")
+	catalog, err := layoutcatalog.BuiltinCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	report := catalog.Validate(markdown)
+	if len(report.Errors) != 0 || len(report.Warnings) != 0 {
+		t.Fatalf("layout E2E fixture drifted: errors=%+v warnings=%+v", report.Errors, report.Warnings)
 	}
 }
 

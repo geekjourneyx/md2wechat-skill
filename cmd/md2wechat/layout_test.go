@@ -133,6 +133,87 @@ func TestLayoutListRejectsUnsupportedLifecycle(t *testing.T) {
 	}
 }
 
+func TestLayoutListRejectsUnsupportedServes(t *testing.T) {
+	setupLayoutListLifecycleTest(t)
+	layoutListFilters.serves = "typo"
+
+	err := layoutListCmd.RunE(layoutListCmd, nil)
+	cliErr, ok := err.(*cliError)
+	if !ok || cliErr.Code != codeLayoutInvalidFilter {
+		t.Fatalf("layout list error = %#v, want %s", err, codeLayoutInvalidFilter)
+	}
+}
+
+func TestLayoutListExposesOverrideRendererBoundary(t *testing.T) {
+	oldJSON := jsonOutput
+	oldFilters := layoutListFilters
+	t.Cleanup(func() {
+		jsonOutput = oldJSON
+		layoutListFilters = oldFilters
+		layoutcatalog.ResetDefaultCatalogForTests()
+	})
+	dir := t.TempDir()
+	yaml := []byte(`schema_version: "1"
+name: local-card
+lifecycle: recommended
+body_format: fields
+version: "1.0.0"
+category: opening
+serves: [attention]
+fields:
+  required:
+    - name: title
+example: |
+  :::local-card
+  title: Local
+  :::
+metadata:
+  author: test
+  provenance: custom
+`)
+	if err := os.WriteFile(filepath.Join(dir, "local-card.yaml"), yaml, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("MD2WECHAT_LAYOUT_DIR", dir)
+	jsonOutput = true
+	layoutListFilters = struct {
+		category    string
+		serves      string
+		contentType string
+		industry    string
+		tag         string
+		lifecycle   string
+	}{}
+	layoutcatalog.ResetDefaultCatalogForTests()
+
+	stdout := captureStdout(t, func() {
+		if err := layoutListCmd.RunE(layoutListCmd, nil); err != nil {
+			t.Fatal(err)
+		}
+	})
+	var response struct {
+		Data struct {
+			Modules []struct {
+				Name                    string `json:"name"`
+				Source                  string `json:"source"`
+				RemoteRendererAvailable bool   `json:"remote_renderer_available"`
+			} `json:"modules"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(stdout, &response); err != nil {
+		t.Fatal(err)
+	}
+	for _, module := range response.Data.Modules {
+		if module.Name == "local-card" {
+			if module.Source != layoutcatalog.LayoutSourceOverride || module.RemoteRendererAvailable {
+				t.Fatalf("local-card boundary = %+v", module)
+			}
+			return
+		}
+	}
+	t.Fatal("local-card missing from layout list")
+}
+
 func setupLayoutListLifecycleTest(t *testing.T) {
 	t.Helper()
 	oldJSON := jsonOutput
@@ -392,6 +473,10 @@ opener:
       enum: ["2", "3"]
 body:
   min_images: 1
+example: |
+  :::gallery-grid{columns=2}
+  ![示例](https://example.com/example.png)
+  :::
 metadata:
   author: test
   provenance: custom
@@ -410,6 +495,10 @@ opener:
   caption: true
 body:
   min_images: 1
+example: |
+  :::gallery-caption[示例]
+  ![示例](https://example.com/example.png)
+  :::
 metadata:
   author: test
   provenance: custom

@@ -1241,7 +1241,9 @@ md2wechat config show --format json | grep api_key
 
 在 `~/.config/md2wechat/layout/<category>/<name>.yaml` 创建文件：
 
-本地 YAML 只扩展或覆盖 CLI 的 discovery、render 和 validate 契约，不能在远端 API 中凭空创建 HTML renderer。自定义名称在远端没有对应实现时，即使本地 validate 通过，也不应宣称已可渲染。
+本地 YAML 只扩展或覆盖 CLI 的 discovery、render 和 validate 契约，不能在远端 API 中凭空创建 HTML renderer。自定义名称在远端没有对应实现时，即使本地 validate 通过，也不应宣称已可渲染。`layout list --json` 会把这类条目标记为 `source: override`、`remote_renderer_available: false`。
+
+YAML 使用严格字段检查：拼错或未支持的键会阻止 catalog 加载。recommended 模块必须提供一个能通过相同 schema 校验的 canonical `example`；结构不同的 variant 还必须提供自己的 `use_when` 和 `example`。
 
 ```yaml
 schema_version: "1"

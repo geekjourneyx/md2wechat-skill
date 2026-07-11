@@ -1,6 +1,7 @@
 package layoutcatalog
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -28,6 +29,17 @@ var (
 
 func NewCatalog() *Catalog {
 	return &Catalog{modules: map[string]*LayoutSpec{}}
+}
+
+// BuiltinCatalog returns the renderer-backed catalog without local overrides.
+func BuiltinCatalog() (*Catalog, error) {
+	c := NewCatalog()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if err := c.loadBuiltin(); err != nil {
+		return nil, fmt.Errorf("load builtin layout: %w", err)
+	}
+	return c, nil
 }
 
 func DefaultCatalog() (*Catalog, error) {
@@ -99,6 +111,10 @@ func (c *Catalog) loadBuiltin() error {
 			if err != nil {
 				return fmt.Errorf("parse builtin %s/%s: %w", cat, name, err)
 			}
+			spec.Source = LayoutSourceBuiltin
+			if err := validateLoadedWitnesses(spec); err != nil {
+				return fmt.Errorf("validate builtin %s/%s: %w", cat, name, err)
+			}
 			c.modules[spec.Name] = spec
 		}
 	}
@@ -134,6 +150,10 @@ func (c *Catalog) loadFromDir(dir string) error {
 		if err != nil {
 			return fmt.Errorf("parse %s: %w", p, err)
 		}
+		spec.Source = LayoutSourceOverride
+		if err := validateLoadedWitnesses(spec); err != nil {
+			return fmt.Errorf("validate %s: %w", p, err)
+		}
 		c.modules[spec.Name] = spec
 		return nil
 	})
@@ -141,7 +161,9 @@ func (c *Catalog) loadFromDir(dir string) error {
 
 func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	var spec LayoutSpec
-	if err := yaml.Unmarshal(data, &spec); err != nil {
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&spec); err != nil {
 		return nil, err
 	}
 	if spec.SchemaVersion != SchemaVersion {
@@ -203,6 +225,9 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if !seenBodyFormats[BodyFormatRows] && spec.Rows != nil {
 		return nil, fmt.Errorf("rows requires body_format rows")
 	}
+	if err := validateRowsSpec(spec.Rows); err != nil {
+		return nil, err
+	}
 	if spec.Metadata.Author == "" || spec.Metadata.Provenance == "" {
 		return nil, fmt.Errorf("metadata.author and metadata.provenance are required")
 	}
@@ -210,6 +235,66 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 		return nil, err
 	}
 	return &spec, nil
+}
+
+func validateLoadedWitnesses(spec *LayoutSpec) error {
+	if spec.Lifecycle != LifecycleRecommended {
+		return nil
+	}
+	if strings.TrimSpace(spec.Example) == "" {
+		return fmt.Errorf("recommended layout %q requires a canonical example", spec.Name)
+	}
+	temporary := NewCatalog()
+	temporary.modules[spec.Name] = spec
+	if err := temporary.ValidateWitness(WitnessContract{
+		Module: spec.Name, Example: spec.Example, AssertContains: spec.ExampleAssertContains,
+	}); err != nil {
+		return fmt.Errorf("canonical example: %w", err)
+	}
+	for _, variant := range spec.Variants {
+		if strings.TrimSpace(variant.UseWhen) == "" {
+			return fmt.Errorf("variant %q requires use_when", variant.Name)
+		}
+		if strings.TrimSpace(variant.Example) == "" {
+			return fmt.Errorf("variant %q requires an executable example", variant.Name)
+		}
+		if err := temporary.ValidateWitness(WitnessContract{
+			Module: spec.Name, Variant: variant.Name, VariantAliases: variant.Aliases,
+			Example: variant.Example, AssertContains: variant.AssertContains,
+		}); err != nil {
+			return fmt.Errorf("variant %q example: %w", variant.Name, err)
+		}
+	}
+	return nil
+}
+
+func validateRowsSpec(rows *RowsSpec) error {
+	if rows == nil {
+		return nil
+	}
+	if rows.MinColumns <= 0 {
+		return fmt.Errorf("rows.min_columns must be greater than zero")
+	}
+	if len(rows.Schema) == 0 {
+		return nil
+	}
+	if rows.MinColumns > len(rows.Schema) {
+		return fmt.Errorf("rows.min_columns must not exceed rows.schema length")
+	}
+	seen := map[string]bool{}
+	for _, field := range rows.Schema {
+		if strings.TrimSpace(field.Name) == "" || strings.TrimSpace(field.Name) != field.Name {
+			return fmt.Errorf("rows.schema field name %q is invalid", field.Name)
+		}
+		if seen[field.Name] {
+			return fmt.Errorf("duplicate rows.schema field %q", field.Name)
+		}
+		seen[field.Name] = true
+		if field.ValueType != "" && field.ValueType != "string" {
+			return fmt.Errorf("rows.schema field %q has invalid value_type %q", field.Name, field.ValueType)
+		}
+	}
+	return nil
 }
 
 func validateWitnessSpecs(spec *LayoutSpec, declaredFields map[string]bool) error {

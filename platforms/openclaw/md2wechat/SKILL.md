@@ -162,7 +162,7 @@ Use `layout list --json` and `layout show <name> --json` to inspect `body_format
 
 Inspect the opener, body schema, canonical executable example, and any structurally distinct variant examples with `layout show <name> --json`. Reuse the canonical witness instead of guessing syntax. Use `layout render` when structured variables are enough; for complex blocks pass raw content with `--body-file` (or `--body-file -` for stdin), then validate the generated Markdown.
 
-Default discovery returns recommended modules. Query `layout list --lifecycle compatibility --json` only when migrating existing `dialogue`, `gallery`, or `longimage` blocks; do not recommend compatibility layouts for new articles. Local `layout validate` proves schema acceptance, not that a custom YAML has a remote HTML renderer or that a target API deployment supports it.
+Default discovery returns recommended modules. Query `layout list --lifecycle compatibility --json` only when migrating existing `dialogue`, `gallery`, or `longimage` blocks; do not recommend compatibility layouts for new articles. Before selecting a module for API conversion, require `remote_renderer_available: true` from `layout list --json`. Local `layout validate` proves schema acceptance, not that a custom YAML has a remote HTML renderer or that a target API deployment supports it.
 
 Default module discipline:
 

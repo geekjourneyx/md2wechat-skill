@@ -58,7 +58,9 @@ func validateBlockBody(spec *LayoutSpec, body []string) []bodyValidationIssue {
 func parseBodyFacts(spec *LayoutSpec, format string, body []string) (bodyFacts, []bodyValidationIssue) {
 	facts := newBodyFacts()
 	switch format {
-	case BodyFormatFields, BodyFormatMarkdownFields, "":
+	case BodyFormatFields, "":
+		return parseFieldsBody(spec.Fields, body)
+	case BodyFormatMarkdownFields:
 		facts.addDeclaredFields(spec.Fields, body)
 		facts.imageCount = countMarkdownImages(body)
 		return facts, nil
@@ -90,6 +92,26 @@ func parseBodyFacts(spec *LayoutSpec, format string, body []string) (bodyFacts, 
 	default:
 		return facts, []bodyValidationIssue{{message: fmt.Sprintf("unsupported body_format %q", format)}}
 	}
+}
+
+func parseFieldsBody(fields *FieldsSpec, body []string) (bodyFacts, []bodyValidationIssue) {
+	facts := newBodyFacts()
+	for _, raw := range body {
+		line := strings.TrimSpace(strings.TrimRight(raw, "\r"))
+		if line == "" {
+			continue
+		}
+		idx := strings.Index(line, ":")
+		if idx <= 0 {
+			return facts, []bodyValidationIssue{{message: "fields body lines must use key: value syntax", cause: ErrInvalidFieldValue}}
+		}
+		name := strings.TrimSpace(line[:idx])
+		if !isDeclaredField(fields, name) {
+			return facts, []bodyValidationIssue{{field: name, message: fmt.Sprintf("unknown field %q", name), cause: ErrInvalidFieldValue}}
+		}
+		facts.addField(name, strings.TrimSpace(line[idx+1:]))
+	}
+	return facts, nil
 }
 
 func newBodyFacts() bodyFacts {
@@ -170,6 +192,18 @@ func parseRowsBody(spec *LayoutSpec, body []string) (bodyFacts, []bodyValidation
 		for i := 0; i < spec.Rows.MinColumns; i++ {
 			if strings.TrimSpace(cells[i]) == "" {
 				return facts, []bodyValidationIssue{{message: fmt.Sprintf("row column %d must not be empty", i+1)}}
+			}
+		}
+		if len(spec.Rows.Schema) > 0 {
+			for i, cell := range cells {
+				if i >= len(spec.Rows.Schema) {
+					break
+				}
+				field := spec.Rows.Schema[i]
+				value := strings.TrimSpace(cell)
+				if err := checkEnum(field, value); err != nil {
+					return facts, []bodyValidationIssue{{field: field.Name, message: err.Error(), cause: ErrInvalidFieldValue}}
+				}
 			}
 		}
 	}
