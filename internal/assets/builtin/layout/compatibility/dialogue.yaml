@@ -26,7 +26,7 @@ example: |
   甲：你好
   乙：你好
   :::
-example_assert_contains: "甲：你好"
+example_assert_contains: "你好"
 metadata:
   author: md2wechat
   provenance: builtin

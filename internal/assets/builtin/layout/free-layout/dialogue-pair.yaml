@@ -41,6 +41,7 @@ example: |
   U: 我需要学多少个模块？
   E: 先学开场、信息卡、证据、总结和 CTA，绝大多数文章就能明显升级。
   :::
+example_assert_contains: "高级模块和普通 Markdown 有什么区别？"
 metadata:
   author: md2wechat
   provenance: builtin

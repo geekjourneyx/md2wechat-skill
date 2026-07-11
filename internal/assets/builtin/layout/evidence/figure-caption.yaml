@@ -46,6 +46,7 @@ example: |
   caption: 2026 年用户增长曲线
   source: 内部实验数据
   :::
+example_assert_contains: "2026 年用户增长曲线"
 metadata:
   author: md2wechat
   provenance: builtin

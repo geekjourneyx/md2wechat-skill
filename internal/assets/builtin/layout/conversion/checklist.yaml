@@ -39,6 +39,7 @@ example: |
   pending | 数据再补齐 | 关键数字和案例放进对应模块
   warn | 链接和说明单独检查 | 避免手机里出现跳读和看不清
   :::
+example_assert_contains: "结构先搭好"
 metadata:
   author: md2wechat
   provenance: builtin

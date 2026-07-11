@@ -42,6 +42,7 @@ example: |
 
   左侧讲结论，右侧放证据、说明或下一步，让两块信息都能独立阅读。
   :::
+example_assert_contains: "主判断"
 metadata:
   author: md2wechat
   provenance: builtin

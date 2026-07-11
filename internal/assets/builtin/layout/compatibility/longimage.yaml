@@ -24,7 +24,6 @@ example: |
   :::longimage
   ![长图](https://example.com/longimage.jpg)
   :::
-example_assert_contains: "![长图](https://example.com/longimage.jpg)"
 metadata:
   author: md2wechat
   provenance: builtin

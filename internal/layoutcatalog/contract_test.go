@@ -491,6 +491,11 @@ func TestCompatibilityModuleContracts(t *testing.T) {
 			example: longimageCompatibilityGuideSnippet,
 		},
 	}
+	wantAssertions := map[string]string{
+		"gallery":   "",
+		"dialogue":  "你好",
+		"longimage": "",
+	}
 
 	c := NewCatalog()
 	if err := c.Load(); err != nil {
@@ -523,10 +528,42 @@ func TestCompatibilityModuleContracts(t *testing.T) {
 			if spec.Example != contract.example {
 				t.Errorf("canonical migration witness differs\ngot:  %q\nwant: %q", spec.Example, contract.example)
 			}
+			if spec.ExampleAssertContains != wantAssertions[name] {
+				t.Errorf("example_assert_contains = %q, want %q", spec.ExampleAssertContains, wantAssertions[name])
+			}
 			if err := checkExecutableWitness(c, spec.Name, "", spec.Example, spec.ExampleAssertContains); err != nil {
 				t.Fatalf("witness invalid: %v", err)
 			}
 		})
+	}
+}
+
+func TestBuiltinCanonicalStableAssertions(t *testing.T) {
+	want := map[string]string{
+		"checklist":         "结构先搭好",
+		"dialogue-pair":     "高级模块和普通 Markdown 有什么区别？",
+		"figure-caption":    "2026 年用户增长曲线",
+		"flow":              "草稿输入",
+		"image-text":        "图和说明绑在一起，读者更容易跟上重点",
+		"question":          "md2wechat 是排版工具吗？",
+		"split":             "主判断",
+		"svg-swipe-gallery": "第一张",
+	}
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for name, assertion := range want {
+		spec, ok := c.Get(name)
+		if !ok {
+			t.Fatalf("missing %s", name)
+		}
+		if spec.ExampleAssertContains != assertion {
+			t.Errorf("%s example_assert_contains = %q, want %q", name, spec.ExampleAssertContains, assertion)
+		}
+		if !strings.Contains(spec.Example, assertion) {
+			t.Errorf("%s example does not contain assertion %q", name, assertion)
+		}
 	}
 }
 

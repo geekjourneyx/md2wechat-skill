@@ -59,6 +59,7 @@ example: |
   image: https://example.com/split.png
   alt: 图文双栏示例图片
   :::
+example_assert_contains: "图和说明绑在一起，读者更容易跟上重点"
 metadata:
   author: md2wechat
   provenance: builtin

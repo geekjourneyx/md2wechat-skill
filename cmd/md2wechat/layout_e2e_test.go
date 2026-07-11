@@ -169,6 +169,27 @@ func TestSemanticConformanceRules(t *testing.T) {
 	}
 }
 
+func TestSVGGallerySemanticConformanceCountsSVGImageElements(t *testing.T) {
+	witness := e2eWitness{Module: "svg-swipe-gallery", Probe: "第一张"}
+	tests := []struct {
+		name     string
+		rendered string
+		wantErr  bool
+	}{
+		{name: "two SVG images", rendered: `<svg><image href="one"></image><image href="two"></image></svg>`},
+		{name: "one SVG image", rendered: `<svg><image href="one"></image></svg>`, wantErr: true},
+		{name: "HTML images do not satisfy SVG branch", rendered: `<div><img src="one"><img src="two"></div>`, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := checkSemanticConformance(witness, tt.rendered)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("checkSemanticConformance() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestImageWitnessRetainsStableAltContent(t *testing.T) {
 	witness := e2eWitness{Module: "gallery", Probe: "图一", ProbeInImageAlt: true}
 	if err := checkConformanceHTML(witness, `<section data-mpa-action-id="gallery"><img alt="图一"></section>`); err != nil {
@@ -345,6 +366,27 @@ func TestCollectE2EWitnessesPrefersExplicitAssertion(t *testing.T) {
 	}
 	if err := checkConformanceHTML(witnesses[0], `<section data-mpa-action-id="hero">Explicit visible</section>`); err != nil {
 		t.Fatalf("explicit visible assertion should pass without derived probe: %v", err)
+	}
+}
+
+func TestCollectE2EImageWitnessPrefersExplicitVisibleAssertion(t *testing.T) {
+	c := layoutcatalog.NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	builtin, _ := c.Get("gallery-grid")
+	spec := *builtin
+	spec.Example = ":::gallery-grid\n![Derived alt](https://example.com/a.png) | Explicit visible caption\n:::\n"
+	spec.ExampleAssertContains = "Explicit visible caption"
+	witnesses, err := witnessesForSpec(c, &spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := witnesses[0]; got.Probe != "Explicit visible caption" || got.ProbeInImageAlt {
+		t.Fatalf("image witness = %+v, want explicit visible probe", got)
+	}
+	if err := checkConformanceHTML(witnesses[0], `<section data-mpa-action-id="gallery-grid"><img alt="Derived alt"><p>Explicit visible caption</p></section>`); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -634,8 +676,12 @@ func hasImageAltProbe(node *html.Node, probe string) bool {
 
 func checkSemanticConformance(witness e2eWitness, rendered string) error {
 	minimumImages := 0
+	imageElement := "img"
 	switch witness.Module {
-	case "image-compare", "svg-swipe-gallery":
+	case "svg-swipe-gallery":
+		minimumImages = 2
+		imageElement = "image"
+	case "image-compare":
 		minimumImages = 2
 	case "gallery-grid", "gallery-story", "image-phone-shot", "figure-caption":
 		minimumImages = 1
@@ -646,8 +692,8 @@ func checkSemanticConformance(witness e2eWitness, rendered string) error {
 	if err != nil {
 		return fmt.Errorf("%s response is not parseable HTML: %w", witness.Module, err)
 	}
-	if count := countDOMElements(doc, "img"); count < minimumImages {
-		return fmt.Errorf("%s response has %d image element(s), want at least %d", witness.Module, count, minimumImages)
+	if count := countDOMElements(doc, imageElement); count < minimumImages {
+		return fmt.Errorf("%s response has %d %s element(s), want at least %d", witness.Module, count, imageElement, minimumImages)
 	}
 	return nil
 }
@@ -733,13 +779,14 @@ func witnessesForSpec(c *layoutcatalog.Catalog, spec *layoutcatalog.LayoutSpec) 
 			return nil, err
 		}
 		probe := strings.TrimSpace(item.assertion)
-		probeInImageAlt := spec.BodyFormat == layoutcatalog.BodyFormatMarkdownImages
-		if probe == "" || probeInImageAlt {
+		probeInImageAlt := false
+		if probe == "" {
 			var err error
 			probe, err = deterministicWitnessProbe(spec.BodyFormat, item.markdown)
 			if err != nil {
 				return nil, fmt.Errorf("%s witness %q probe: %w", spec.Name, item.variant, err)
 			}
+			probeInImageAlt = spec.BodyFormat == layoutcatalog.BodyFormatMarkdownImages
 		}
 		if probe == "" {
 			return nil, fmt.Errorf("%s witness %q has no deterministic probe or explicit assertion", spec.Name, item.variant)

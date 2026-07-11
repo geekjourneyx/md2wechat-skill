@@ -48,6 +48,7 @@ example: |
   Q: 第一次应该怎么试？
   A: 给一篇草稿或一个选题，先让 Agent 30 分钟内出一版高级稿。
   :::
+example_assert_contains: "md2wechat 是排版工具吗？"
 metadata:
   author: md2wechat
   provenance: builtin

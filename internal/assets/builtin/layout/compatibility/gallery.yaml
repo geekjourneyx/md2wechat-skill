@@ -26,7 +26,6 @@ example: |
   ![图一](https://example.com/1.png)
   ![图二](https://example.com/2.png)
   :::
-example_assert_contains: "![图一](https://example.com/1.png)"
 metadata:
   author: md2wechat
   provenance: builtin

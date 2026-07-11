@@ -36,6 +36,7 @@ example: |
   ![A](https://mmbiz.qpic.cn/...) | 第一张
   ![B](https://mmbiz.qpic.cn/...) | 第二张
   :::
+example_assert_contains: "第一张"
 metadata:
   author: md2wechat
   provenance: builtin

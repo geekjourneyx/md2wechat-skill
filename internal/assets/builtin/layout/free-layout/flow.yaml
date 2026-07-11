@@ -29,6 +29,7 @@ example: |
   :::flow[Agent 发布流程]
   草稿输入 → 结构判断 → 模块选择 → 视觉校准 → 发布检查
   :::
+example_assert_contains: "草稿输入"
 metadata:
   author: md2wechat
   provenance: builtin
