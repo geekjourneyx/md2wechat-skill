@@ -18,42 +18,67 @@ func (c *Catalog) Render(name string, vars map[string]any) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("%w: %s", ErrUnknownModule, name)
 	}
-	switch spec.BodyFormat {
-	case BodyFormatRows:
-		return renderRows(spec, vars)
-	case BodyFormatJSONObject:
-		return renderJSONFields(spec, vars, "object")
-	case BodyFormatJSONArray:
-		return renderJSONFields(spec, vars, "array")
-	case BodyFormatFields, "":
-		return renderFields(spec, vars)
-	default:
-		return "", fmt.Errorf("%w: unsupported body_format %q", ErrInvalidFieldValue, spec.BodyFormat)
+	opener, err := renderOpener(spec, vars)
+	if err != nil {
+		return "", err
 	}
+	if spec.Body != nil {
+		if rawBody, ok := lookupString(vars, "body"); ok && rawBody != "" {
+			out := renderRawBody(opener, rawBody)
+			primary := *spec
+			primary.CompatibleBodyFormats = nil
+			if err := validateRenderedBody(&primary, rawBody); err != nil {
+				return "", err
+			}
+			return out, nil
+		}
+	}
+
+	formats := append([]string{spec.BodyFormat}, spec.CompatibleBodyFormats...)
+	for _, format := range formats {
+		var out string
+		var renderErr error
+		switch format {
+		case BodyFormatRows:
+			if _, ok := vars["rows"]; !ok {
+				continue
+			}
+			out, renderErr = renderRows(spec, vars, opener)
+		case BodyFormatJSONObject:
+			out, renderErr = renderJSONFields(spec, vars, "object", opener)
+		case BodyFormatJSONArray:
+			out, renderErr = renderJSONFields(spec, vars, "array", opener)
+		case BodyFormatFields, BodyFormatMarkdownFields, "":
+			out, renderErr = renderFields(spec, vars, opener)
+		default:
+			continue
+		}
+		if renderErr != nil {
+			return "", renderErr
+		}
+		if err := validateRenderedOutput(spec, out); err != nil {
+			return "", err
+		}
+		return out, nil
+	}
+	return "", fmt.Errorf("%w: no accepted body format supports structured rendering", ErrInvalidFieldValue)
 }
 
-func renderFields(spec *LayoutSpec, vars map[string]any) (string, error) {
+func renderFields(spec *LayoutSpec, vars map[string]any, opener string) (string, error) {
 	var b strings.Builder
-	fmt.Fprintf(&b, ":::%s\n", spec.Name)
+	fmt.Fprintf(&b, "%s\n", opener)
 
 	if spec.Fields != nil {
 		for _, f := range spec.Fields.Required {
 			val, ok := lookupString(vars, f.Name)
-			if !ok || val == "" {
-				return "", fmt.Errorf("%w: %s.%s", ErrMissingRequiredField, spec.Name, f.Name)
+			if ok {
+				fmt.Fprintf(&b, "%s: %s\n", f.Name, val)
 			}
-			if err := checkEnum(f, val); err != nil {
-				return "", err
-			}
-			fmt.Fprintf(&b, "%s: %s\n", f.Name, val)
 		}
 		for _, f := range spec.Fields.Optional {
 			val, ok := lookupString(vars, f.Name)
 			if !ok || val == "" {
 				continue
-			}
-			if err := checkEnum(f, val); err != nil {
-				return "", err
 			}
 			fmt.Fprintf(&b, "%s: %s\n", f.Name, val)
 		}
@@ -62,26 +87,19 @@ func renderFields(spec *LayoutSpec, vars map[string]any) (string, error) {
 	return b.String(), nil
 }
 
-func renderJSONFields(spec *LayoutSpec, vars map[string]any, bodyKind string) (string, error) {
+func renderJSONFields(spec *LayoutSpec, vars map[string]any, bodyKind, opener string) (string, error) {
 	obj := map[string]any{}
 	if spec.Fields != nil {
 		for _, f := range spec.Fields.Required {
 			val, ok := lookupString(vars, f.Name)
-			if !ok || val == "" {
-				return "", fmt.Errorf("%w: %s.%s", ErrMissingRequiredField, spec.Name, f.Name)
+			if ok {
+				setJSONField(obj, f.Name, parseJSONFieldValue(val))
 			}
-			if err := checkEnum(f, val); err != nil {
-				return "", err
-			}
-			setJSONField(obj, f.Name, parseJSONFieldValue(val))
 		}
 		for _, f := range spec.Fields.Optional {
 			val, ok := lookupString(vars, f.Name)
 			if !ok || val == "" {
 				continue
-			}
-			if err := checkEnum(f, val); err != nil {
-				return "", err
 			}
 			setJSONField(obj, f.Name, parseJSONFieldValue(val))
 		}
@@ -97,43 +115,36 @@ func renderJSONFields(spec *LayoutSpec, vars map[string]any, bodyKind string) (s
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, ":::%s\n", spec.Name)
+	fmt.Fprintf(&b, "%s\n", opener)
 	fmt.Fprintf(&b, "%s\n", encoded)
 	b.WriteString(":::\n")
 	return b.String(), nil
 }
 
-func renderRows(spec *LayoutSpec, vars map[string]any) (string, error) {
+func renderRows(spec *LayoutSpec, vars map[string]any, opener string) (string, error) {
 	rowsRaw, ok := vars["rows"]
 	if !ok {
 		return "", fmt.Errorf("%w: %s.rows", ErrMissingRequiredField, spec.Name)
 	}
 	rows, ok := rowsRaw.([]any)
-	if !ok || len(rows) == 0 {
-		return "", fmt.Errorf("%w: %s.rows must be non-empty list", ErrInvalidFieldValue, spec.Name)
+	if !ok {
+		return "", fmt.Errorf("%w: %s.rows must be a list", ErrInvalidFieldValue, spec.Name)
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, ":::%s\n", spec.Name)
+	fmt.Fprintf(&b, "%s\n", opener)
 
 	if spec.Fields != nil {
 		for _, f := range spec.Fields.Required {
 			val, ok := lookupString(vars, f.Name)
-			if !ok || val == "" {
-				return "", fmt.Errorf("%w: %s.%s", ErrMissingRequiredField, spec.Name, f.Name)
+			if ok {
+				fmt.Fprintf(&b, "%s: %s\n", f.Name, val)
 			}
-			if err := checkEnum(f, val); err != nil {
-				return "", err
-			}
-			fmt.Fprintf(&b, "%s: %s\n", f.Name, val)
 		}
 		for _, f := range spec.Fields.Optional {
 			val, ok := lookupString(vars, f.Name)
 			if !ok || val == "" {
 				continue
-			}
-			if err := checkEnum(f, val); err != nil {
-				return "", err
 			}
 			fmt.Fprintf(&b, "%s: %s\n", f.Name, val)
 		}
@@ -148,9 +159,6 @@ func renderRows(spec *LayoutSpec, vars map[string]any) (string, error) {
 		if !ok {
 			return "", fmt.Errorf("%w: %s.rows[%d] must be a list", ErrInvalidFieldValue, spec.Name, i)
 		}
-		if spec.Rows.MinColumns > 0 && len(cells) < spec.Rows.MinColumns {
-			return "", fmt.Errorf("%w: %s.rows[%d] needs at least %d columns", ErrMissingRequiredField, spec.Name, i, spec.Rows.MinColumns)
-		}
 		strCells := make([]string, len(cells))
 		for j, cell := range cells {
 			strCells[j] = fmt.Sprintf("%v", cell)
@@ -159,6 +167,34 @@ func renderRows(spec *LayoutSpec, vars map[string]any) (string, error) {
 	}
 	b.WriteString(":::\n")
 	return b.String(), nil
+}
+
+func renderRawBody(opener, body string) string {
+	return opener + "\n" + strings.TrimRight(body, "\r\n") + "\n:::\n"
+}
+
+func validateRenderedOutput(spec *LayoutSpec, out string) error {
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	if len(lines) < 2 {
+		return fmt.Errorf("%w: rendered block is incomplete", ErrInvalidFieldValue)
+	}
+	return validateRenderedBody(spec, strings.Join(lines[1:len(lines)-1], "\n"))
+}
+
+func validateRenderedBody(spec *LayoutSpec, rawBody string) error {
+	issues := validateBlockBody(spec, strings.Split(rawBody, "\n"))
+	if len(issues) == 0 {
+		return nil
+	}
+	issue := issues[0]
+	cause := issue.cause
+	if cause == nil {
+		cause = ErrInvalidFieldValue
+	}
+	if issue.field != "" {
+		return fmt.Errorf("%w: %s.%s: %s", cause, spec.Name, issue.field, issue.message)
+	}
+	return fmt.Errorf("%w: %s: %s", cause, spec.Name, issue.message)
 }
 
 func exampleJSONBodyKind(example string) string {

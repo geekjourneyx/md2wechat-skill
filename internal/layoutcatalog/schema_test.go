@@ -21,7 +21,17 @@ func TestSchemaVersionConstant(t *testing.T) {
 }
 
 func TestValidBodyFormats(t *testing.T) {
-	want := []string{BodyFormatFields, BodyFormatRows, BodyFormatJSONObject, BodyFormatJSONArray}
+	want := []string{
+		BodyFormatFields,
+		BodyFormatRows,
+		BodyFormatJSONObject,
+		BodyFormatJSONArray,
+		BodyFormatMarkdownImages,
+		BodyFormatMarkdownFields,
+		BodyFormatSplit,
+		BodyFormatLines,
+		BodyFormatDialogue,
+	}
 	for _, v := range want {
 		if !ValidBodyFormats[v] {
 			t.Errorf("expected %q to be a valid body_format, missing", v)

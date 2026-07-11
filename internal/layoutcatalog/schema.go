@@ -3,10 +3,15 @@ package layoutcatalog
 const SchemaVersion = "1"
 
 const (
-	BodyFormatFields     = "fields"
-	BodyFormatRows       = "rows"
-	BodyFormatJSONObject = "json_object"
-	BodyFormatJSONArray  = "json_array"
+	BodyFormatFields         = "fields"
+	BodyFormatRows           = "rows"
+	BodyFormatJSONObject     = "json_object"
+	BodyFormatJSONArray      = "json_array"
+	BodyFormatMarkdownImages = "markdown_images"
+	BodyFormatMarkdownFields = "markdown_fields"
+	BodyFormatSplit          = "split"
+	BodyFormatLines          = "lines"
+	BodyFormatDialogue       = "dialogue"
 )
 
 const (
@@ -29,10 +34,15 @@ var ValidServes = map[string]bool{
 }
 
 var ValidBodyFormats = map[string]bool{
-	BodyFormatFields:     true,
-	BodyFormatRows:       true,
-	BodyFormatJSONObject: true,
-	BodyFormatJSONArray:  true,
+	BodyFormatFields:         true,
+	BodyFormatRows:           true,
+	BodyFormatJSONObject:     true,
+	BodyFormatJSONArray:      true,
+	BodyFormatMarkdownImages: true,
+	BodyFormatMarkdownFields: true,
+	BodyFormatSplit:          true,
+	BodyFormatLines:          true,
+	BodyFormatDialogue:       true,
 }
 
 var ValidLifecycles = map[string]bool{
@@ -55,8 +65,26 @@ type RowsSpec struct {
 }
 
 type FieldsSpec struct {
-	Required []FieldSpec `yaml:"required,omitempty"`
-	Optional []FieldSpec `yaml:"optional,omitempty"`
+	Required    []FieldSpec `yaml:"required,omitempty"`
+	Optional    []FieldSpec `yaml:"optional,omitempty"`
+	RequiredAny [][]string  `yaml:"required_any,omitempty"`
+}
+
+type FieldGroupSpec struct {
+	Start    string   `yaml:"start"`
+	Required []string `yaml:"required"`
+	Min      int      `yaml:"min"`
+}
+
+type BodySpec struct {
+	MinImages          int             `yaml:"min_images,omitempty"`
+	MaxImages          int             `yaml:"max_images,omitempty"`
+	MinItems           int             `yaml:"min_items,omitempty"`
+	Separator          string          `yaml:"separator,omitempty"`
+	AllowedPrefixes    []string        `yaml:"allowed_prefixes,omitempty"`
+	RequiredPairs      [][2]string     `yaml:"required_pairs,omitempty"`
+	AllowNamedSpeakers bool            `yaml:"allow_named_speakers,omitempty"`
+	Group              *FieldGroupSpec `yaml:"group,omitempty"`
 }
 
 type LayoutMetadata struct {
@@ -88,28 +116,30 @@ type ParsedOpener struct {
 }
 
 type LayoutSpec struct {
-	SchemaVersion      string         `yaml:"schema_version"`
-	Name               string         `yaml:"name"`
-	Lifecycle          string         `yaml:"lifecycle,omitempty"`
-	BodyFormat         string         `yaml:"body_format,omitempty" json:"body_format,omitempty"`
-	Version            string         `yaml:"version"`
-	Since              string         `yaml:"since,omitempty"`
-	Category           string         `yaml:"category"`
-	Serves             []string       `yaml:"serves"`
-	ContentTypes       []string       `yaml:"content_types,omitempty"`
-	Industry           []string       `yaml:"industry,omitempty"`
-	Tags               []string       `yaml:"tags,omitempty"`
-	Position           string         `yaml:"position,omitempty"`
-	WhenToUse          string         `yaml:"when_to_use,omitempty"`
-	WhenNotToUse       string         `yaml:"when_not_to_use,omitempty"`
-	PairsWellWith      []string       `yaml:"pairs_well_with,omitempty"`
-	AvoidCombiningWith []string       `yaml:"avoid_combining_with,omitempty"`
-	AntiPattern        string         `yaml:"anti_pattern,omitempty"`
-	Opener             *OpenerSpec    `yaml:"opener,omitempty"`
-	Fields             *FieldsSpec    `yaml:"fields,omitempty"`
-	Rows               *RowsSpec      `yaml:"rows,omitempty"`
-	Example            string         `yaml:"example,omitempty"`
-	Metadata           LayoutMetadata `yaml:"metadata"`
+	SchemaVersion         string         `yaml:"schema_version"`
+	Name                  string         `yaml:"name"`
+	Lifecycle             string         `yaml:"lifecycle,omitempty"`
+	BodyFormat            string         `yaml:"body_format,omitempty" json:"body_format,omitempty"`
+	CompatibleBodyFormats []string       `yaml:"compatible_body_formats,omitempty" json:"compatible_body_formats,omitempty"`
+	Version               string         `yaml:"version"`
+	Since                 string         `yaml:"since,omitempty"`
+	Category              string         `yaml:"category"`
+	Serves                []string       `yaml:"serves"`
+	ContentTypes          []string       `yaml:"content_types,omitempty"`
+	Industry              []string       `yaml:"industry,omitempty"`
+	Tags                  []string       `yaml:"tags,omitempty"`
+	Position              string         `yaml:"position,omitempty"`
+	WhenToUse             string         `yaml:"when_to_use,omitempty"`
+	WhenNotToUse          string         `yaml:"when_not_to_use,omitempty"`
+	PairsWellWith         []string       `yaml:"pairs_well_with,omitempty"`
+	AvoidCombiningWith    []string       `yaml:"avoid_combining_with,omitempty"`
+	AntiPattern           string         `yaml:"anti_pattern,omitempty"`
+	Opener                *OpenerSpec    `yaml:"opener,omitempty"`
+	Fields                *FieldsSpec    `yaml:"fields,omitempty"`
+	Rows                  *RowsSpec      `yaml:"rows,omitempty"`
+	Body                  *BodySpec      `yaml:"body,omitempty"`
+	Example               string         `yaml:"example,omitempty"`
+	Metadata              LayoutMetadata `yaml:"metadata"`
 }
 
 type ListFilter struct {

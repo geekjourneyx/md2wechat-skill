@@ -166,6 +166,16 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if !ValidBodyFormats[spec.BodyFormat] {
 		return nil, fmt.Errorf("invalid body_format %q", spec.BodyFormat)
 	}
+	seenBodyFormats := map[string]bool{spec.BodyFormat: true}
+	for _, format := range spec.CompatibleBodyFormats {
+		if !ValidBodyFormats[format] {
+			return nil, fmt.Errorf("invalid compatible body_format %q", format)
+		}
+		if seenBodyFormats[format] {
+			return nil, fmt.Errorf("duplicate compatible body_format %q", format)
+		}
+		seenBodyFormats[format] = true
+	}
 	if spec.Category == "" {
 		return nil, fmt.Errorf("category is required")
 	}
@@ -177,13 +187,10 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 			return nil, fmt.Errorf("invalid serves value: %q", s)
 		}
 	}
-	if spec.Fields != nil && spec.Rows != nil {
-		return nil, fmt.Errorf("fields and rows are mutually exclusive")
-	}
-	if spec.BodyFormat == BodyFormatRows && spec.Rows == nil {
+	if seenBodyFormats[BodyFormatRows] && spec.Rows == nil {
 		return nil, fmt.Errorf("body_format rows requires rows")
 	}
-	if spec.BodyFormat != BodyFormatRows && spec.Rows != nil {
+	if !seenBodyFormats[BodyFormatRows] && spec.Rows != nil {
 		return nil, fmt.Errorf("rows requires body_format rows")
 	}
 	if spec.Metadata.Author == "" || spec.Metadata.Provenance == "" {

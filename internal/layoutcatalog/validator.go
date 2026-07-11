@@ -76,88 +76,13 @@ func (c *Catalog) validateBlock(opener ParsedOpener, body []string, line int, r 
 		})
 		return
 	}
-	present := map[string]string{}
-	if spec.BodyFormat == BodyFormatJSONObject || spec.BodyFormat == BodyFormatJSONArray {
-		if jsonFields, err := parseJSONBodyFields(body, spec.BodyFormat); err != nil {
-			r.Errors = append(r.Errors, ValidationIssue{
-				Module:  name,
-				Line:    line,
-				Message: err.Error(),
-			})
-			return
-		} else {
-			for k, v := range jsonFields {
-				present[k] = v
-			}
-		}
-	}
-	for _, ln := range body {
-		ln = strings.TrimRight(ln, "\r")
-		if strings.TrimSpace(ln) == "" {
-			continue
-		}
-		idx := strings.Index(ln, ":")
-		if idx <= 0 {
-			continue // row line (rows mode) — skip strict parse
-		}
-		k := strings.TrimSpace(ln[:idx])
-		v := strings.TrimSpace(ln[idx+1:])
-		present[k] = v
-	}
-	if spec.BodyFormat == BodyFormatRows {
-		rowCount := 0
-		for _, ln := range body {
-			ln = strings.TrimRight(ln, "\r")
-			if strings.TrimSpace(ln) == "" {
-				continue
-			}
-			if idx := strings.Index(ln, ":"); idx <= 0 {
-				rowCount++
-			}
-		}
-		if rowCount == 0 {
-			r.Errors = append(r.Errors, ValidationIssue{
-				Module:  name,
-				Line:    line,
-				Message: "rows module requires at least one data row",
-			})
-		}
-	}
-	if spec.Fields != nil {
-		for _, f := range spec.Fields.Required {
-			if v, ok := present[f.Name]; !ok || v == "" {
-				r.Errors = append(r.Errors, ValidationIssue{
-					Module:  name,
-					Field:   f.Name,
-					Line:    line,
-					Message: "required field missing",
-				})
-			}
-		}
-		for _, f := range spec.Fields.Required {
-			if v, ok := present[f.Name]; ok && v != "" {
-				if err := checkEnum(f, v); err != nil {
-					r.Errors = append(r.Errors, ValidationIssue{
-						Module:  name,
-						Field:   f.Name,
-						Line:    line,
-						Message: err.Error(),
-					})
-				}
-			}
-		}
-		for _, f := range spec.Fields.Optional {
-			if v, ok := present[f.Name]; ok && v != "" {
-				if err := checkEnum(f, v); err != nil {
-					r.Errors = append(r.Errors, ValidationIssue{
-						Module:  name,
-						Field:   f.Name,
-						Line:    line,
-						Message: err.Error(),
-					})
-				}
-			}
-		}
+	for _, issue := range validateBlockBody(spec, body) {
+		r.Errors = append(r.Errors, ValidationIssue{
+			Module:  name,
+			Field:   issue.field,
+			Line:    line,
+			Message: issue.message,
+		})
 	}
 }
 
