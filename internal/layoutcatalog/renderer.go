@@ -21,10 +21,14 @@ type RenderInput struct {
 }
 
 func (c *Catalog) Render(name string, vars map[string]any) (string, error) {
-	return c.RenderBlock(name, RenderInput{Fields: vars})
+	return c.renderBlock(name, RenderInput{Fields: vars}, openerParamOrderDeclared)
 }
 
 func (c *Catalog) RenderBlock(name string, input RenderInput) (string, error) {
+	return c.renderBlock(name, input, openerParamOrderLexical)
+}
+
+func (c *Catalog) renderBlock(name string, input RenderInput, order openerParamOrder) (string, error) {
 	spec, ok := c.Get(name)
 	if !ok {
 		return "", fmt.Errorf("%w: %s", ErrUnknownModule, name)
@@ -33,7 +37,7 @@ func (c *Catalog) RenderBlock(name string, input RenderInput) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	opener, err := renderOpener(spec, openerVars)
+	opener, err := renderOpenerWithOrder(spec, openerVars, order)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrInvalidFieldValue, err)
 	}

@@ -130,6 +130,45 @@ func TestRenderBlockPreservesLegacyHeroRender(t *testing.T) {
 	if legacy != block {
 		t.Fatalf("Render() = %q, RenderBlock() = %q", legacy, block)
 	}
+	want := ":::hero\neyebrow: 深度观察\ntitle: 公众号排版的真问题\n:::\n"
+	if legacy != want {
+		t.Fatalf("Render() = %q, want unchanged hero output %q", legacy, want)
+	}
+}
+
+func TestRenderPreservesDeclaredOpenerOrderWhileRenderBlockSortsParams(t *testing.T) {
+	c := NewCatalog()
+	c.modules["ordered"] = &LayoutSpec{
+		Name:       "ordered",
+		BodyFormat: BodyFormatFields,
+		Opener: &OpenerSpec{
+			ParamStyle: ParamStyleBraces,
+			Params: []ParamSpec{
+				{Name: "zeta", Default: "z-default"},
+				{Name: "alpha"},
+			},
+		},
+		Fields: &FieldsSpec{Required: []FieldSpec{{Name: "title"}}},
+	}
+
+	legacy, err := c.Render("ordered", map[string]any{"alpha": "a", "title": "Title"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := ":::ordered{zeta=z-default alpha=a}\ntitle: Title\n:::\n"; legacy != want {
+		t.Fatalf("Render() = %q, want %q", legacy, want)
+	}
+
+	block, err := c.RenderBlock("ordered", RenderInput{
+		Fields: map[string]any{"title": "Title"},
+		Params: map[string]string{"alpha": "a"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := ":::ordered{alpha=a zeta=z-default}\ntitle: Title\n:::\n"; block != want {
+		t.Fatalf("RenderBlock() = %q, want %q", block, want)
+	}
 }
 
 func TestRenderBlockExplicitBodyTakesPrecedenceAcrossPrimaryFormats(t *testing.T) {

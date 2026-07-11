@@ -155,7 +155,7 @@ func TestRenderOpenerSortsParameterKeysIncludingDefaults(t *testing.T) {
 	vars := map[string]any{}
 	vars["zeta"] = "z"
 	vars["alpha"] = "a"
-	got, err := renderOpener(spec, vars)
+	got, err := renderOpenerWithOrder(spec, vars, openerParamOrderLexical)
 	if err != nil {
 		t.Fatal(err)
 	}

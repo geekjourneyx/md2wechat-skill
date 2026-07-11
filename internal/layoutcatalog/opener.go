@@ -8,6 +8,13 @@ import (
 
 const reservedModuleName = "block"
 
+type openerParamOrder int
+
+const (
+	openerParamOrderDeclared openerParamOrder = iota
+	openerParamOrderLexical
+)
+
 func parseBlockOpener(line string) (ParsedOpener, error) {
 	line = strings.TrimRight(line, " \t\r")
 	if !strings.HasPrefix(line, ":::") {
@@ -199,6 +206,10 @@ func stringAllowed(value string, enum []string) bool {
 }
 
 func renderOpener(spec *LayoutSpec, vars map[string]any) (string, error) {
+	return renderOpenerWithOrder(spec, vars, openerParamOrderDeclared)
+}
+
+func renderOpenerWithOrder(spec *LayoutSpec, vars map[string]any, order openerParamOrder) (string, error) {
 	if spec.Name == reservedModuleName {
 		return "", fmt.Errorf("layout module name %q is reserved", spec.Name)
 	}
@@ -237,7 +248,9 @@ func renderOpener(spec *LayoutSpec, vars map[string]any) (string, error) {
 	if len(values) == 0 {
 		return base, nil
 	}
-	sort.Strings(values)
+	if order == openerParamOrderLexical {
+		sort.Strings(values)
+	}
 	switch spec.Opener.ParamStyle {
 	case ParamStyleBraces:
 		return base + "{" + strings.Join(values, " ") + "}", nil
