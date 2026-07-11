@@ -1,6 +1,7 @@
 package layoutcatalog
 
 import (
+	"fmt"
 	"os"
 	"slices"
 	"strings"
@@ -20,6 +21,77 @@ type recommendedScenarioMap struct {
 	} `yaml:"scenarios"`
 }
 
+const pinnedRecommendedScenarioOracle = `
+hero-editorial|hero|editorial
+hero-briefing|hero|briefing
+hero-story|hero|story
+cards|cards|
+part|part|
+toc|toc|
+label-title|label-title|
+audience-fit|audience-fit|
+verdict|verdict|
+myth-fact|myth-fact|
+bridge|bridge|
+manifesto|manifesto|
+infographic-thesis|infographic|thesis
+infographic-formula|infographic|formula
+infographic-pullquote|infographic|pullquote
+infographic-contrast|infographic|contrast
+infographic-diagnosis|infographic|diagnosis
+infographic-number|infographic|number
+infographic-path|infographic|path
+infographic-anatomy|infographic|anatomy
+infographic-tradeoff|infographic|tradeoff
+infographic-evidence-chain|infographic|evidence-chain
+infographic-micro-case|infographic|micro-case
+metrics|metrics|
+compare|compare|
+steps|steps|
+timeline|timeline|
+quote-light|quote|light
+quote-brand|quote|brand
+quote-proof|quote|proof
+image-text|image-text|
+image-compare|image-compare|
+image-annotate|image-annotate|
+image-steps|image-steps|
+image-phone-shot|image-phone-shot|
+author-card|author-card|
+series|series|
+subscribe|subscribe|
+people|people|
+cases|cases|
+pricing|pricing|
+faq|faq|
+logos|logos|
+checklist|checklist|
+toolbox|toolbox|
+specs|specs|
+notice|notice|
+summary-legacy|summary|
+summary-three|summary|three
+summary-decision|summary|decision
+summary-save|summary|save
+cta-save-follow|cta|save-follow
+cta-consult|cta|consult
+cta-trial|cta|trial
+callout|callout|
+callout-warning|callout|
+quote-card|quote-card|
+stat-row|stat-row|
+definition|definition|
+tweet|tweet|
+question|question|
+comparison-table|comparison-table|
+changelog|changelog|
+resource-list|resource-list|
+split|split|
+flow|flow|
+matrix|matrix|
+dialogue-pair|dialogue-pair|
+`
+
 func TestRecommendedScenarioMappingMatchesPinnedSources(t *testing.T) {
 	c := NewCatalog()
 	if err := c.Load(); err != nil {
@@ -31,6 +103,9 @@ func TestRecommendedScenarioMappingMatchesPinnedSources(t *testing.T) {
 	}
 	if len(m.Scenarios) != 68 {
 		t.Fatalf("scenario count = %d", len(m.Scenarios))
+	}
+	if err := comparePinnedScenarioTuples(m); err != nil {
+		t.Fatal(err)
 	}
 
 	seenIDs, coveredModules := map[string]bool{}, map[string]bool{}
@@ -61,6 +136,34 @@ func TestRecommendedScenarioMappingMatchesPinnedSources(t *testing.T) {
 	if !slices.Equal(diff, wantGuideOnly) {
 		t.Fatalf("scenario-source gap = %v, want %v", diff, wantGuideOnly)
 	}
+}
+
+func TestPinnedScenarioTupleOracleRejectsFabricationAndReassignment(t *testing.T) {
+	for _, mutate := range []func(*recommendedScenarioMap){
+		func(m *recommendedScenarioMap) { m.Scenarios[0].ID = "fabricated-id" },
+		func(m *recommendedScenarioMap) { m.Scenarios[0].Module = "cards" },
+		func(m *recommendedScenarioMap) { m.Scenarios[0].Variant = "briefing" },
+	} {
+		m := readRecommendedScenarioMap(t)
+		mutate(&m)
+		if err := comparePinnedScenarioTuples(m); err == nil {
+			t.Fatal("mutated pinned scenario tuple must fail")
+		}
+	}
+}
+
+func comparePinnedScenarioTuples(mapping recommendedScenarioMap) error {
+	want := strings.Split(strings.TrimSpace(pinnedRecommendedScenarioOracle), "\n")
+	got := make([]string, 0, len(mapping.Scenarios))
+	for _, scenario := range mapping.Scenarios {
+		got = append(got, strings.Join([]string{scenario.ID, scenario.Module, scenario.Variant}, "|"))
+	}
+	slices.Sort(want)
+	slices.Sort(got)
+	if !slices.Equal(got, want) {
+		return fmt.Errorf("pinned scenario tuples differ\ngot:  %v\nwant: %v", got, want)
+	}
+	return nil
 }
 
 func readRecommendedScenarioMap(t *testing.T) recommendedScenarioMap {

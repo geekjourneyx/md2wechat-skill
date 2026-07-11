@@ -41,9 +41,10 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { re
 const layoutConformanceBaseURL = "https://md2wechat.app"
 
 type e2eSettings struct {
-	BaseURL   string
-	APIKey    string
-	CLICommit string
+	BaseURL         string
+	APIKey          string
+	CLICommit       string
+	ExpectedBuildID string
 }
 
 func e2eGate(t *testing.T) e2eSettings {
@@ -65,9 +66,13 @@ func loadE2ESettings() (e2eSettings, error) {
 		return e2eSettings{}, fmt.Errorf("load E2E configuration: %w", err)
 	}
 	settings := e2eSettings{
-		BaseURL:   layoutConformanceBaseURL,
-		APIKey:    strings.TrimSpace(cfg.MD2WechatAPIKey),
-		CLICommit: strings.TrimSpace(os.Getenv("MD2WECHAT_CLI_COMMIT")),
+		BaseURL:         layoutConformanceBaseURL,
+		APIKey:          strings.TrimSpace(cfg.MD2WechatAPIKey),
+		CLICommit:       strings.TrimSpace(os.Getenv("MD2WECHAT_CLI_COMMIT")),
+		ExpectedBuildID: strings.TrimSpace(os.Getenv("MD2WECHAT_API_BUILD_ID")),
+	}
+	if override := strings.TrimSpace(os.Getenv("MD2WECHAT_BASE_URL")); override != "" {
+		settings.BaseURL = strings.TrimRight(override, "/")
 	}
 	if settings.APIKey == "" {
 		return e2eSettings{}, fmt.Errorf("authentication failure: MD2WECHAT_API_KEY is not configured")
@@ -76,6 +81,21 @@ func loadE2ESettings() (e2eSettings, error) {
 		return e2eSettings{}, fmt.Errorf("MD2WECHAT_CLI_COMMIT is required for conformance evidence")
 	}
 	return settings, nil
+}
+
+func validateRemoteBuildIdentity(got, expected, first string) error {
+	if expected != "" {
+		if got == "" {
+			return fmt.Errorf("API drift: expected build id %q but response had no recognized build header", expected)
+		}
+		if got != expected {
+			return fmt.Errorf("API drift: response build id %q, want %q", got, expected)
+		}
+	}
+	if first != "" && got != first {
+		return fmt.Errorf("API drift: conflicting response build ids %q and %q", first, got)
+	}
+	return nil
 }
 
 func TestDecodeE2EResponse(t *testing.T) {
@@ -112,6 +132,7 @@ func TestConformanceResponse(t *testing.T) {
 		{name: "missing probe", html: `<section data-mpa-action-id="demo">other</section>`, want: "visible probe"},
 		{name: "probe in attribute is not visible", html: `<section data-mpa-action-id="demo" title="Visible probe">other</section>`, want: "visible probe"},
 		{name: "raw fence", html: `<section data-mpa-action-id="demo">Visible probe :::demo</section>`, want: "raw fence"},
+		{name: "one of multiple markers conforms", html: `<section data-mpa-action-id="demo"></section><section data-mpa-action-id="demo">Visible probe</section>`},
 		{name: "success", html: `<section data-mpa-action-id="demo">Visible probe</section>`},
 	}
 	for _, tt := range tests {
@@ -125,6 +146,47 @@ func TestConformanceResponse(t *testing.T) {
 			}
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("checkConformanceHTML() error = %v, want category %q", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestConformanceEvidenceMustShareOneModuleSubtree(t *testing.T) {
+	tests := []struct {
+		name    string
+		witness e2eWitness
+		html    string
+	}{
+		{
+			name:    "visible probe outside marker",
+			witness: e2eWitness{Module: "demo", Probe: "Probe"},
+			html:    `<section data-mpa-action-id="demo"></section><p>Probe</p>`,
+		},
+		{
+			name:    "variant on other marker",
+			witness: e2eWitness{Module: "hero", Variant: "editorial", Probe: "Probe"},
+			html:    `<section data-mpa-action-id="hero">Probe</section><section data-mpa-action-id="other" data-hero-variant="editorial"></section>`,
+		},
+		{
+			name:    "image alt probe outside marker",
+			witness: e2eWitness{Module: "gallery", Probe: "Probe", ProbeInImageAlt: true},
+			html:    `<section data-mpa-action-id="gallery"></section><section data-mpa-action-id="other"><img alt="Probe"></section>`,
+		},
+		{
+			name:    "images on other marker",
+			witness: e2eWitness{Module: "image-compare", Probe: "Probe"},
+			html:    `<section data-mpa-action-id="image-compare">Probe</section><section data-mpa-action-id="other"><img><img></section>`,
+		},
+		{
+			name:    "different markers split evidence",
+			witness: e2eWitness{Module: "hero", Variant: "editorial", Probe: "Probe"},
+			html:    `<section data-mpa-action-id="hero">Probe</section><section data-mpa-action-id="hero" data-hero-variant="editorial"></section>`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := checkConformanceHTML(tt.witness, tt.html); err == nil {
+				t.Fatal("split conformance evidence must fail")
 			}
 		})
 	}
@@ -239,7 +301,8 @@ func TestE2ESettingsUseProductionTargetAndConfigCredential(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("MD2WECHAT_API_KEY", "environment-key")
-	t.Setenv("MD2WECHAT_BASE_URL", "https://wrong.example")
+	t.Setenv("MD2WECHAT_BASE_URL", "")
+	t.Setenv("MD2WECHAT_API_BUILD_ID", "expected-build")
 	t.Setenv("MD2WECHAT_CLI_COMMIT", "cli-commit")
 	dir := filepath.Join(home, ".config", "md2wechat")
 	if err := os.MkdirAll(dir, 0700); err != nil {
@@ -255,8 +318,44 @@ func TestE2ESettingsUseProductionTargetAndConfigCredential(t *testing.T) {
 	if settings.BaseURL != "https://md2wechat.app" {
 		t.Fatalf("BaseURL = %q", settings.BaseURL)
 	}
-	if settings.APIKey != "environment-key" || settings.CLICommit != "cli-commit" {
+	if settings.APIKey != "environment-key" || settings.CLICommit != "cli-commit" || settings.ExpectedBuildID != "expected-build" {
 		t.Fatalf("settings did not honor safe config/env precedence")
+	}
+}
+
+func TestE2ESettingsAllowExplicitTargetOverride(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MD2WECHAT_API_KEY", "environment-key")
+	t.Setenv("MD2WECHAT_BASE_URL", "http://localhost:3000/")
+	t.Setenv("MD2WECHAT_CLI_COMMIT", "cli-commit")
+	settings, err := loadE2ESettings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if settings.BaseURL != "http://localhost:3000" {
+		t.Fatalf("BaseURL = %q", settings.BaseURL)
+	}
+}
+
+func TestValidateRemoteBuildIdentity(t *testing.T) {
+	tests := []struct {
+		name, got, expected, first string
+		wantErr                    bool
+	}{
+		{name: "expected match", got: "build-a", expected: "build-a"},
+		{name: "expected missing", expected: "build-a", wantErr: true},
+		{name: "expected mismatch", got: "build-b", expected: "build-a", wantErr: true},
+		{name: "consistent observed", got: "build-a", first: "build-a"},
+		{name: "conflicting observed", got: "build-b", first: "build-a", wantErr: true},
+		{name: "missing conflicts with observed", first: "build-a", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateRemoteBuildIdentity(tt.got, tt.expected, tt.first)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("validateRemoteBuildIdentity() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
 
@@ -448,45 +547,88 @@ func TestBuiltinExecutableWitnessProbesAreComplete(t *testing.T) {
 	}
 }
 
+type e2eWitnessGroup struct {
+	Lifecycle string
+	Witnesses []e2eWitness
+}
+
+func collectAllE2EWitnesses(c *layoutcatalog.Catalog) ([]e2eWitnessGroup, error) {
+	groups := make([]e2eWitnessGroup, 0, 2)
+	for _, lifecycle := range []string{layoutcatalog.LifecycleRecommended, layoutcatalog.LifecycleCompatibility} {
+		group := e2eWitnessGroup{Lifecycle: lifecycle}
+		for _, spec := range c.ListFiltered(layoutcatalog.ListFilter{Lifecycle: lifecycle}) {
+			witnesses, err := witnessesForSpec(c, spec)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", spec.Name, err)
+			}
+			group.Witnesses = append(group.Witnesses, witnesses...)
+		}
+		groups = append(groups, group)
+	}
+	return groups, nil
+}
+
+func TestCollectAllE2EWitnessesHasStable80WitnessContract(t *testing.T) {
+	c, err := layoutcatalog.DefaultCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	groups, err := collectAllE2EWitnesses(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(groups) != 2 || groups[0].Lifecycle != layoutcatalog.LifecycleRecommended || groups[1].Lifecycle != layoutcatalog.LifecycleCompatibility {
+		t.Fatalf("lifecycle groups = %+v", groups)
+	}
+	if got := len(groups[0].Witnesses) + len(groups[1].Witnesses); got != 80 {
+		t.Fatalf("witness count = %d, want 80", got)
+	}
+}
+
 func TestE2ELayoutConformance(t *testing.T) {
-	runE2ELifecycle(t, layoutcatalog.LifecycleRecommended)
-}
-
-func TestE2ECompatibilityConformance(t *testing.T) {
-	runE2ELifecycle(t, layoutcatalog.LifecycleCompatibility)
-}
-
-func runE2ELifecycle(t *testing.T, lifecycle string) {
-	t.Helper()
 	settings := e2eGate(t)
 	c, err := layoutcatalog.DefaultCatalog()
 	if err != nil {
 		t.Fatal(err)
 	}
+	groups, err := collectAllE2EWitnesses(c)
+	if err != nil {
+		t.Fatal(err)
+	}
 	client := http.DefaultClient
 	var remoteIdentity string
-	for _, spec := range c.ListFiltered(layoutcatalog.ListFilter{Lifecycle: lifecycle}) {
-		witnesses, err := witnessesForSpec(c, spec)
-		if err != nil {
-			t.Errorf("%s: %v", spec.Name, err)
-			continue
-		}
-		for _, witness := range witnesses {
-			witness := witness
-			name := witness.Module
-			if witness.Variant != "" {
-				name += "/" + witness.Variant
+	identityInitialized := false
+	for _, group := range groups {
+		group := group
+		t.Run(group.Lifecycle, func(t *testing.T) {
+			for _, witness := range group.Witnesses {
+				witness := witness
+				name := witness.Module
+				if witness.Variant != "" {
+					name += "/" + witness.Variant
+				}
+				t.Run(name, func(t *testing.T) {
+					identity, requestErr := runConformanceRequest(client, settings.BaseURL, settings.APIKey, witness)
+					first := ""
+					if identityInitialized {
+						first = remoteIdentity
+					}
+					if err := validateRemoteBuildIdentity(identity, settings.ExpectedBuildID, first); err != nil {
+						t.Fatal(err)
+					}
+					if identityInitialized && identity != remoteIdentity {
+						t.Fatalf("API drift: conflicting response build ids %q and %q", remoteIdentity, identity)
+					}
+					if !identityInitialized {
+						remoteIdentity = identity
+						identityInitialized = true
+					}
+					if requestErr != nil {
+						t.Fatal(requestErr)
+					}
+				})
 			}
-			t.Run(name, func(t *testing.T) {
-				identity, err := runConformanceRequest(client, settings.BaseURL, settings.APIKey, witness)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if remoteIdentity == "" {
-					remoteIdentity = identity
-				}
-			})
-		}
+		})
 	}
 	t.Logf("conformance target=%s cli_commit=%s", settings.BaseURL, settings.CLICommit)
 	if remoteIdentity != "" {
@@ -562,30 +704,43 @@ func decodeE2EResponse(resp *http.Response) (string, error) {
 }
 
 func checkConformanceHTML(witness e2eWitness, html string) error {
+	if strings.Contains(html, ":::"+witness.Module) {
+		return fmt.Errorf("%s response retained raw fence", witness.Module)
+	}
 	doc, err := htmlpkgParse(html)
 	if err != nil {
 		return fmt.Errorf("%s response is not parseable HTML: %w", witness.Module, err)
 	}
-	if !hasDOMAttributeValue(doc, "data-mpa-action-id", witness.Module) {
+	markers := findDOMAttributeValueNodes(doc, "data-mpa-action-id", witness.Module)
+	if len(markers) == 0 {
 		return fmt.Errorf("API drift: %s response missing module marker data-mpa-action-id=%q", witness.Module, witness.Module)
 	}
+	var lastErr error
+	for _, marker := range markers {
+		if err := checkConformanceSubtree(witness, marker); err == nil {
+			return nil
+		} else {
+			lastErr = err
+		}
+	}
+	return fmt.Errorf("%s response has no conforming module subtree: %w", witness.Module, lastErr)
+}
+
+func checkConformanceSubtree(witness e2eWitness, marker *html.Node) error {
 	probe := strings.TrimSpace(witness.Probe)
 	if probe == "" {
 		return fmt.Errorf("%s witness has no visible probe", witness.Module)
 	}
-	if witness.ProbeInImageAlt && !hasImageAltProbe(doc, probe) {
+	if witness.ProbeInImageAlt && !hasImageAltProbe(marker, probe) {
 		return fmt.Errorf("%s response missing image alt probe %q", witness.Module, probe)
 	}
-	if !witness.ProbeInImageAlt && !strings.Contains(strings.TrimSpace(visibleDOMText(doc)), probe) {
+	if !witness.ProbeInImageAlt && !strings.Contains(strings.TrimSpace(visibleDOMText(marker)), probe) {
 		return fmt.Errorf("%s response missing visible probe %q", witness.Module, probe)
 	}
-	if strings.Contains(html, ":::"+witness.Module) {
-		return fmt.Errorf("%s response retained raw fence", witness.Module)
-	}
-	if attribute, value, ok := expectedVariantBranch(witness); ok && !hasDOMAttributeValue(doc, attribute, value) {
+	if attribute, value, ok := expectedVariantBranch(witness); ok && !hasDOMAttributeValue(marker, attribute, value) {
 		return fmt.Errorf("%s/%s response missing %s=%q", witness.Module, witness.Variant, attribute, value)
 	}
-	return checkSemanticConformance(witness, html)
+	return checkSemanticConformanceNode(witness, marker)
 }
 
 var variantBranchAttributes = map[string]string{
@@ -644,6 +799,22 @@ func hasDOMAttributeValue(node *html.Node, name, value string) bool {
 	return false
 }
 
+func findDOMAttributeValueNodes(node *html.Node, name, value string) []*html.Node {
+	var matches []*html.Node
+	if node.Type == html.ElementNode {
+		for _, attr := range node.Attr {
+			if attr.Key == name && attr.Val == value {
+				matches = append(matches, node)
+				break
+			}
+		}
+	}
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		matches = append(matches, findDOMAttributeValueNodes(child, name, value)...)
+	}
+	return matches
+}
+
 func visibleDOMText(node *html.Node) string {
 	if node.Type == html.ElementNode && (node.Data == "script" || node.Data == "style") {
 		return ""
@@ -675,6 +846,14 @@ func hasImageAltProbe(node *html.Node, probe string) bool {
 }
 
 func checkSemanticConformance(witness e2eWitness, rendered string) error {
+	doc, err := html.Parse(strings.NewReader(rendered))
+	if err != nil {
+		return fmt.Errorf("%s response is not parseable HTML: %w", witness.Module, err)
+	}
+	return checkSemanticConformanceNode(witness, doc)
+}
+
+func checkSemanticConformanceNode(witness e2eWitness, node *html.Node) error {
 	minimumImages := 0
 	imageElement := "img"
 	switch witness.Module {
@@ -688,11 +867,7 @@ func checkSemanticConformance(witness e2eWitness, rendered string) error {
 	default:
 		return nil
 	}
-	doc, err := html.Parse(strings.NewReader(rendered))
-	if err != nil {
-		return fmt.Errorf("%s response is not parseable HTML: %w", witness.Module, err)
-	}
-	if count := countDOMElements(doc, imageElement); count < minimumImages {
+	if count := countDOMElements(node, imageElement); count < minimumImages {
 		return fmt.Errorf("%s response has %d %s element(s), want at least %d", witness.Module, count, imageElement, minimumImages)
 	}
 	return nil
@@ -717,10 +892,10 @@ func runConformanceRequest(client *http.Client, baseURL, apiKey string, witness 
 	identity, _ := remoteBuildIdentity(resp.Header)
 	html, err := decodeE2EResponse(resp)
 	if err != nil {
-		return "", err
+		return identity, err
 	}
 	if err := checkConformanceHTML(witness, html); err != nil {
-		return "", fmt.Errorf("API drift: %w", err)
+		return identity, fmt.Errorf("API drift: %w", err)
 	}
 	return identity, nil
 }
