@@ -203,6 +203,12 @@ func validateOpenerSpec(opener *OpenerSpec) error {
 	if !validStyles[opener.ParamStyle] {
 		return fmt.Errorf("invalid opener param_style %q", opener.ParamStyle)
 	}
+	if opener.Caption && opener.ParamStyle == ParamStyleBracket {
+		return fmt.Errorf("opener caption and bracket param_style are mutually exclusive")
+	}
+	if len(opener.Params) > 0 && opener.ParamStyle == "" {
+		return fmt.Errorf("opener params require param_style")
+	}
 	seen := make(map[string]bool, len(opener.Params))
 	for _, param := range opener.Params {
 		if param.Name == "" {

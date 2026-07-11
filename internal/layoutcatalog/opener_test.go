@@ -29,8 +29,13 @@ func TestParseBlockOpener(t *testing.T) {
 
 func TestParseBlockOpenerRejectsMalformedForms(t *testing.T) {
 	for _, line := range []string{
+		":::block",
 		":::block hero",
+		":::block[hero]",
+		":::block{type=hero}",
 		":::gallery-grid{columns=3",
+		":::future [标题]",
+		":::future {columns=3}",
 		":::toc[阅读导航] trailing",
 		":::matrix =value",
 		":::matrix headers=one headers=two",
@@ -100,6 +105,8 @@ func TestValidateOpenerRejectsSpecViolations(t *testing.T) {
 	}{
 		{":::toc[阅读导航]", &OpenerSpec{}},
 		{":::toc[]", &OpenerSpec{}},
+		{":::toc[]", &OpenerSpec{Caption: true}},
+		{":::split[]", &OpenerSpec{ParamStyle: ParamStyleBracket, Params: []ParamSpec{{Name: "ratio"}}}},
 		{":::matrix unknown=value", &OpenerSpec{ParamStyle: ParamStyleTokens, Params: []ParamSpec{{Name: "headers"}}}},
 		{":::callout danger", &OpenerSpec{ParamStyle: ParamStyleToken, Params: []ParamSpec{{Name: "type", Enum: []string{"info", "warning"}}}}},
 		{":::gallery-grid columns=3", &OpenerSpec{ParamStyle: ParamStyleBraces, Params: []ParamSpec{{Name: "columns"}}}},
@@ -180,6 +187,8 @@ metadata:
 		{"duplicate params", "opener:\n  param_style: tokens\n  params:\n    - name: side\n    - name: side", "duplicate opener param"},
 		{"bracket arity", "opener:\n  param_style: bracket\n  params:\n    - name: left\n    - name: right", "requires exactly one parameter"},
 		{"token arity", "opener:\n  param_style: token", "requires exactly one parameter"},
+		{"caption bracket ambiguity", "opener:\n  caption: true\n  param_style: bracket\n  params:\n    - name: ratio", "caption and bracket"},
+		{"params without style", "opener:\n  params:\n    - name: columns", "params require param_style"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := parseLayoutSpec([]byte(strings.Replace(base, "%s", tc.opener, 1)))

@@ -85,6 +85,24 @@ func TestValidateUnknownModuleWithWellFormedParamsWarns(t *testing.T) {
 	}
 }
 
+func TestValidateWhitespacePrefixedStructuredSuffixErrors(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, opener := range []string{":::future [标题]", ":::future {columns=3}"} {
+		t.Run(opener, func(t *testing.T) {
+			r := c.Validate(opener + "\nfoo: bar\n:::\n")
+			if len(r.Errors) == 0 || r.Errors[0].Message != "invalid layout block opener" {
+				t.Fatalf("expected structural opener error, got %+v", r)
+			}
+			if len(r.Warnings) != 0 {
+				t.Fatalf("malformed opener must not warn as unknown, got %+v", r.Warnings)
+			}
+		})
+	}
+}
+
 func TestValidateKnownModuleOpenerAgainstSpec(t *testing.T) {
 	c := NewCatalog()
 	c.modules["callout"] = &LayoutSpec{

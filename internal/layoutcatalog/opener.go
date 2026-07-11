@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+const reservedModuleName = "block"
+
 func parseBlockOpener(line string) (ParsedOpener, error) {
 	line = strings.TrimRight(line, " \t\r")
 	if !strings.HasPrefix(line, ":::") {
@@ -18,7 +20,11 @@ func parseBlockOpener(line string) (ParsedOpener, error) {
 	if nameEnd == 0 {
 		return ParsedOpener{}, fmt.Errorf("layout opener requires a valid module name")
 	}
-	parsed := ParsedOpener{Name: rest[:nameEnd], Params: map[string]string{}}
+	name := rest[:nameEnd]
+	if name == reservedModuleName {
+		return ParsedOpener{}, fmt.Errorf("%q is reserved and cannot be a layout module name", name)
+	}
+	parsed := ParsedOpener{Name: name, Params: map[string]string{}}
 	suffix := rest[nameEnd:]
 	if suffix == "" {
 		return parsed, nil
@@ -45,11 +51,8 @@ func parseBlockOpener(line string) (ParsedOpener, error) {
 		return parsed, nil
 	case ' ', '\t':
 		raw := strings.TrimSpace(suffix)
-		if raw == "" || strings.ContainsAny(raw, "＝：") {
+		if raw == "" || strings.ContainsAny(raw, "＝：") || strings.HasPrefix(raw, "[") || strings.HasPrefix(raw, "{") {
 			return ParsedOpener{}, fmt.Errorf("invalid token opener suffix")
-		}
-		if parsed.Name == "block" {
-			return ParsedOpener{}, fmt.Errorf(":::block is not a valid layout module opener")
 		}
 		parsed.RawParams = raw
 		if strings.Contains(raw, "=") {
@@ -104,6 +107,9 @@ func validateOpener(parsed ParsedOpener, spec *OpenerSpec) (ParsedOpener, error)
 			return ParsedOpener{}, fmt.Errorf("module does not support opener parameters")
 		}
 		return parsed, nil
+	}
+	if parsed.bracket && parsed.Caption == "" {
+		return ParsedOpener{}, fmt.Errorf("opener bracket content must not be empty")
 	}
 
 	style := openerParamStyle(parsed)
