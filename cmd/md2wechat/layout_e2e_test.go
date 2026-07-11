@@ -106,9 +106,23 @@ func TestSemanticConformanceRules(t *testing.T) {
 }
 
 func TestConformanceRequestUsesLocalTransport(t *testing.T) {
+	const markdown = ":::demo\ntitle: Visible probe\n:::\n"
 	client := &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
 		if req.Method != http.MethodPost || req.URL.String() != "http://layout.invalid/api/convert" {
 			t.Fatalf("request = %s %s", req.Method, req.URL)
+		}
+		if got := req.Header.Get("Authorization"); got != "Bearer secret" {
+			t.Fatalf("Authorization = %q", got)
+		}
+		if got := req.Header.Get("Content-Type"); got != "application/json" {
+			t.Fatalf("Content-Type = %q", got)
+		}
+		var payload map[string]string
+		if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+			t.Fatal(err)
+		}
+		if payload["markdown"] != markdown {
+			t.Fatalf("markdown payload = %q", payload["markdown"])
 		}
 		return &http.Response{
 			StatusCode: http.StatusOK,
@@ -117,8 +131,8 @@ func TestConformanceRequestUsesLocalTransport(t *testing.T) {
 			Request:    req,
 		}, nil
 	})}
-	witness := e2eWitness{Module: "demo", Markdown: ":::demo\ntitle: Visible probe\n:::\n", Probe: "Visible probe"}
-	if err := runConformanceRequest(client, "http://layout.invalid", "", witness); err != nil {
+	witness := e2eWitness{Module: "demo", Markdown: markdown, Probe: "Visible probe"}
+	if err := runConformanceRequest(client, "http://layout.invalid", "secret", witness); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -128,6 +142,7 @@ func TestDeterministicWitnessProbe(t *testing.T) {
 		name, format, markdown, want string
 	}{
 		{name: "fields skip variant control", format: layoutcatalog.BodyFormatFields, markdown: ":::demo\nvariant: compact\ntitle: Field probe\n:::\n", want: "Field probe"},
+		{name: "markdown fields", format: layoutcatalog.BodyFormatMarkdownFields, markdown: ":::demo\nvariant: compact\ntitle: Markdown field probe\n:::\n", want: "Markdown field probe"},
 		{name: "JSON object", format: layoutcatalog.BodyFormatJSONObject, markdown: ":::demo\n{\"type\":\"compact\",\"title\":\"JSON probe\"}\n:::\n", want: "JSON probe"},
 		{name: "JSON array", format: layoutcatalog.BodyFormatJSONArray, markdown: ":::demo\n[{\"title\":\"Array probe\"}]\n:::\n", want: "Array probe"},
 		{name: "rows", format: layoutcatalog.BodyFormatRows, markdown: ":::demo\n Row probe | second\n:::\n", want: "Row probe"},
@@ -136,7 +151,9 @@ func TestDeterministicWitnessProbe(t *testing.T) {
 		{name: "lines", format: layoutcatalog.BodyFormatLines, markdown: ":::demo\nLine probe\n:::\n", want: "Line probe"},
 		{name: "dialogue", format: layoutcatalog.BodyFormatDialogue, markdown: ":::demo\nA: Dialogue probe\n:::\n", want: "A: Dialogue probe"},
 	}
+	testedFormats := make(map[string]bool, len(tests))
 	for _, tt := range tests {
+		testedFormats[tt.format] = true
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := deterministicWitnessProbe(tt.format, tt.markdown)
 			if err != nil {
@@ -146,6 +163,14 @@ func TestDeterministicWitnessProbe(t *testing.T) {
 				t.Fatalf("probe = %q, want %q", got, tt.want)
 			}
 		})
+	}
+	for format := range layoutcatalog.ValidBodyFormats {
+		if !testedFormats[format] {
+			t.Errorf("body format %q has no deterministic probe case", format)
+		}
+	}
+	if len(testedFormats) != len(layoutcatalog.ValidBodyFormats) {
+		t.Fatalf("probe formats = %v, valid formats = %v", testedFormats, layoutcatalog.ValidBodyFormats)
 	}
 }
 
@@ -169,6 +194,62 @@ func TestCollectE2EWitnessesIncludesCanonicalAndVariants(t *testing.T) {
 	}
 	if len(witnesses) != 2 || witnesses[0].Variant != "" || witnesses[1].Variant != "compact" {
 		t.Fatalf("witnesses = %+v", witnesses)
+	}
+}
+
+func TestCollectE2EWitnessesPrefersExplicitAssertion(t *testing.T) {
+	c := layoutcatalog.NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	builtin, _ := c.Get("hero")
+	spec := *builtin
+	spec.Example = ":::hero\neyebrow: Derived but not visible\ntitle: Explicit visible\n:::\n"
+	spec.ExampleAssertContains = "Explicit visible"
+	witnesses, err := witnessesForSpec(c, &spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := witnesses[0].Probe; got != "Explicit visible" {
+		t.Fatalf("probe = %q, want explicit assertion", got)
+	}
+	if err := checkConformanceHTML(witnesses[0], `<section data-mpa-action-id="1">Explicit visible</section>`); err != nil {
+		t.Fatalf("explicit visible assertion should pass without derived probe: %v", err)
+	}
+}
+
+func TestCollectE2EWitnessesBindsModuleAndVariant(t *testing.T) {
+	c := layoutcatalog.NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	builtin, _ := c.Get("hero")
+	tests := []struct {
+		name    string
+		example string
+		variant layoutcatalog.VariantSpec
+		wantErr bool
+	}{
+		{name: "wrong canonical opener", example: ":::part\neyebrow: Test\ntitle: Probe\n:::\n", wantErr: true},
+		{name: "variant missing selector", example: ":::hero\neyebrow: Test\ntitle: Probe\n:::\n", variant: layoutcatalog.VariantSpec{Name: "compact"}, wantErr: true},
+		{name: "variant canonical selector", example: ":::hero\nvariant: compact\neyebrow: Test\ntitle: Probe\n:::\n", variant: layoutcatalog.VariantSpec{Name: "compact"}},
+		{name: "variant alias selector", example: ":::hero\nvariant: dense\neyebrow: Test\ntitle: Probe\n:::\n", variant: layoutcatalog.VariantSpec{Name: "compact", Aliases: []string{"dense"}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := *builtin
+			if tt.variant.Name == "" {
+				spec.Example = tt.example
+			} else {
+				spec.Example = ":::hero\neyebrow: Test\ntitle: Canonical\n:::\n"
+				tt.variant.Example = tt.example
+				spec.Variants = []layoutcatalog.VariantSpec{tt.variant}
+			}
+			_, err := witnessesForSpec(c, &spec)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("witnessesForSpec() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
 
@@ -385,30 +466,34 @@ func postConvert(client *http.Client, baseURL, apiKey, markdown string) (*http.R
 func witnessesForSpec(c *layoutcatalog.Catalog, spec *layoutcatalog.LayoutSpec) ([]e2eWitness, error) {
 	declared := make([]struct {
 		variant, markdown, assertion string
+		aliases                      []string
 	}, 0, 1+len(spec.Variants))
 	declared = append(declared, struct {
 		variant, markdown, assertion string
+		aliases                      []string
 	}{markdown: spec.Example, assertion: spec.ExampleAssertContains})
 	for _, variant := range spec.Variants {
 		declared = append(declared, struct {
 			variant, markdown, assertion string
-		}{variant: variant.Name, markdown: variant.Example, assertion: variant.AssertContains})
+			aliases                      []string
+		}{variant: variant.Name, aliases: variant.Aliases, markdown: variant.Example, assertion: variant.AssertContains})
 	}
 
 	witnesses := make([]e2eWitness, 0, len(declared))
 	for _, item := range declared {
-		if strings.TrimSpace(item.markdown) == "" {
-			return nil, fmt.Errorf("%s witness %q has an empty example", spec.Name, item.variant)
+		if err := c.ValidateWitness(layoutcatalog.WitnessContract{
+			Module: spec.Name, Variant: item.variant, VariantAliases: item.aliases,
+			Example: item.markdown, AssertContains: item.assertion,
+		}); err != nil {
+			return nil, err
 		}
-		if report := c.Validate(item.markdown); len(report.Errors) != 0 {
-			return nil, fmt.Errorf("%s witness %q does not validate: %v", spec.Name, item.variant, report.Errors)
-		}
-		probe, err := deterministicWitnessProbe(spec.BodyFormat, item.markdown)
-		if err != nil {
-			return nil, fmt.Errorf("%s witness %q probe: %w", spec.Name, item.variant, err)
-		}
+		probe := strings.TrimSpace(item.assertion)
 		if probe == "" {
-			probe = strings.TrimSpace(item.assertion)
+			var err error
+			probe, err = deterministicWitnessProbe(spec.BodyFormat, item.markdown)
+			if err != nil {
+				return nil, fmt.Errorf("%s witness %q probe: %w", spec.Name, item.variant, err)
+			}
 		}
 		if probe == "" {
 			return nil, fmt.Errorf("%s witness %q has no deterministic probe or explicit assertion", spec.Name, item.variant)

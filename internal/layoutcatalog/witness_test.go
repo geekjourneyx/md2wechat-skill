@@ -1,7 +1,6 @@
 package layoutcatalog
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 )
@@ -23,6 +22,18 @@ func TestExecutableWitnessContract(t *testing.T) {
 	}
 	if err := checkExecutableWitness(c, "demo", "compact", canonical, "Canonical witness"); err == nil {
 		t.Fatal("variant witness must select its variant")
+	}
+}
+
+func TestExecutableWitnessAcceptsDeclaredVariantAlias(t *testing.T) {
+	c := NewCatalog()
+	c.modules["demo"] = &LayoutSpec{Name: "demo", BodyFormat: BodyFormatFields}
+	err := c.ValidateWitness(WitnessContract{
+		Module: "demo", Variant: "compact", VariantAliases: []string{"dense"},
+		Example: ":::demo\nvariant: dense\n:::\n",
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -75,7 +86,10 @@ func TestBuiltinVariantWitnesses(t *testing.T) {
 		for _, variant := range spec.Variants {
 			variant := variant
 			t.Run(spec.Name+"/"+variant.Name, func(t *testing.T) {
-				if err := checkExecutableWitness(c, spec.Name, variant.Name, variant.Example, variant.AssertContains); err != nil {
+				if err := c.ValidateWitness(WitnessContract{
+					Module: spec.Name, Variant: variant.Name, VariantAliases: variant.Aliases,
+					Example: variant.Example, AssertContains: variant.AssertContains,
+				}); err != nil {
 					t.Fatal(err)
 				}
 			})
@@ -111,6 +125,9 @@ func TestParseLayoutSpecValidatesVariantIdentity(t *testing.T) {
 		{name: "duplicate names", variants: "  - name: compact\n  - name: compact\n", want: "duplicate variant"},
 		{name: "alias collides with name", variants: "  - name: compact\n    aliases: [dense]\n  - name: dense\n", want: "duplicate variant"},
 		{name: "duplicate aliases", variants: "  - name: compact\n    aliases: [dense, dense]\n", want: "duplicate variant"},
+		{name: "spaced name", variants: "  - name: ' compact'\n", want: "surrounding whitespace"},
+		{name: "spaced alias", variants: "  - name: compact\n    aliases: ['dense ']\n", want: "surrounding whitespace"},
+		{name: "spaced collision fails closed", variants: "  - name: compact\n  - name: ' compact '\n", want: "surrounding whitespace"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -171,64 +188,9 @@ func TestValidatorIndependentNegativeBoundaries(t *testing.T) {
 }
 
 func checkExecutableWitness(c *Catalog, module, variant, example, assertion string) error {
-	if strings.TrimSpace(example) == "" {
-		return fmt.Errorf("%s witness example is empty", module)
-	}
-	lines := strings.Split(strings.TrimSpace(example), "\n")
-	opener, err := parseBlockOpener(strings.TrimRight(lines[0], "\r"))
-	if err != nil {
-		return fmt.Errorf("parse %s witness opener: %w", module, err)
-	}
-	if opener.Name != module {
-		return fmt.Errorf("witness opener %q does not match module %q", opener.Name, module)
-	}
-	report := c.Validate(example)
-	if len(report.Errors) != 0 {
-		return fmt.Errorf("%s witness validation errors: %v", module, report.Errors)
-	}
-	if variant != "" {
-		spec, ok := c.Get(module)
-		if !ok {
-			return fmt.Errorf("module %q not found", module)
-		}
-		body := lines[1:]
-		if len(body) > 0 && strings.TrimSpace(strings.TrimRight(body[len(body)-1], "\r")) == ":::" {
-			body = body[:len(body)-1]
-		}
-		facts, issues := parseBodyFacts(spec, spec.BodyFormat, body)
-		if len(issues) != 0 {
-			return fmt.Errorf("parse %s witness facts: %v", module, issues)
-		}
-		selected := opener.Params["variant"] == variant || opener.Params["type"] == variant ||
-			hasWitnessFact(facts, "variant", variant) || hasWitnessFact(facts, "type", variant) ||
-			hasStructuredWitnessSelector(body, "variant", variant) || hasStructuredWitnessSelector(body, "type", variant)
-		if !selected {
-			return fmt.Errorf("%s witness does not select variant %q", module, variant)
-		}
-	}
-	if assertion != "" && !strings.Contains(example, assertion) {
-		return fmt.Errorf("%s witness does not contain assertion %q", module, assertion)
-	}
-	return nil
-}
-
-func hasStructuredWitnessSelector(body []string, name, value string) bool {
-	for _, line := range body {
-		key, got, ok := strings.Cut(strings.TrimSpace(strings.TrimRight(line, "\r")), ":")
-		if ok && strings.TrimSpace(key) == name && strings.TrimSpace(got) == value {
-			return true
-		}
-	}
-	return false
-}
-
-func hasWitnessFact(facts bodyFacts, name, value string) bool {
-	for _, got := range facts.fieldValues[name] {
-		if got == value {
-			return true
-		}
-	}
-	return false
+	return c.ValidateWitness(WitnessContract{
+		Module: module, Variant: variant, Example: example, AssertContains: assertion,
+	})
 }
 
 const baseLayoutYAML = `schema_version: "1"

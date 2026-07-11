@@ -215,17 +215,25 @@ func validateWitnessSpecs(spec *LayoutSpec) error {
 	}
 	identities := make(map[string]string)
 	for _, variant := range spec.Variants {
-		if strings.TrimSpace(variant.Name) == "" {
+		name := strings.TrimSpace(variant.Name)
+		if name == "" {
 			return fmt.Errorf("variant name must not be empty")
 		}
+		if name != variant.Name {
+			return fmt.Errorf("variant name %q must not have surrounding whitespace", variant.Name)
+		}
 		for _, identity := range append([]string{variant.Name}, variant.Aliases...) {
-			if strings.TrimSpace(identity) == "" {
+			normalized := strings.TrimSpace(identity)
+			if normalized == "" {
 				return fmt.Errorf("variant alias must not be empty")
 			}
-			if previous, exists := identities[identity]; exists {
-				return fmt.Errorf("duplicate variant name or alias %q (already declared by %q)", identity, previous)
+			if normalized != identity {
+				return fmt.Errorf("variant name or alias %q must not have surrounding whitespace", identity)
 			}
-			identities[identity] = variant.Name
+			if previous, exists := identities[normalized]; exists {
+				return fmt.Errorf("duplicate variant name or alias %q (already declared by %q)", normalized, previous)
+			}
+			identities[normalized] = name
 		}
 		if variant.AssertContains != "" && !strings.Contains(variant.Example, variant.AssertContains) {
 			return fmt.Errorf("variant %q assert_contains %q is absent from its example", variant.Name, variant.AssertContains)
