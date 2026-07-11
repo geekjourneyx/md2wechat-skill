@@ -30,11 +30,13 @@
 make e2e-layout
 ```
 
-该目标固定请求 `https://md2wechat.app`，从 `~/.config/md2wechat/config.yaml` 读取 `api.md2wechat_key`；`MD2WECHAT_API_KEY` 可覆盖配置文件。API key 只进入 `X-API-Key` 请求头，不会出现在命令行、JSONL 报告或测试日志中。
+该目标默认请求 `https://md2wechat.app`；本地或 staging 验证可显式设置 `MD2WECHAT_BASE_URL` 覆盖目标。凭证从 `~/.config/md2wechat/config.yaml` 的 `api.md2wechat_key` 读取，`MD2WECHAT_API_KEY` 可覆盖配置文件。API key 只进入 `X-API-Key` 请求头，不会出现在命令行、JSONL 报告或测试日志中。
 
 报告默认写入 `/tmp/md2wechat-layout-conformance.jsonl`，可通过 `LAYOUT_CONFORMANCE_OUTPUT` 改路径。每个 recommended canonical witness、声明的 variant witness和三个 compatibility witness 都是独立子测试；任一 module marker、稳定正文、精确 variant 分支属性、语义 DOM 约束或原始 fence 不一致都会失败。
 
-远端若返回 build identity header，报告优先记录该值；否则只记录固定 target 与 UTC 观测时间，并明确标记为非 commit 证据。失败类别区分 authentication、API drift 与 network failure。
+可选设置 `MD2WECHAT_API_BUILD_ID` 锁定预期部署版本；设置后每个响应都必须携带 recognized build identity header 且精确匹配。未设置时仍要求本次 80-witness run 内所有响应 identity 一致；若均无 header，只记录 target 与 UTC 观测时间，并明确标记为非 commit 证据。失败类别区分 authentication、API drift 与 network failure。
+
+2026-07-11 对 `https://md2wechat.app` 的复验覆盖 80 个 canonical、结构变体及 compatibility witness，结果 80 pass / 0 fail。远端未提供 commit build identity，因此证据身份记录为固定 target + UTC timestamp，并明确标记 `non_commit_evidence=true`；该结论不把本地 `layout validate` 当作远端部署证明。
 
 执行过的基础自检：
 

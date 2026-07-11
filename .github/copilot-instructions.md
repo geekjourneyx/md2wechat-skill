@@ -61,23 +61,26 @@ md2wechat capabilities --json
 md2wechat providers list --json
 md2wechat themes list --json
 md2wechat prompts list --json
-md2wechat layout list --json      # advanced layout modules (43 built-in)
+md2wechat layout list --json      # 53 recommended advanced layout syntax names
 ```
 These are the source of truth. Do not guess from docs or stale memory.
 
 ### Layout Module Discovery
-Advanced layout modules (43 built-in, 6 categories) are discovered and validated via:
+Advanced layout discovery defaults to 53 recommended syntax names across 9 categories (`opening`, `infographic`, `judgment`, `evidence`, `conversion`, `brand`, `sprint4`, `free-layout`, `interactive`). Three compatibility modules are listed separately for migration:
 ```bash
-md2wechat layout list --json                           # list all modules
+md2wechat layout list --json                           # list recommended modules
+md2wechat layout list --lifecycle compatibility --json # migration only
 md2wechat layout list --serves attention --json        # filter by goal
 md2wechat layout show <name> --json                    # inspect a module
 md2wechat layout render <name> --var KEY=VALUE         # render syntax block
 md2wechat layout validate --file article.md --json     # validate syntax in file
 ```
 
-**重要约束**：高级排版模块（`:::block` 语法）仅在 **API 模式**下渲染。
+**重要约束**：高级排版模块使用通用 `:::name` 语法，仅在 **API 模式**下渲染；`block` 是保留语法名，不是通用占位符。
 - `convert`（默认）= API 模式，模块正常渲染
-- `convert --mode ai` = AI 模式，`:::block` 不渲染，以普通段落输出
+- `convert --mode ai` = AI 模式，`:::name` 高级排版块不渲染，以普通段落输出
+
+Keep one canonical executable example per recommended syntax and add examples only for structurally distinct variants. The 68-scenario mapping (48 source-mapped names plus 5 guide-only names) stays test-only. Real conformance must cover canonical, variant, and compatibility witnesses and prove semantic markers/stable content with no raw fence; local validation alone is not remote deployment proof.
 
 The 4 `serves` values that every module is mapped to: `attention` | `readability` | `memorability` | `conversion`.
 

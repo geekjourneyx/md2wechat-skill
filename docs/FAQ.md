@@ -880,9 +880,13 @@ md2wechat layout list --serves attention --json   # attention-grabbing modules
 md2wechat layout show hero --json      # full spec with fields and example
 ```
 
+计数口径分别是 68 个场景条目、53 个默认推荐语法名、3 个兼容模块、4 个基础增强能力和 60 项渲染层语法能力。68 不是 `layout list` 的条目数：同一语法名可承载多个场景或结构变体。`layout show --json` 的 schema 定义合法性，canonical example 和结构不同的 variant examples 是可执行参考。
+
 When the user has not chosen a theme or module, use discovery output as facts and let the Agent decide from the article and Brand Profile. The CLI does not parse Brand Profile; Agents should read `~/.config/md2wechat/brand.md` themselves, choose a compatible theme from `themes list --json`, inspect module schemas with `layout show`, and render only the modules they can fill correctly.
 
 Keep the source Markdown read-only: create a temporary formatted Markdown artifact with rendered `:::module` blocks, run `layout validate` on that generated file, then pass the generated Markdown to `/api/convert`. Saving generated Markdown near the source requires explicit user confirmation.
+
+For complex bodies, pass raw body content with `layout render <name> --body-file <path>` or stdin via `--body-file -`; use `--param KEY=VALUE` for opener parameters and `--caption` for the bracket caption. Local `layout validate` proves catalog/schema acceptance only. It does not prove that a custom YAML has a deployed remote HTML renderer or that the current API target renders it.
 
 ### What does "unknown layout module" in validate output mean?
 

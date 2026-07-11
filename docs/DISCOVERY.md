@@ -389,7 +389,7 @@ Prompt catalog 的加载优先级为：
 
 ## Layout Module Discovery (:::module Syntax)
 
-The `layout` subcommand exposes 53 recommended advanced WeChat layout syntaxes (`:::module`) by default. Discovery separately reports 68 upstream scenarios, 3 compatibility modules, 4 base enhancements, and 60 total render syntaxes; these counts are not interchangeable.
+The `layout` subcommand exposes 53 个主推 advanced WeChat layout syntax names (`:::module`) by default. Capability discovery separately reports 68 个主推高级排版场景条目, 3 个兼容模块, 4 个基础增强能力, and 60 项渲染层语法能力; these counts are not interchangeable. The 68 scenarios are source-use-case mappings, while the 53 names are the default CLI discovery objects. Maintainer tests map 48 of those names from source scenarios and keep five guide-only names explicit; the CLI does not publish that test-only mapping.
 
 ### Commands
 
@@ -416,7 +416,9 @@ md2wechat layout validate --file article.md --json
 md2wechat layout validate --stdin --json < article.md
 ```
 
-`layout list --json` 会在模块摘要中显示 `body_format`；`layout show --json` 会在完整规格中显示同一字段。它是模块正文语法来源：`fields` / `rows` / `json_object` / `json_array`。`example` 只是展示，不应作为推断依据。
+`layout list --json` 会在模块摘要中显示 `body_format`；`layout show --json` 会显示完整 schema、canonical `Example` 和结构不同的 `Variants[].Example`。Schema 定义合法输入；Example 是经过验证的可执行 witness，应复用而不是手猜语法。正文格式共有 `fields` / `rows` / `json_object` / `json_array` / `markdown_images` / `markdown_fields` / `split` / `lines` / `dialogue` 九种；`compatible_body_formats` 只表示模块仍接受的旧正文格式。
+
+默认 `layout list --json` 只返回 recommended lifecycle。旧稿迁移时才运行 `layout list --lifecycle compatibility --json`；不要把 `dialogue`、`gallery`、`longimage` 推荐给新稿。复杂正文使用 `layout render <name> --body-file <path>`（或 `--body-file -` 从 stdin 读取），opener 参数用可重复的 `--param KEY=VALUE`，方括号 caption 用 `--caption`。
 
 When the user says "帮我排版这篇文章" without naming a theme or module, run discovery first, then use `layout list`, `layout show`, and `layout render` as primitives. The CLI does not parse `~/.config/md2wechat/brand.md`; Agents should read Brand Profile themselves and choose the final theme/modules. Keep the source Markdown read-only: create a temporary formatted Markdown artifact, validate it with `layout validate`, then pass that temporary file to `convert`. Saving generated Markdown near the source requires explicit user confirmation.
 
@@ -464,7 +466,7 @@ To add or override a module, create `<category>/<name>.yaml` in any override dir
 - 当前是否存在某个 theme / prompt
 - 当前 theme 是否可直接选择，是否匹配 `api` / `ai` 模式
 - 高级排版模块 catalog 是否可用
-- 每个高级排版模块的 `body_format`，即正文应写成 `fields` / `rows` / `json_object` / `json_array`
+- 每个高级排版模块的 `body_format` 和 `compatible_body_formats`，即正文应采用九种受支持格式中的哪一种
 - 尚未发布的工作流是否只是声明为 `available: false`
 
 配置主路径仍然是：

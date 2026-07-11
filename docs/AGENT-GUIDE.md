@@ -88,7 +88,7 @@ md2wechat prompts list --json
 
 使用 `md2wechat prompts show <name> --kind <kind> --json` 查看单个 prompt 的具体内容和配置。
 
-### 1.5 查看高级排版模块（43 个内置模块）
+### 1.5 查看高级排版模块（默认 53 个推荐语法名）
 
 ```bash
 md2wechat layout list --json
@@ -96,9 +96,10 @@ md2wechat layout list --serves attention --json     # 按目标筛选
 md2wechat layout list --serves readability --json
 md2wechat layout list --serves memorability --json
 md2wechat layout list --serves conversion --json
+md2wechat layout list --lifecycle compatibility --json  # 仅旧稿迁移
 ```
 
-仅在高级排版、模块选择或模块语法排障时使用。列出所有可用的高级排版模块。每个模块都有四个服务目标之一或多个：
+仅在高级排版、模块选择或模块语法排障时使用。默认列表只返回 recommended lifecycle；compatibility 列表只用于迁移旧稿。每个推荐模块都有四个服务目标之一或多个：
 - `attention` — 吸引注意力（hero、verdict、toc）
 - `readability` — 提升可读性（steps、callout、bridge）
 - `memorability` — 增强记忆点（quote、metrics、summary）
@@ -231,7 +232,7 @@ Agent 应先从文章本身和用户指令中判断这三个问题；只有关�
 
 **Step 2 — 内容映射**（基于四目标框架）
 
-使用 43 个排版模块中的这些映射关系：
+使用 CLI 默认返回的推荐排版语法中的这些映射关系：
 
 | 目标 | 常见问题 | 推荐模块 | 示例 |
 |------|---------|---------|------|
@@ -242,7 +243,7 @@ Agent 应先从文章本身和用户指令中判断这三个问题；只有关�
 
 **Step 3 — 模块选择与验证**
 
-结合 Brand Profile 的自然语言约束和内容特性，从 43 个模块中选择最合适的组合。保持用户原文只读，把生成稿写入临时 Markdown，然后验证临时稿：
+结合 Brand Profile 的自然语言约束和内容特性，从 discovery 结果中选择最合适的推荐模块。保持用户原文只读，把生成稿写入临时 Markdown，然后验证临时稿：
 
 ```bash
 md2wechat layout validate --file /tmp/md2wechat-format/<run-id>/article.formatted.md --json
@@ -256,10 +257,10 @@ md2wechat layout show hero --json
 md2wechat layout show callout --json
 
 # 渲染模块 Markdown 片段（本地命令，不调用远程 API）
-md2wechat layout render callout --var 'rows=[["重要提示"]]' --json
+printf '%s\n' '重要提示' | md2wechat layout render callout --body-file - --json
 ```
 
-读取 `layout list --json` / `layout show --json` 的 `body_format` 决定正文写法：`fields` / `rows` / `json_object` / `json_array`。不要从 `example` 反推语法。
+读取 `layout list --json` / `layout show --json` 的 `body_format` 决定正文写法：`fields` / `rows` / `json_object` / `json_array` / `markdown_images` / `markdown_fields` / `split` / `lines` / `dialogue`。Schema 决定合法性；优先复用 canonical `Example`，只有结构不同的分支才选 `Variants[].Example`。复杂正文用 `--body-file`，不要拼成大量 `--var`。兼容模块仅用于旧稿迁移。
 
 ---
 
@@ -275,7 +276,7 @@ md2wechat convert article.md --output output.html
 
 **前置条件**：
 - 需要配置 `MD2WECHAT_API_KEY`，可通过 `MD2WECHAT_BASE_URL` 或 `api.md2wechat_base_url` 覆盖 API 地址
-- 支持所有 43 个高级排版模块
+- 支持默认发现的 53 个推荐高级排版语法；3 个兼容模块仅用于旧稿迁移
 - 输出 HTML 最终，可直接用于微信草稿或发布
 
 **响应示例**：
@@ -468,7 +469,7 @@ md2wechat layout show callout --json
 ### 7.4 测试模块渲染
 
 ```bash
-md2wechat layout render callout --var 'rows=[["测试内容"]]' --json
+printf '%s\n' '测试内容' | md2wechat layout render callout --body-file - --json
 md2wechat layout render cta --var title="立即订阅" --var note="持续更新" --json
 ```
 
@@ -698,7 +699,7 @@ md2wechat convert article.md --mode ai --output output.html
 | 预览文章 | `md2wechat preview article.md` |
 | 创建草稿 | `md2wechat convert article.md --draft --cover ./cover.jpg` |
 | 查看模块规范 | `md2wechat layout show hero --json` |
-| 测试模块渲染 | `md2wechat layout render callout --var 'rows=[["test"]]' --json` |
+| 测试模块渲染 | `printf '%s\n' 'test' \| md2wechat layout render callout --body-file - --json` |
 
 ---
 

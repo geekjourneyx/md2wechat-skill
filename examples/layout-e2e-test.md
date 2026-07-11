@@ -4,9 +4,11 @@ author: md2wechat
 digest: 覆盖九类推荐模块的真实 API 渲染测试，每次发布前必须通过
 ---
 
+> 本文件是九类推荐语法的人工综合样例，不替代发布 conformance。发布证据使用 `make e2e-layout`，固定验证生产目标 `https://md2wechat.app` 的 canonical、结构 variant 和 3 个 compatibility witness；其他目标不能作为发布完成证明。
+
 :::hero
 eyebrow: 排版能力测试
-title: 53 个推荐模块，一次看清
+title: 53 个推荐语法名，一次看清
 subtitle: 真实 API 渲染验证
 :::
 
@@ -101,7 +103,7 @@ subtitle: 覆盖 AI 写作、排版系统和公众号工作流
 :::checklist
 已安装 md2wechat CLI
 已配置 API Key
-已确认本地服务运行中
+已确认生产 conformance 目标与身份记录
 已选择合适的排版模块
 :::
 
@@ -113,7 +115,7 @@ subtitle: 覆盖 AI 写作、排版系统和公众号工作流
 
 :::cta
 title: 立即体验高级排版
-note: 支持 43 个模块，覆盖六大内容类型
+note: 53 个推荐语法覆盖九类内容结构，3 个 compatibility 模块仅用于迁移
 :::
 
 :::summary

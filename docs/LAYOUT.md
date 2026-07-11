@@ -11,7 +11,7 @@
 
 - [一、什么是高级排版模块](#一什么是高级排版模块)
 - [二、3 步快速上手](#二3-步快速上手)
-- [三、6 大类模块详解](#三6-大类模块详解)
+- [三、9 大类模块详解](#三9-大类模块详解)
   - [opening 开场类](#opening-开场类)
   - [infographic 信息图类](#infographic-信息图类)
   - [judgment 判断类](#judgment-判断类)
@@ -19,6 +19,8 @@
   - [conversion 行动类](#conversion-行动类)
   - [brand 品牌类](#brand-品牌类)
   - [sprint4 精选增强类](#sprint4-精选增强类)
+  - [free-layout 自由布局类](#free-layout-自由布局类)
+  - [interactive 交互类](#interactive-交互类)
 - [四、一篇完整文章示例](#四一篇完整文章示例)
 - [五、Agent 工作流](#五agent-工作流)
 - [六、常见错误排查](#六常见错误排查)
@@ -68,7 +70,7 @@ subtitle: 不是好不好看，是读者读不读得完
 
 ### 语法规则
 
-每个模块的 `body_format` 决定正文写法。先用 `layout list --json` 粗看，再用 `layout show <name> --json` 查看完整规格，不要从示例猜。
+每个模块的 `body_format` 决定正文写法。先用 `layout list --json` 粗看，再用 `layout show <name> --json` 查看完整规格。Schema 定义什么输入合法；canonical `Example` 是经过契约测试的可执行 witness，结构不同的分支才会额外提供 `Variants[].Example`。复用 witness，不要只凭模块名猜语法。
 
 `body_format: fields`：
 
@@ -93,6 +95,35 @@ subtitle: 不是好不好看，是读者读不读得完
 {"key": "value"}
 :::
 ```
+
+完整的九种正文格式如下：
+
+| `body_format` | 正文形态 | 典型模块 |
+|---|---|---|
+| `fields` | 每行 `key: value` | `hero`、`verdict` |
+| `rows` | 每行一条、列用 `|` 分隔 | `toc`、`metrics` |
+| `json_object` | 一个 JSON 对象 | `definition`、`tweet` |
+| `json_array` | 一个 JSON 数组 | `stat-row`、`resource-list` |
+| `markdown_images` | Markdown 图片列表，可夹带允许的文本 | `gallery-grid`、`svg-swipe-gallery` |
+| `markdown_fields` | 重复字段组中允许 Markdown 图片 | `image-steps`、`figure-caption` |
+| `split` | 两段正文由模块 schema 指定的分隔线隔开 | `split` |
+| `lines` | 逐行条目，分隔符或前缀由 schema 约束 | `flow`、`callout` |
+| `dialogue` | 成对前缀或具名说话人行 | `question`、`dialogue-pair` |
+
+`compatible_body_formats` 是旧正文仍可通过校验的兼容入口，不改变主推格式。例如 `question` 的主格式是 `dialogue`，同时接受旧的 `json_array`。
+
+### Catalog 计数与 lifecycle
+
+- 68 个主推高级排版场景条目是上游使用场景维度。
+- 53 个主推 `:::` 语法名是 `layout list --json` 默认返回的 CLI 对象。
+- 3 个 compatibility 模块是 `dialogue`、`gallery`、`longimage`，只用于旧稿迁移。
+- 4 个基础增强能力与上述语法合计为 60 项渲染层语法能力。
+
+68 与 53 不能互换：一个语法名可以承载多个场景或结构变体。场景映射只用于维护测试，不会通过 CLI discovery 输出。
+
+本批新增的 10 个推荐语法名分属三个新/扩展类别：`figure-caption`、`gallery-grid`、`gallery-story`、`image-phone-shot`、`svg-reveal`、`svg-swipe-gallery`、`split`、`flow`、`matrix`、`dialogue-pair`。具体 opener、body、schema、canonical witness 和结构 variant 以 `layout show <name> --json` 为准。
+
+2026-07-11 针对 `https://md2wechat.app` 的真实语义 conformance 复验覆盖 80 个 canonical、variant 与 compatibility witness，结果 80 pass / 0 fail。远端身份是 target + UTC timestamp 的 `non_commit_evidence`，不是可追溯到远端 commit 的 build identity。
 
 ---
 
@@ -182,6 +213,21 @@ subtitle: 排版的本质是降低阅读决策成本
 
 把这段代码粘贴到 Markdown 文章对应位置，转换时就会渲染出来。
 
+复杂正文不要压成大量 `--var`。把正文写入临时文件或通过 stdin 传入；opener 参数与方括号 caption 分开传递：
+
+```bash
+md2wechat layout render gallery-grid \
+  --param columns=2 \
+  --body-file /tmp/gallery-body.md \
+  --json
+
+printf '%s\n' '草稿输入 → 结构判断 → 模块选择' | \
+  md2wechat layout render flow --caption "Agent 发布流程" --body-file - --json
+
+printf '%s\n' '左侧内容' '---' '右侧内容' | \
+  md2wechat layout render split --body-file - --json
+```
+
 ### 验证语法
 
 写完文章后，先验证再转换：
@@ -190,12 +236,14 @@ subtitle: 排版的本质是降低阅读决策成本
 md2wechat layout validate --file article.md --json
 ```
 
-- 返回 `errors: 0` → 可以直接转换
-- 返回 `errors: N` → 检查提示信息，修复后再转
+- 返回 `code: LAYOUT_VALIDATED` 且没有 errors → 本地语法可进入转换
+- 返回 `code: LAYOUT_VALIDATE_HAS_ERRORS` → 检查 errors，修复后再转
+
+这里的“可以转换”只表示本地 catalog/schema 已接受语法。真正的 API HTML 渲染能力仍需远端 conformance 或一次真实转换证明；两者不是同一层验证。
 
 ---
 
-## 三、6 大类模块详解
+## 三、9 大类模块详解
 
 ### opening 开场类
 
@@ -893,6 +941,41 @@ A: 不需要，照着字段填写就行。
 
 ---
 
+### free-layout 自由布局类
+
+这组模块表达无法可靠压缩成 `key: value` 或表格行的正文结构：
+
+| 模块 | 主格式 | 用途 |
+|---|---|---|
+| `split` | `split` | 用 schema 指定分隔线组织左右/前后两段内容 |
+| `flow` | `lines` | 用逐行节点表达流程 |
+| `matrix` | `rows` | 用稳定列数表达二维矩阵 |
+| `dialogue-pair` | `dialogue` | 用成对说话人内容表达对话 |
+
+先运行 `layout show <name> --json` 读取 separator、列数、允许前缀、canonical example 等约束。复杂正文使用 `--body-file`。
+
+### interactive 交互类
+
+| 模块 | 主格式 | 用途 |
+|---|---|---|
+| `svg-reveal` | `fields` | 单图揭示式交互 |
+| `svg-swipe-gallery` | `markdown_images` | 多图滑动浏览 |
+
+这两个语法只在 API 模式由远端 renderer 转成 HTML。`layout validate` 只证明本地 schema 接受输入，不证明远端已部署对应 renderer。
+
+### compatibility 旧稿迁移
+
+默认列表不会返回 `dialogue`、`gallery`、`longimage`。只在迁移已有文章时发现和检查它们：
+
+```bash
+md2wechat layout list --lifecycle compatibility --json
+md2wechat layout show gallery --json
+```
+
+新稿分别使用 `dialogue-pair`、推荐图片模块以及其他当前 recommended 语法。
+
+---
+
 ## 四、一篇完整文章示例
 
 以下是一篇观点文的完整排版骨架，涵盖 opening → body → conversion → brand 的完整流程。
@@ -1145,6 +1228,8 @@ md2wechat config show --format json | grep api_key
 ### 创建自定义模块 YAML
 
 在 `~/.config/md2wechat/layout/<category>/<name>.yaml` 创建文件：
+
+本地 YAML 只扩展或覆盖 CLI 的 discovery、render 和 validate 契约，不能在远端 API 中凭空创建 HTML renderer。自定义名称在远端没有对应实现时，即使本地 validate 通过，也不应宣称已可渲染。
 
 ```yaml
 schema_version: "1"
