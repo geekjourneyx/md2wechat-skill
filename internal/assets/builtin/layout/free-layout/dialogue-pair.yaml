@@ -1,0 +1,46 @@
+schema_version: "1"
+name: dialogue-pair
+body_format: dialogue
+version: "1.0.0"
+since: "1.5.0"
+category: free-layout
+serves: [readability, memorability]
+content_types: [opinion, tutorial, report]
+industry: [general]
+tags: [free-layout, dialogue, interview, qa]
+position: body
+when_to_use: |
+  双人对话、访谈、读者问答或顾问式解释。
+  新对话内容优先使用 dialogue-pair，旧 dialogue 只用于兼容。
+when_not_to_use: |
+  单人引用用 quote；结构化问答列表用 faq；
+  不要用方括号声明人物名称。
+pairs_well_with: [quote, faq, summary]
+avoid_combining_with: [dialogue-pair]
+anti_pattern: |
+  空对话会导致校验失败；
+  正文只接受 U: 和 E: 前缀，人物名称用 left= 和 right= 配置。
+opener:
+  param_style: tokens
+  params:
+    - name: left
+      description: 左侧人物名称
+      default: 用户
+    - name: right
+      description: 右侧人物名称
+      default: 助手
+body:
+  min_items: 1
+  allowed_prefixes: ["U:", "E:"]
+example: |
+  :::dialogue-pair left=读者 right=作者
+  U: 高级模块和普通 Markdown 有什么区别？
+  E: 高级模块把结构、层级和视觉节奏一起带进公众号正文，不只是把文字换个样式。
+
+  U: 我需要学多少个模块？
+  E: 先学开场、信息卡、证据、总结和 CTA，绝大多数文章就能明显升级。
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#dialogue-pair"

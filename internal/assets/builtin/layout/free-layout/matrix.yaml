@@ -1,0 +1,47 @@
+schema_version: "1"
+name: matrix
+body_format: rows
+version: "1.0.0"
+since: "1.5.0"
+category: free-layout
+serves: [readability]
+content_types: [tutorial, report, announcement, product-launch]
+industry: [general]
+tags: [free-layout, matrix, comparison, versions]
+position: body
+when_to_use: |
+  对比多个方案、能力或版本。
+  使用 headers= 声明表头，每行用 | 分隔维度和至少一个方案值。
+when_not_to_use: |
+  两项观点对照优先用 compare；
+  不要把标准 Markdown 表格直接放入 matrix。
+pairs_well_with: [compare, pricing, specs]
+avoid_combining_with: [matrix]
+anti_pattern: |
+  标准 Markdown 表格的首尾竖线和分隔行不会被跳过；
+  没有 | 的短行会因列数不足而校验失败。
+opener:
+  param_style: tokens
+  params:
+    - name: headers
+      description: 逗号分隔的表头
+      example: "能力,基础版,专业版,企业版"
+rows:
+  delimiter: "|"
+  min_columns: 2
+  schema:
+    - name: dimension
+      description: 对比维度
+    - name: value
+      description: 至少一个方案值
+example: |
+  :::matrix headers=能力,基础版,专业版,企业版
+  高级模块|有|有|有
+  主题定制|无|有|有
+  API 调用|无|有|有
+  私有部署|无|无|有
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#matrix"

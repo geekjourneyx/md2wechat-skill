@@ -1,0 +1,34 @@
+schema_version: "1"
+name: flow
+body_format: lines
+version: "1.0.0"
+since: "1.5.0"
+category: free-layout
+serves: [readability, memorability]
+content_types: [tutorial, report, announcement, product-launch]
+industry: [general]
+tags: [free-layout, flow, process, sequence]
+position: body
+when_to_use: |
+  展示短流程、路径节点或阶段顺序。
+  每个节点只写短语，推荐使用箭头串联。
+when_not_to_use: |
+  节点需要标题和长说明时用 steps；
+  只有单个判断时不需要流程模块。
+pairs_well_with: [steps, checklist, summary]
+avoid_combining_with: [flow]
+anti_pattern: |
+  空流程会导致校验失败；
+  节点写成长段解释会削弱流程的扫描效率。
+opener:
+  caption: true
+body:
+  min_items: 1
+example: |
+  :::flow[Agent 发布流程]
+  草稿输入 → 结构判断 → 模块选择 → 视觉校准 → 发布检查
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#flow"

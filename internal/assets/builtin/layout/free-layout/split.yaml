@@ -1,0 +1,47 @@
+schema_version: "1"
+name: split
+body_format: split
+version: "1.0.0"
+since: "1.5.0"
+category: free-layout
+serves: [readability]
+content_types: [opinion, tutorial, report, announcement, product-launch]
+industry: [general]
+tags: [free-layout, split, columns, comparison]
+position: body
+when_to_use: |
+  把主判断和补充说明拆成左右两张信息卡。
+  适合左右观点、方案拆分或一侧放图的场景。
+when_not_to_use: |
+  普通信息卡优先用 cards；明确对比优先用 compare；
+  图文说明优先用 image-text，避免为了形式感强行双栏。
+pairs_well_with: [verdict, quote, image-text]
+avoid_combining_with: [split]
+anti_pattern: |
+  两栏之间缺少单独一行的 --- 会导致校验失败；
+  两侧内容过长会在窄屏上拥挤；没有明确比例需求时不要覆盖默认 1:1。
+opener:
+  param_style: bracket
+  params:
+    - name: ratio
+      description: 左右两栏比例；省略时由渲染器使用默认 1:1
+      example: "3:2"
+body:
+  separator: "---"
+  min_items: 2
+example: |
+  :::split
+  ## 主判断
+
+  高级排版不是把页面做花，而是让读者先看懂重点。
+
+  ---
+
+  ## 落地方式
+
+  左侧讲结论，右侧放证据、说明或下一步，让两块信息都能独立阅读。
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#split"

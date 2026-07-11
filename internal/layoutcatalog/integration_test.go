@@ -3,6 +3,7 @@ package layoutcatalog
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -68,5 +69,22 @@ func TestIntegrationRenderThenValidateRoundtrip(t *testing.T) {
 	r := c.Validate(out)
 	if len(r.Errors) > 0 {
 		t.Errorf("rendered output should validate clean: %+v", r.Errors)
+	}
+}
+
+func TestIntegrationFreeLayoutCanonicalExamplesValidate(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	markdown := strings.Join([]string{
+		splitGuideSnippet,
+		flowGuideSnippet,
+		matrixGuideSnippet,
+		dialoguePairGuideSnippet,
+	}, "\n")
+	result := c.Validate(markdown)
+	if len(result.Errors) != 0 || len(result.Warnings) != 0 {
+		t.Fatalf("free-layout canonical examples should validate cleanly: errors=%+v warnings=%+v", result.Errors, result.Warnings)
 	}
 }
