@@ -208,6 +208,7 @@ func TestCalibratedVariantAndBodyMatrix(t *testing.T) {
 		{name: "quote proof alias", markdown: ":::quote\nvariant: evidence\nquote: 证据\nsource: 研究报告\n:::\n", accepted: true},
 		{name: "quote unknown variant", markdown: ":::quote\nvariant: loud\nquote: 证据\n:::\n"},
 		{name: "summary legacy", markdown: ":::summary\nhighlight: 一句话\n:::\n", accepted: true},
+		{name: "summary default missing highlight", markdown: ":::summary\ntitle: 标题\n:::\n"},
 		{name: "summary legacy missing highlight", markdown: ":::summary\nvariant: legacy\ntitle: 标题\n:::\n"},
 		{name: "summary three", markdown: ":::summary\nvariant: three\nitems: 一 | 二 | 三\n:::\n", accepted: true},
 		{name: "summary three alias", markdown: ":::summary\nvariant: points\nitems: 一 | 二 | 三\n:::\n", accepted: true},
@@ -237,6 +238,49 @@ func TestCalibratedVariantAndBodyMatrix(t *testing.T) {
 			report := c.Validate(tt.markdown)
 			if got := len(report.Errors) == 0; got != tt.accepted {
 				t.Fatalf("accepted = %v, want %v; errors=%+v", got, tt.accepted, report.Errors)
+			}
+		})
+	}
+}
+
+func TestRendererFalsePositiveBoundaries(t *testing.T) {
+	tests := []struct {
+		name, markdown string
+		accepted       bool
+		field          string
+		maxErrors      int
+	}{
+		{name: "manifesto believe only", markdown: ":::manifesto\nbelieve: 结构先于风格\n:::\n", accepted: true},
+		{name: "manifesto against only", markdown: ":::manifesto\nagainst: 堆模板\n:::\n"},
+		{name: "path needs two items", markdown: ":::infographic\ntype: path\ntitle: 路径\nitems: 一步\n:::\n"},
+		{name: "path has two items", markdown: ":::infographic\ntype: path\ntitle: 路径\nitems: 一步 | 二步\n:::\n", accepted: true},
+		{name: "formula needs two parts", markdown: ":::infographic\ntype: formula\ntitle: 公式\nformula: 判断\n:::\n"},
+		{name: "formula has two parts", markdown: ":::infographic\ntype: formula\ntitle: 公式\nformula: 判断 + 行动\n:::\n", accepted: true},
+		{name: "tradeoff needs two parts", markdown: ":::infographic\ntype: tradeoff\ntitle: 取舍\ntradeoffs: 速度:快\n:::\n"},
+		{name: "tradeoff has two parts", markdown: ":::infographic\ntype: tradeoff\ntitle: 取舍\ntradeoffs: 速度:快 | 稳定:高\n:::\n", accepted: true},
+		{name: "annotate point needs four parts", markdown: ":::image-annotate\nimage: https://example.com/a.png\npoint: 01 | 20 | 30\n:::\n"},
+		{name: "annotate point has four parts", markdown: ":::image-annotate\nimage: https://example.com/a.png\npoint: 01 | 20 | 30 | 标题\n:::\n", accepted: true},
+		{name: "inactive unknown variant", markdown: ":::infographic\ntype: thesis\nvariant: unknown\ntitle: 判断\n:::\n", field: "variant", maxErrors: 1},
+		{name: "unknown type one error", markdown: ":::infographic\ntype: unknown\ntitle: 判断\n:::\n", field: "type", maxErrors: 1},
+		{name: "type overrides variant", markdown: ":::infographic\nvariant: formula\ntype: thesis\ntitle: 判断\n:::\n", accepted: true},
+		{name: "last type wins", markdown: ":::infographic\ntype: path\ntype: formula\ntitle: 公式\nformula: 判断 + 行动\n:::\n", accepted: true},
+		{name: "earlier unknown type rejected", markdown: ":::infographic\ntype: unknown\ntype: thesis\ntitle: 判断\n:::\n", field: "type", maxErrors: 1},
+	}
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			report := c.Validate(tt.markdown)
+			if got := len(report.Errors) == 0; got != tt.accepted {
+				t.Fatalf("accepted = %v, want %v; errors=%+v", got, tt.accepted, report.Errors)
+			}
+			if tt.field != "" && len(report.Errors) > 0 && report.Errors[0].Field != tt.field {
+				t.Fatalf("error field = %q, want %q", report.Errors[0].Field, tt.field)
+			}
+			if tt.maxErrors > 0 && len(report.Errors) > tt.maxErrors {
+				t.Fatalf("errors = %+v, want at most %d", report.Errors, tt.maxErrors)
 			}
 		})
 	}

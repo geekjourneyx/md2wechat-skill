@@ -37,6 +37,28 @@ func TestExecutableWitnessAcceptsDeclaredVariantAlias(t *testing.T) {
 	}
 }
 
+func TestExecutableWitnessUsesEffectiveLastWriteSelector(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name, variant, example string
+		wantErr                bool
+	}{
+		{name: "type overrides variant", variant: "formula", example: ":::infographic\nvariant: formula\ntype: thesis\ntitle: 判断\n:::\n", wantErr: true},
+		{name: "last type wins", variant: "formula", example: ":::infographic\ntype: thesis\ntype: formula\ntitle: 公式\nformula: 判断 + 行动\n:::\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := c.ValidateWitness(WitnessContract{Module: "infographic", Variant: tt.variant, Example: tt.example})
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ValidateWitness() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestExecutableWitnessRejectsInvalidContracts(t *testing.T) {
 	c := NewCatalog()
 	c.modules["demo"] = &LayoutSpec{
@@ -208,6 +230,8 @@ func TestParseLayoutSpecValidatesVariantRules(t *testing.T) {
 	}{
 		{name: "undeclared required", variant: "  - name: compact\n    use_when: 需要紧凑结构\n    required: [missing]\n    example: |\n      :::demo\n      variant: compact\n      title: Value\n      :::\n", want: "not declared"},
 		{name: "empty required any", variant: "  - name: compact\n    use_when: 需要紧凑结构\n    required_any: [[]]\n    example: |\n      :::demo\n      variant: compact\n      title: Value\n      :::\n", want: "must not be empty"},
+		{name: "undeclared shape field", variant: "  - name: compact\n    use_when: 需要紧凑结构\n    shapes:\n      - {field: missing, separator: '|', min_parts: 2}\n    example: |\n      :::demo\n      variant: compact\n      title: Value\n      :::\n", want: "shape field"},
+		{name: "invalid shape minimum", variant: "  - name: compact\n    use_when: 需要紧凑结构\n    shapes:\n      - {field: title, separator: '|', min_parts: 1}\n    example: |\n      :::demo\n      variant: compact\n      title: Value\n      :::\n", want: "greater than 1"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

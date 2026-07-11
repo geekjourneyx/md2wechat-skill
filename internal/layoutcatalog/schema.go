@@ -65,9 +65,17 @@ type RowsSpec struct {
 }
 
 type FieldsSpec struct {
-	Required    []FieldSpec `yaml:"required,omitempty"`
-	Optional    []FieldSpec `yaml:"optional,omitempty"`
-	RequiredAny [][]string  `yaml:"required_any,omitempty"`
+	Required    []FieldSpec      `yaml:"required,omitempty"`
+	Optional    []FieldSpec      `yaml:"optional,omitempty"`
+	RequiredAny [][]string       `yaml:"required_any,omitempty"`
+	OutputOrder []string         `yaml:"output_order,omitempty"`
+	Shapes      []FieldShapeSpec `yaml:"shapes,omitempty"`
+}
+
+type FieldShapeSpec struct {
+	Field     string `yaml:"field"`
+	Separator string `yaml:"separator"`
+	MinParts  int    `yaml:"min_parts"`
 }
 
 type FieldGroupSpec struct {
@@ -94,14 +102,15 @@ type LayoutMetadata struct {
 }
 
 type VariantSpec struct {
-	Name           string     `yaml:"name"`
-	Aliases        []string   `yaml:"aliases,omitempty"`
-	Description    string     `yaml:"description,omitempty"`
-	UseWhen        string     `yaml:"use_when"`
-	Required       []string   `yaml:"required,omitempty"`
-	RequiredAny    [][]string `yaml:"required_any,omitempty"`
-	Example        string     `yaml:"example"`
-	AssertContains string     `yaml:"assert_contains,omitempty"`
+	Name           string           `yaml:"name"`
+	Aliases        []string         `yaml:"aliases,omitempty"`
+	Description    string           `yaml:"description,omitempty"`
+	UseWhen        string           `yaml:"use_when"`
+	Required       []string         `yaml:"required,omitempty"`
+	RequiredAny    [][]string       `yaml:"required_any,omitempty"`
+	Shapes         []FieldShapeSpec `yaml:"shapes,omitempty"`
+	Example        string           `yaml:"example"`
+	AssertContains string           `yaml:"assert_contains,omitempty"`
 }
 
 type ParamSpec struct {

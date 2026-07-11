@@ -21,7 +21,7 @@ avoid_combining_with: [hero]
 anti_pattern: |
   把 hero 当 banner 放每个章节开头；
   title 写口水话不写判断；
-  缺少 cta_text 错失开篇钩子。
+  缺少 title 导致渲染失败。
 fields:
   required:
     - name: title
@@ -56,6 +56,7 @@ fields:
     - name: tags
       description: 标签，用 | 分隔
       example: "开场 | 判断"
+  output_order: [variant, eyebrow, meta, kicker, title, subtitle, points, image, brand, tags]
 variants:
   - name: editorial
     use_when: 观点文开场先给出判断

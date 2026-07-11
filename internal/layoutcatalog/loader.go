@@ -255,6 +255,9 @@ func validateWitnessSpecs(spec *LayoutSpec, declaredFields map[string]bool) erro
 				}
 			}
 		}
+		if err := validateFieldShapeSpecs(variant.Shapes, declaredFields, fmt.Sprintf("variant %q", variant.Name)); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -299,7 +302,35 @@ func validateFieldsSpec(fields *FieldsSpec) (map[string]bool, error) {
 		}
 		seenGroups[key] = true
 	}
+	seenOutput := map[string]bool{}
+	for _, name := range fields.OutputOrder {
+		if !declared[name] {
+			return nil, fmt.Errorf("output_order field %q is not declared", name)
+		}
+		if seenOutput[name] {
+			return nil, fmt.Errorf("duplicate output_order field %q", name)
+		}
+		seenOutput[name] = true
+	}
+	if err := validateFieldShapeSpecs(fields.Shapes, declared, "fields"); err != nil {
+		return nil, err
+	}
 	return declared, nil
+}
+
+func validateFieldShapeSpecs(shapes []FieldShapeSpec, declared map[string]bool, owner string) error {
+	for _, shape := range shapes {
+		if !declared[shape.Field] {
+			return fmt.Errorf("%s shape field %q is not declared", owner, shape.Field)
+		}
+		if shape.Separator == "" {
+			return fmt.Errorf("%s shape separator must not be empty", owner)
+		}
+		if shape.MinParts <= 1 {
+			return fmt.Errorf("%s shape min_parts must be greater than 1", owner)
+		}
+	}
+	return nil
 }
 
 func validateBodySpec(body *BodySpec, declared, acceptedFormats map[string]bool) error {

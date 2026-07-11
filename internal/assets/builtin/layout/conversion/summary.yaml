@@ -19,11 +19,14 @@ when_not_to_use: |
 pairs_well_with: [verdict, cta, subscribe]
 avoid_combining_with: []
 anti_pattern: |
-  缺少 highlight 导致渲染失败；
+  默认或 legacy 缺少 highlight 导致渲染失败；
   highlight 写成描述性语句而非判断；
   body 写太长变成第二个正文段落。
 fields:
-  required: []
+  required:
+    - name: highlight
+      description: 一句话总结
+      example: "先把结构搭稳，再让主题接管气质"
   optional:
     - name: variant
       description: 总结结构变体
@@ -32,9 +35,6 @@ fields:
     - name: eyebrow
       description: 标签词
       example: "一句话总结"
-    - name: highlight
-      description: 一句话总结
-      example: "先把结构搭稳，再让主题接管气质"
     - name: title
       description: 摘要标题
       example: "发布前带走三点"

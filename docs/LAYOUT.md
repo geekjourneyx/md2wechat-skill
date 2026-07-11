@@ -535,13 +535,17 @@ label_after: 新版模块化排版
 
 **什么时候用**：操作教程，每步配一张截图。
 
-**格式**：`步骤序号 | 步骤说明 | 图片URL`
+**格式**：`body_format: markdown_fields`。每组使用 `step` 和 `desc`，中间可放一张 Markdown 图片；图片可省略。可用 `{columns=2 caption_style=numbered}` 等参数。
 
 ```
-:::image-steps
-01 | 打开 md2wechat 配置文件 | https://example.com/step1.png
-02 | 填入 API Key | https://example.com/step2.png
-03 | 运行 convert 命令 | https://example.com/step3.png
+:::image-steps{columns=2 caption_style=numbered}
+step: 打开编辑器
+![打开](https://example.com/open.jpg)
+desc: 选择主题和文章结构。
+note: 先确认文章目标
+step: 复制到微信
+![复制](https://example.com/copy.jpg)
+desc: 检查预览后复制。
 :::
 ```
 
@@ -633,16 +637,16 @@ md2wechat layout validate 通过 | done
 
 #### summary — 文章总结
 
-**什么时候用**：文章结尾前，把核心观点浓缩成 3-5 条。
+**什么时候用**：章节复盘或文章结尾。根据读者需要选择一句话、三点、决策或收藏清单。
 
-**格式**：每行一条要点
+**必填规则**：默认/`legacy` 需要 `highlight`；`three` 和 `save` 需要 `items`；`decision` 需要 `fit` 或 `recommendation`。
 
 ```
-:::summary[本文要点]
-高级排版模块只在 API 模式下工作
-每个模块只服务 4 件事之一：attention / readability / memorability / conversion
-一篇文章 hero 1 个、verdict 1 个、cta 1 个，不要堆模块
-先用 layout validate 检查语法，再转换
+:::summary
+variant: three
+title: 发布前带走三点
+items: 结构先于风格 | 模块服务阅读 | 主题定义气质
+note: 适合章节末尾和观点文复盘
 :::
 ```
 
@@ -741,17 +745,13 @@ topic: 高级排版模块实战指南
 
 #### callout — 提示框
 
-**什么时候用**：需要突出提示信息时，支持 5 种样式。
+**什么时候用**：需要突出提示、警告、成功确认或危险说明时，支持 4 种样式。
 
-**格式**：`:::callout 类型`（类型：`info`默认、`tip`、`warning`、`success`、`danger`）
+**格式**：`:::callout 类型`（类型：`info` 默认、`warning`、`success`、`danger`）
 
 ```
 :::callout
 这是默认 info 样式，适合一般说明。
-:::
-
-:::callout tip
-💡 小技巧：先用 layout list 发现模块，再用 layout show 确认字段。
 :::
 
 :::callout warning
@@ -829,11 +829,23 @@ topic: 高级排版模块实战指南
 
 **什么时候用**：文章中有问答对，比 faq 更简洁。
 
-**格式**：JSON 数组，每项 `q`（不是 `question`）和 `a`（不是 `answer`）
+**主格式**：按顺序成对书写 `Q:` / `A:`，每个问题必须紧跟一个回答。
 
 ```
 :::question
-[{"q":"为什么要用高级排版模块？","a":"因为普通 Markdown 在微信里没有视觉层级。"},{"q":"需要懂设计吗？","a":"不需要，照着字段填写就行。"}]
+Q: 为什么要用高级排版模块？
+A: 因为普通 Markdown 在微信里没有视觉层级。
+
+Q: 需要懂设计吗？
+A: 不需要，照着字段填写就行。
+:::
+```
+
+兼容旧稿的 JSON 数组格式；每一项都必须同时包含 `q` 和 `a`：
+
+```
+:::question
+[{"q":"问题？","a":"答案。"}]
 :::
 ```
 
@@ -896,7 +908,7 @@ digest: 不是好不好看，是读者有没有理由读下去
 eyebrow: 深度观察
 title: 公众号排版的真问题
 subtitle: 不是好不好看，是读者有没有理由读下去
-cta_text: ↓ 3 分钟，给你一个判断
+kicker: 先给读者一个判断
 :::
 
 :::toc[阅读导航]
@@ -976,11 +988,10 @@ body: 让读者每次打开你的文章都知道"哦，这是 XX 的风格"，�
 写一篇文章，用 hero + verdict + cta | todo
 :::
 
-:::summary[本文要点]
-读者决定读不读只需要 3 秒，排版要在这 3 秒内给出理由
-排版解决 4 件事：attention / readability / memorability / conversion
-每件事选 1 个模块，hero 1 个 verdict 1 个 cta 1 个
-用 layout validate 先检查，再 convert 转换
+:::summary
+variant: three
+title: 本文要点
+items: 3 秒内给出阅读理由 | 每件事只选一个模块 | 先 validate 再 convert
 :::
 
 :::cta

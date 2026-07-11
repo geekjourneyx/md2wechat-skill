@@ -95,6 +95,35 @@ func TestConformanceResponse(t *testing.T) {
 	}
 }
 
+func TestVariantConformanceRequiresExactRendererBranch(t *testing.T) {
+	tests := []struct {
+		module, variant, attribute, value string
+	}{
+		{module: "hero", variant: "editorial", attribute: "data-hero-variant", value: "editorial"},
+		{module: "quote", variant: "proof", attribute: "data-quote-variant", value: "proof"},
+		{module: "summary", variant: "decision", attribute: "data-summary-variant", value: "decision"},
+		{module: "cta", variant: "trial", attribute: "data-cta-variant", value: "trial"},
+		{module: "infographic", variant: "mini-case", attribute: "data-infographic-type", value: "micro-case"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.module+"/"+tt.variant, func(t *testing.T) {
+			witness := e2eWitness{Module: tt.module, Variant: tt.variant, Probe: "Probe"}
+			valid := fmt.Sprintf(`<section data-mpa-action-id="1" %s="%s">Probe</section>`, tt.attribute, tt.value)
+			if err := checkConformanceHTML(witness, valid); err != nil {
+				t.Fatal(err)
+			}
+			fallback := `<section data-mpa-action-id="1">Probe</section>`
+			if err := checkConformanceHTML(witness, fallback); err == nil || !strings.Contains(err.Error(), tt.attribute) {
+				t.Fatalf("fallback error = %v, want exact branch attribute", err)
+			}
+			wrong := fmt.Sprintf(`<section data-mpa-action-id="1" %s="fallback">Probe</section>`, tt.attribute)
+			if err := checkConformanceHTML(witness, wrong); err == nil || !strings.Contains(err.Error(), tt.value) {
+				t.Fatalf("wrong branch error = %v, want value %q", err, tt.value)
+			}
+		})
+	}
+}
+
 func TestSemanticConformanceRules(t *testing.T) {
 	witness := e2eWitness{Module: "image-compare", Probe: "Before"}
 	if err := checkSemanticConformance(witness, `<section><img alt="Before"></section>`); err == nil {
@@ -386,7 +415,30 @@ func checkConformanceHTML(witness e2eWitness, html string) error {
 	if strings.Contains(html, ":::"+witness.Module) {
 		return fmt.Errorf("%s response retained raw fence", witness.Module)
 	}
+	if attribute, value, ok := expectedVariantBranch(witness); ok && !hasDOMAttributeValue(doc, attribute, value) {
+		return fmt.Errorf("%s/%s response missing %s=%q", witness.Module, witness.Variant, attribute, value)
+	}
 	return checkSemanticConformance(witness, html)
+}
+
+var variantBranchAttributes = map[string]string{
+	"hero":        "data-hero-variant",
+	"quote":       "data-quote-variant",
+	"summary":     "data-summary-variant",
+	"cta":         "data-cta-variant",
+	"infographic": "data-infographic-type",
+}
+
+func expectedVariantBranch(witness e2eWitness) (string, string, bool) {
+	attribute, ok := variantBranchAttributes[witness.Module]
+	if !ok || witness.Variant == "" {
+		return "", "", false
+	}
+	value := witness.Variant
+	if witness.Module == "infographic" && value == "mini-case" {
+		value = "micro-case"
+	}
+	return attribute, value, true
 }
 
 func htmlpkgParse(rendered string) (*html.Node, error) {
@@ -403,6 +455,22 @@ func hasDOMAttribute(node *html.Node, name string) bool {
 	}
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
 		if hasDOMAttribute(child, name) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasDOMAttributeValue(node *html.Node, name, value string) bool {
+	if node.Type == html.ElementNode {
+		for _, attr := range node.Attr {
+			if attr.Key == name && attr.Val == value {
+				return true
+			}
+		}
+	}
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		if hasDOMAttributeValue(child, name, value) {
 			return true
 		}
 	}

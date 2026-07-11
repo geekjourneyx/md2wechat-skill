@@ -211,6 +211,69 @@ func TestValidateBlockBodyMatrix(t *testing.T) {
 	}
 }
 
+func TestFieldShapeValidationMatrix(t *testing.T) {
+	field := func(name string) FieldSpec { return FieldSpec{Name: name} }
+	tests := []struct {
+		name    string
+		values  []string
+		shapes  []FieldShapeSpec
+		wantErr bool
+	}{
+		{name: "pipe accepts two", values: []string{"one | two"}, shapes: []FieldShapeSpec{{Field: "items", Separator: "|", MinParts: 2}}},
+		{name: "pipe rejects one", values: []string{"one"}, shapes: []FieldShapeSpec{{Field: "items", Separator: "|", MinParts: 2}}, wantErr: true},
+		{name: "plus ignores empty parts", values: []string{"one + "}, shapes: []FieldShapeSpec{{Field: "items", Separator: "+", MinParts: 2}}, wantErr: true},
+		{name: "validates every repeated value", values: []string{"01 | 20 | 30 | title", "broken"}, shapes: []FieldShapeSpec{{Field: "point", Separator: "|", MinParts: 4}}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fieldName := "items"
+			if tt.shapes[0].Field == "point" {
+				fieldName = "point"
+			}
+			body := make([]string, 0, len(tt.values))
+			for _, value := range tt.values {
+				body = append(body, fieldName+": "+value)
+			}
+			spec := &LayoutSpec{BodyFormat: BodyFormatFields, Fields: &FieldsSpec{Optional: []FieldSpec{field(fieldName)}, Shapes: tt.shapes}}
+			issues := validateBlockBody(spec, body)
+			if got := len(issues) > 0; got != tt.wantErr {
+				t.Fatalf("issues = %+v, wantErr %v", issues, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestQuestionPairAndJSONArrayItemBoundaries(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name, markdown string
+		accepted       bool
+	}{
+		{name: "ordered two pairs", markdown: ":::question\nQ: One?\nA: One.\nQ: Two?\nA: Two.\n:::\n", accepted: true},
+		{name: "answer before question", markdown: ":::question\nA: Answer.\nQ: Question?\n:::\n"},
+		{name: "two questions before answer", markdown: ":::question\nQ: One?\nQ: Two?\nA: Answer.\n:::\n"},
+		{name: "trailing answer", markdown: ":::question\nQ: One?\nA: One.\nA: Extra.\n:::\n"},
+		{name: "complete JSON items", markdown: ":::question\n[{\"q\":\"One?\",\"a\":\"One.\"},{\"q\":\"Two?\",\"a\":\"Two.\"}]\n:::\n", accepted: true},
+		{name: "split JSON fields", markdown: ":::question\n[{\"q\":\"One?\"},{\"a\":\"One.\"}]\n:::\n"},
+		{name: "second JSON item incomplete", markdown: ":::question\n[{\"q\":\"One?\",\"a\":\"One.\"},{\"q\":\"Two?\"}]\n:::\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			report := c.Validate(tt.markdown)
+			if got := len(report.Errors) == 0; got != tt.accepted {
+				t.Fatalf("accepted = %v, want %v; errors=%+v", got, tt.accepted, report.Errors)
+			}
+		})
+	}
+	report := c.Validate(":::question\n[{\"q\":\"One?\"},{\"a\":\"One.\"}]\n:::\n")
+	if len(report.Errors) == 0 || !strings.Contains(report.Errors[0].Message, "item 1") {
+		t.Fatalf("split JSON error = %+v, want per-item error", report.Errors)
+	}
+}
+
 func TestParseLayoutSpecBodySchemaMatrix(t *testing.T) {
 	base := `
 schema_version: "1"
@@ -266,6 +329,34 @@ metadata:
 			}
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 				t.Fatalf("parseLayoutSpec() error = %v, want %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestParseLayoutSpecFieldShapeAndOutputOrderSchema(t *testing.T) {
+	tests := []struct {
+		name, fields, want string
+	}{
+		{name: "valid", fields: "  output_order: [title, items]\n  shapes:\n    - {field: items, separator: '|', min_parts: 2}\n"},
+		{name: "unknown output field", fields: "  output_order: [missing]\n", want: "output_order field"},
+		{name: "duplicate output field", fields: "  output_order: [title, title]\n", want: "duplicate output_order"},
+		{name: "unknown shape field", fields: "  shapes:\n    - {field: missing, separator: '|', min_parts: 2}\n", want: "shape field"},
+		{name: "empty separator", fields: "  shapes:\n    - {field: items, separator: '', min_parts: 2}\n", want: "separator"},
+		{name: "small minimum", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 1}\n", want: "greater than 1"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			yaml := baseLayoutYAML + "fields:\n  optional:\n    - name: title\n    - name: items\n" + tt.fields
+			_, err := parseLayoutSpec([]byte(yaml))
+			if tt.want == "" {
+				if err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("error = %v, want category %q", err, tt.want)
 			}
 		})
 	}

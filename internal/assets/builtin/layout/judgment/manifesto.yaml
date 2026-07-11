@@ -19,22 +19,22 @@ when_not_to_use: |
 pairs_well_with: [hero, author-card, subscribe]
 avoid_combining_with: [manifesto]
 anti_pattern: |
-  title、believe、against 都没有导致渲染失败；
+  title 和 believe 都没有导致渲染失败，against 不能单独渲染；
   believe 和 against 用逗号分隔（应该用 |）；
   写成宣传稿而非真实的个人立场。
 fields:
   required: []
   required_any:
-    - [title, believe, against]
+    - [title, believe]
   optional:
     - name: title
-      description: 核心主张标题（title、believe、against 至少填一个）
+      description: 核心主张标题（title 或 believe 至少填一个）
       example: "我相信普通人也应该拥有自己的内容系统"
     - name: believe
-      description: 正面信念，用 | 分隔多个条目（title、believe、against 至少填一个）
+      description: 正面信念，用 | 分隔多个条目（title 或 believe 至少填一个）
       example: "结构先于风格 | 文字永远是主角 | 主题负责气质"
     - name: against
-      description: 反对立场，用 | 分隔多个条目（title、believe、against 至少填一个）
+      description: 反对立场，用 | 分隔多个条目，不能作为唯一内容
       example: "大字报式排版 | 随机堆模板 | 为装饰牺牲阅读"
     - name: label
       description: 标签词，默认显示"我的长期判断"

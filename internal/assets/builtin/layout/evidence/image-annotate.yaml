@@ -43,6 +43,8 @@ fields:
     - name: alt
       description: 图片替代文字
       example: "图片标注卡示例"
+  shapes:
+    - {field: point, separator: "|", min_parts: 4}
 example: |
   :::image-annotate
   eyebrow: 拆解说明

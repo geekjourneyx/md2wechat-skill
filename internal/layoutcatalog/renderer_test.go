@@ -130,7 +130,7 @@ func TestRenderBlockPreservesLegacyHeroRender(t *testing.T) {
 	if legacy != block {
 		t.Fatalf("Render() = %q, RenderBlock() = %q", legacy, block)
 	}
-	want := ":::hero\ntitle: 公众号排版的真问题\neyebrow: 深度观察\n:::\n"
+	want := ":::hero\neyebrow: 深度观察\ntitle: 公众号排版的真问题\n:::\n"
 	if legacy != want {
 		t.Fatalf("Render() = %q, want unchanged hero output %q", legacy, want)
 	}

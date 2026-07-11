@@ -20,9 +20,8 @@ pairs_well_with: [hero, verdict, metrics, compare]
 avoid_combining_with: []
 anti_pattern: |
   缺少 title 导致渲染失败；
-  type: data 缺少 value 会自动回退成 statement；
-  type: flow 少于 2 项会自动回退成 statement；
-  type: contrast 缺少 left 或 right 会回退成 statement；
+  number 缺少 value、path 少于 2 项会回退 thesis；
+  contrast 缺少 left 或 right、formula 少于 2 项会回退 thesis；
   title 中 |关键词| 超过 3 个高亮片段。
 fields:
   required:
@@ -90,6 +89,8 @@ variants:
     aliases: [equation]
     use_when: 需要表达可记忆公式
     required: [title, formula]
+    shapes:
+      - {field: formula, separator: "+", min_parts: 2}
     example: |
       :::infographic
       type: formula
@@ -121,6 +122,8 @@ variants:
     aliases: [diagnose, problem]
     use_when: 需要列出待解决问题
     required: [title, items]
+    shapes:
+      - {field: items, separator: "|", min_parts: 2}
     example: |
       :::infographic
       type: diagnosis
@@ -142,6 +145,8 @@ variants:
     aliases: [flow, logic, chain]
     use_when: 需要压缩关键路径
     required: [title, items]
+    shapes:
+      - {field: items, separator: "|", min_parts: 2}
     example: |
       :::infographic
       type: path
@@ -152,6 +157,8 @@ variants:
     aliases: [breakdown, deconstruct]
     use_when: 需要拆解结果组成
     required: [title, items]
+    shapes:
+      - {field: items, separator: "|", min_parts: 2}
     example: |
       :::infographic
       type: anatomy
@@ -162,6 +169,8 @@ variants:
     aliases: [trade-off, tradeoffs]
     use_when: 需要说明方案取舍
     required: [title, tradeoffs]
+    shapes:
+      - {field: tradeoffs, separator: "|", min_parts: 2}
     example: |
       :::infographic
       type: tradeoff
@@ -172,6 +181,8 @@ variants:
     aliases: [evidence, proof-chain]
     use_when: 需要排列证据顺序
     required: [title, items]
+    shapes:
+      - {field: items, separator: "|", min_parts: 2}
     example: |
       :::infographic
       type: evidence-chain
@@ -182,6 +193,8 @@ variants:
     aliases: [micro-case, case]
     use_when: 需要压缩一个微案例
     required: [title, items]
+    shapes:
+      - {field: items, separator: "|", min_parts: 2}
     example: |
       :::infographic
       type: mini-case

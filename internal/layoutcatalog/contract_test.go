@@ -5,7 +5,32 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/geekjourneyx/md2wechat-skill/internal/assets"
 )
+
+func TestBuiltinYAMLExplicitlyDeclaresLifecycle(t *testing.T) {
+	categories, err := assets.ListBuiltinLayoutCategories()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, category := range categories {
+		names, err := assets.ListBuiltinLayouts(category)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, name := range names {
+			raw, err := assets.ReadBuiltinLayout(category, name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			text := string(raw)
+			if !strings.Contains(text, "\nlifecycle: recommended\n") && !strings.Contains(text, "\nlifecycle: compatibility\n") {
+				t.Errorf("%s/%s does not explicitly declare a valid lifecycle", category, name)
+			}
+		}
+	}
+}
 
 type imageModuleParamContract struct {
 	name, defaultValue string
@@ -437,7 +462,7 @@ func TestKnownDriftContractsAreCalibrated(t *testing.T) {
 		"audience-fit":   {any: [][]string{{"fit", "avoid"}}},
 		"verdict":        {any: [][]string{{"title", "body"}}},
 		"bridge":         {any: [][]string{{"title", "body", "next"}}},
-		"manifesto":      {any: [][]string{{"title", "believe", "against"}}},
+		"manifesto":      {any: [][]string{{"title", "believe"}}},
 		"quote":          {any: [][]string{{"quote", "text"}}},
 		"image-text":     {required: []string{"image"}, any: [][]string{{"title", "body"}}},
 		"image-annotate": {required: []string{"image", "point"}},

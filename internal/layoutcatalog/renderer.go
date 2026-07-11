@@ -139,13 +139,7 @@ func renderFields(spec *LayoutSpec, vars map[string]any, opener string) (string,
 	fmt.Fprintf(&b, "%s\n", opener)
 
 	if spec.Fields != nil {
-		for _, f := range spec.Fields.Required {
-			val, ok := lookupString(vars, f.Name)
-			if ok {
-				fmt.Fprintf(&b, "%s: %s\n", f.Name, val)
-			}
-		}
-		for _, f := range spec.Fields.Optional {
+		for _, f := range orderedFieldSpecs(spec.Fields) {
 			val, ok := lookupString(vars, f.Name)
 			if !ok || val == "" {
 				continue
@@ -205,13 +199,7 @@ func renderRows(spec *LayoutSpec, vars map[string]any, opener string) (string, e
 	fmt.Fprintf(&b, "%s\n", opener)
 
 	if spec.Fields != nil {
-		for _, f := range spec.Fields.Required {
-			val, ok := lookupString(vars, f.Name)
-			if ok {
-				fmt.Fprintf(&b, "%s: %s\n", f.Name, val)
-			}
-		}
-		for _, f := range spec.Fields.Optional {
+		for _, f := range orderedFieldSpecs(spec.Fields) {
 			val, ok := lookupString(vars, f.Name)
 			if !ok || val == "" {
 				continue
@@ -237,6 +225,29 @@ func renderRows(spec *LayoutSpec, vars map[string]any, opener string) (string, e
 	}
 	b.WriteString(":::\n")
 	return b.String(), nil
+}
+
+func orderedFieldSpecs(fields *FieldsSpec) []FieldSpec {
+	declared := append(append([]FieldSpec{}, fields.Required...), fields.Optional...)
+	if len(fields.OutputOrder) == 0 {
+		return declared
+	}
+	byName := make(map[string]FieldSpec, len(declared))
+	for _, field := range declared {
+		byName[field.Name] = field
+	}
+	ordered := make([]FieldSpec, 0, len(declared))
+	seen := make(map[string]bool, len(declared))
+	for _, name := range fields.OutputOrder {
+		ordered = append(ordered, byName[name])
+		seen[name] = true
+	}
+	for _, field := range declared {
+		if !seen[field.Name] {
+			ordered = append(ordered, field)
+		}
+	}
+	return ordered
 }
 
 func renderRawBody(opener, body string) string {

@@ -87,6 +87,11 @@ func (c *Catalog) validateBlock(opener ParsedOpener, body []string, line int, r 
 }
 
 func parseJSONBodyFields(body []string, bodyFormat string) (map[string]string, error) {
+	fields, _, err := parseJSONBodyData(body, bodyFormat)
+	return fields, err
+}
+
+func parseJSONBodyData(body []string, bodyFormat string) (map[string]string, []map[string][]string, error) {
 	rawLines := make([]string, 0, len(body))
 	for _, ln := range body {
 		trimmed := strings.TrimSpace(strings.TrimRight(ln, "\r"))
@@ -95,27 +100,40 @@ func parseJSONBodyFields(body []string, bodyFormat string) (map[string]string, e
 		}
 	}
 	if len(rawLines) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	raw := strings.Join(rawLines, "\n")
 	switch bodyFormat {
 	case BodyFormatJSONObject:
 		if !strings.HasPrefix(raw, "{") {
-			return nil, fmt.Errorf("%w: expected JSON object body", ErrInvalidFieldValue)
+			return nil, nil, fmt.Errorf("%w: expected JSON object body", ErrInvalidFieldValue)
 		}
 	case BodyFormatJSONArray:
 		if !strings.HasPrefix(raw, "[") {
-			return nil, fmt.Errorf("%w: expected JSON array body", ErrInvalidFieldValue)
+			return nil, nil, fmt.Errorf("%w: expected JSON array body", ErrInvalidFieldValue)
 		}
 	}
 
 	fields := map[string]string{}
 	var decoded any
 	if err := json.Unmarshal([]byte(raw), &decoded); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	collectJSONFields(fields, "", decoded)
-	return fields, nil
+	var items []map[string][]string
+	if array, ok := decoded.([]any); ok {
+		items = make([]map[string][]string, 0, len(array))
+		for _, item := range array {
+			flat := map[string]string{}
+			collectJSONFields(flat, "", item)
+			values := map[string][]string{}
+			for name, value := range flat {
+				values[name] = []string{value}
+			}
+			items = append(items, values)
+		}
+	}
+	return fields, items, nil
 }
 
 func collectJSONFields(fields map[string]string, prefix string, value any) {

@@ -86,17 +86,15 @@ func witnessSelectsVariant(opener ParsedOpener, facts bodyFacts, name string, al
 	for _, alias := range aliases {
 		accepted[alias] = true
 	}
-	for _, selector := range []string{opener.Params["variant"], opener.Params["type"]} {
-		if accepted[selector] {
-			return true
-		}
+	selector := lastNonEmptyValue(facts.fieldValues["type"])
+	if selector == "" {
+		selector = strings.TrimSpace(opener.Params["type"])
 	}
-	for _, field := range []string{"variant", "type"} {
-		for _, selector := range facts.fieldValues[field] {
-			if accepted[selector] {
-				return true
-			}
-		}
+	if selector == "" {
+		selector = lastNonEmptyValue(facts.fieldValues["variant"])
 	}
-	return false
+	if selector == "" {
+		selector = strings.TrimSpace(opener.Params["variant"])
+	}
+	return accepted[selector]
 }
