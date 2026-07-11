@@ -203,7 +203,35 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if spec.Metadata.Author == "" || spec.Metadata.Provenance == "" {
 		return nil, fmt.Errorf("metadata.author and metadata.provenance are required")
 	}
+	if err := validateWitnessSpecs(&spec); err != nil {
+		return nil, err
+	}
 	return &spec, nil
+}
+
+func validateWitnessSpecs(spec *LayoutSpec) error {
+	if spec.ExampleAssertContains != "" && !strings.Contains(spec.Example, spec.ExampleAssertContains) {
+		return fmt.Errorf("example_assert_contains %q is absent from example", spec.ExampleAssertContains)
+	}
+	identities := make(map[string]string)
+	for _, variant := range spec.Variants {
+		if strings.TrimSpace(variant.Name) == "" {
+			return fmt.Errorf("variant name must not be empty")
+		}
+		for _, identity := range append([]string{variant.Name}, variant.Aliases...) {
+			if strings.TrimSpace(identity) == "" {
+				return fmt.Errorf("variant alias must not be empty")
+			}
+			if previous, exists := identities[identity]; exists {
+				return fmt.Errorf("duplicate variant name or alias %q (already declared by %q)", identity, previous)
+			}
+			identities[identity] = variant.Name
+		}
+		if variant.AssertContains != "" && !strings.Contains(variant.Example, variant.AssertContains) {
+			return fmt.Errorf("variant %q assert_contains %q is absent from its example", variant.Name, variant.AssertContains)
+		}
+	}
+	return nil
 }
 
 func validateFieldsSpec(fields *FieldsSpec) (map[string]bool, error) {

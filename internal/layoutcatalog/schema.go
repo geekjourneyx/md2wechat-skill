@@ -93,6 +93,17 @@ type LayoutMetadata struct {
 	InspiredBy string `yaml:"inspired_by,omitempty"`
 }
 
+type VariantSpec struct {
+	Name           string     `yaml:"name"`
+	Aliases        []string   `yaml:"aliases,omitempty"`
+	Description    string     `yaml:"description,omitempty"`
+	UseWhen        string     `yaml:"use_when"`
+	Required       []string   `yaml:"required,omitempty"`
+	RequiredAny    [][]string `yaml:"required_any,omitempty"`
+	Example        string     `yaml:"example"`
+	AssertContains string     `yaml:"assert_contains,omitempty"`
+}
+
 type ParamSpec struct {
 	Name        string   `yaml:"name"`
 	Description string   `yaml:"description,omitempty"`
@@ -139,6 +150,8 @@ type LayoutSpec struct {
 	Rows                  *RowsSpec      `yaml:"rows,omitempty"`
 	Body                  *BodySpec      `yaml:"body,omitempty"`
 	Example               string         `yaml:"example,omitempty"`
+	ExampleAssertContains string         `yaml:"example_assert_contains,omitempty"`
+	Variants              []VariantSpec  `yaml:"variants,omitempty"`
 	Metadata              LayoutMetadata `yaml:"metadata"`
 }
 
