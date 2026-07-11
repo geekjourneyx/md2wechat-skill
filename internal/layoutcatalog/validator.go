@@ -3,7 +3,6 @@ package layoutcatalog
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 )
 
@@ -19,16 +18,14 @@ type ValidationReport struct {
 	Warnings []ValidationIssue `json:"warnings"`
 }
 
-var blockOpenRE = regexp.MustCompile(`^:::([a-z][a-z0-9_-]*)(?:\[[^\]]*\])?\s*$`)
-
 func (c *Catalog) Validate(markdown string) ValidationReport {
 	var r ValidationReport
 	lines := strings.Split(markdown, "\n")
 	i := 0
 	for i < len(lines) {
 		line := strings.TrimRight(lines[i], "\r")
-		m := blockOpenRE.FindStringSubmatch(line)
-		if m == nil {
+		opener, err := parseBlockOpener(line)
+		if err != nil {
 			if strings.HasPrefix(strings.TrimSpace(line), ":::") && strings.TrimSpace(line) != ":::" {
 				r.Errors = append(r.Errors, ValidationIssue{
 					Line:    i + 1,
@@ -38,7 +35,7 @@ func (c *Catalog) Validate(markdown string) ValidationReport {
 			i++
 			continue
 		}
-		moduleName := m[1]
+		moduleName := opener.Name
 		startLine := i + 1
 		j := i + 1
 		body := []string{}
@@ -54,19 +51,28 @@ func (c *Catalog) Validate(markdown string) ValidationReport {
 			})
 			break
 		}
-		c.validateBlock(moduleName, body, startLine, &r)
+		c.validateBlock(opener, body, startLine, &r)
 		i = j + 1
 	}
 	return r
 }
 
-func (c *Catalog) validateBlock(name string, body []string, line int, r *ValidationReport) {
+func (c *Catalog) validateBlock(opener ParsedOpener, body []string, line int, r *ValidationReport) {
+	name := opener.Name
 	spec, ok := c.Get(name)
 	if !ok {
 		r.Warnings = append(r.Warnings, ValidationIssue{
 			Module:  name,
 			Line:    line,
 			Message: "unknown layout module (CLI catalog may be older than the API)",
+		})
+		return
+	}
+	if _, err := validateOpener(opener, spec.Opener); err != nil {
+		r.Errors = append(r.Errors, ValidationIssue{
+			Module:  name,
+			Line:    line,
+			Message: err.Error(),
 		})
 		return
 	}

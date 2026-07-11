@@ -70,6 +70,42 @@ func TestValidateUnknownModuleWarns(t *testing.T) {
 	}
 }
 
+func TestValidateUnknownModuleWithWellFormedParamsWarns(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	md := ":::future-grid{columns=3}\nfoo: bar\n:::\n"
+	r := c.Validate(md)
+	if len(r.Errors) != 0 {
+		t.Fatalf("unknown well-formed module must not error, got %v", r.Errors)
+	}
+	if len(r.Warnings) != 1 || r.Warnings[0].Module != "future-grid" {
+		t.Fatalf("expected future-grid warning, got %+v", r.Warnings)
+	}
+}
+
+func TestValidateKnownModuleOpenerAgainstSpec(t *testing.T) {
+	c := NewCatalog()
+	c.modules["callout"] = &LayoutSpec{
+		Name:       "callout",
+		BodyFormat: BodyFormatFields,
+		Opener: &OpenerSpec{
+			ParamStyle: ParamStyleToken,
+			Params:     []ParamSpec{{Name: "type", Enum: []string{"info", "warning"}}},
+		},
+	}
+
+	valid := c.Validate(":::callout warning\n:::\n")
+	if len(valid.Errors) != 0 {
+		t.Fatalf("valid token opener errors = %v", valid.Errors)
+	}
+	invalid := c.Validate(":::callout danger\n:::\n")
+	if len(invalid.Errors) != 1 || invalid.Errors[0].Module != "callout" {
+		t.Fatalf("invalid token opener errors = %+v", invalid.Errors)
+	}
+}
+
 func TestValidateInvalidBlockOpenerErrors(t *testing.T) {
 	c := NewCatalog()
 	if err := c.Load(); err != nil {

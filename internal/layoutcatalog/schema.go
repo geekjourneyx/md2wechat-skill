@@ -14,6 +14,13 @@ const (
 	LifecycleCompatibility = "compatibility"
 )
 
+const (
+	ParamStyleBraces  = "braces"
+	ParamStyleTokens  = "tokens"
+	ParamStyleBracket = "bracket"
+	ParamStyleToken   = "token"
+)
+
 var ValidServes = map[string]bool{
 	"attention":    true,
 	"readability":  true,
@@ -58,6 +65,28 @@ type LayoutMetadata struct {
 	InspiredBy string `yaml:"inspired_by,omitempty"`
 }
 
+type ParamSpec struct {
+	Name        string   `yaml:"name"`
+	Description string   `yaml:"description,omitempty"`
+	Enum        []string `yaml:"enum,omitempty"`
+	Default     string   `yaml:"default,omitempty"`
+	Example     string   `yaml:"example,omitempty"`
+}
+
+type OpenerSpec struct {
+	Caption    bool        `yaml:"caption,omitempty"`
+	ParamStyle string      `yaml:"param_style,omitempty"`
+	Params     []ParamSpec `yaml:"params,omitempty"`
+}
+
+type ParsedOpener struct {
+	Name      string
+	Caption   string
+	RawParams string
+	Params    map[string]string
+	bracket   bool
+}
+
 type LayoutSpec struct {
 	SchemaVersion      string         `yaml:"schema_version"`
 	Name               string         `yaml:"name"`
@@ -76,6 +105,7 @@ type LayoutSpec struct {
 	PairsWellWith      []string       `yaml:"pairs_well_with,omitempty"`
 	AvoidCombiningWith []string       `yaml:"avoid_combining_with,omitempty"`
 	AntiPattern        string         `yaml:"anti_pattern,omitempty"`
+	Opener             *OpenerSpec    `yaml:"opener,omitempty"`
 	Fields             *FieldsSpec    `yaml:"fields,omitempty"`
 	Rows               *RowsSpec      `yaml:"rows,omitempty"`
 	Example            string         `yaml:"example,omitempty"`

@@ -156,6 +156,9 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if !ValidLifecycles[spec.Lifecycle] {
 		return nil, fmt.Errorf("invalid lifecycle %q", spec.Lifecycle)
 	}
+	if err := validateOpenerSpec(spec.Opener); err != nil {
+		return nil, err
+	}
 	normalizeBodyFormat(&spec)
 	if !ValidBodyFormats[spec.BodyFormat] {
 		return nil, fmt.Errorf("invalid body_format %q", spec.BodyFormat)
@@ -184,6 +187,36 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 		return nil, fmt.Errorf("metadata.author and metadata.provenance are required")
 	}
 	return &spec, nil
+}
+
+func validateOpenerSpec(opener *OpenerSpec) error {
+	if opener == nil {
+		return nil
+	}
+	validStyles := map[string]bool{
+		"":                true,
+		ParamStyleBraces:  true,
+		ParamStyleTokens:  true,
+		ParamStyleBracket: true,
+		ParamStyleToken:   true,
+	}
+	if !validStyles[opener.ParamStyle] {
+		return fmt.Errorf("invalid opener param_style %q", opener.ParamStyle)
+	}
+	seen := make(map[string]bool, len(opener.Params))
+	for _, param := range opener.Params {
+		if param.Name == "" {
+			return fmt.Errorf("opener parameter name is required")
+		}
+		if seen[param.Name] {
+			return fmt.Errorf("duplicate opener param %q", param.Name)
+		}
+		seen[param.Name] = true
+	}
+	if (opener.ParamStyle == ParamStyleBracket || opener.ParamStyle == ParamStyleToken) && len(opener.Params) != 1 {
+		return fmt.Errorf("opener param_style %q requires exactly one parameter", opener.ParamStyle)
+	}
+	return nil
 }
 
 func normalizeBodyFormat(spec *LayoutSpec) {
