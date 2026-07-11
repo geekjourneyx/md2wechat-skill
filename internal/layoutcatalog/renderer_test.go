@@ -356,6 +356,19 @@ func TestRenderUnknownModuleFails(t *testing.T) {
 	}
 }
 
+func TestRenderBlockDistinguishesReservedAndUnknownModuleNames(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.RenderBlock(reservedModuleName, RenderInput{}); !errors.Is(err, ErrInvalidFieldValue) || errors.Is(err, ErrUnknownModule) {
+		t.Fatalf("RenderBlock(%q) error = %v, want only ErrInvalidFieldValue", reservedModuleName, err)
+	}
+	if _, err := c.RenderBlock("well-formed-unknown", RenderInput{}); !errors.Is(err, ErrUnknownModule) || errors.Is(err, ErrInvalidFieldValue) {
+		t.Fatalf("RenderBlock(well-formed-unknown) error = %v, want only ErrUnknownModule", err)
+	}
+}
+
 // rowsSpecWithEnum returns an in-memory LayoutSpec that has rows mode,
 // a required field with an enum constraint, and an optional field with an enum constraint.
 func rowsSpecWithEnum() *LayoutSpec {

@@ -32,6 +32,9 @@ func (c *Catalog) renderBlock(name string, input RenderInput, order openerParamO
 	if err := validateLayoutModuleName(name); err != nil {
 		return "", fmt.Errorf("%w: %v", ErrInvalidFieldValue, err)
 	}
+	if name == reservedModuleName {
+		return "", fmt.Errorf("%w: layout module name %q is reserved", ErrInvalidFieldValue, name)
+	}
 	spec, ok := c.Get(name)
 	if !ok {
 		return "", fmt.Errorf("%w: %s", ErrUnknownModule, name)
