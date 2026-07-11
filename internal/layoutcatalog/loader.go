@@ -191,7 +191,7 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := validateBodySpec(spec.Body, declaredFields); err != nil {
+	if err := validateBodySpec(spec.Body, declaredFields, seenBodyFormats); err != nil {
 		return nil, err
 	}
 	if seenBodyFormats[BodyFormatRows] && spec.Rows == nil {
@@ -249,7 +249,7 @@ func validateFieldsSpec(fields *FieldsSpec) (map[string]bool, error) {
 	return declared, nil
 }
 
-func validateBodySpec(body *BodySpec, declared map[string]bool) error {
+func validateBodySpec(body *BodySpec, declared, acceptedFormats map[string]bool) error {
 	if body == nil {
 		return nil
 	}
@@ -266,6 +266,13 @@ func validateBodySpec(body *BodySpec, declared map[string]bool) error {
 		return fmt.Errorf("max_images must be at least min_images when nonzero")
 	}
 	seenPairs := map[string]bool{}
+	dialoguePrefixes := map[string]bool{}
+	for _, prefix := range body.AllowedPrefixes {
+		normalized := normalizeDialoguePrefix(prefix)
+		if normalized != "" {
+			dialoguePrefixes[normalized] = true
+		}
+	}
 	for _, pair := range body.RequiredPairs {
 		if strings.TrimSpace(pair[0]) == "" || strings.TrimSpace(pair[1]) == "" {
 			return fmt.Errorf("required_pairs fields must not be empty")
@@ -273,10 +280,25 @@ func validateBodySpec(body *BodySpec, declared map[string]bool) error {
 		if pair[0] == pair[1] {
 			return fmt.Errorf("required_pairs fields must be distinct")
 		}
-		for _, name := range pair {
-			if !declared[name] {
-				return fmt.Errorf("required_pairs field %q is not declared", name)
+		applicableFormat := false
+		if acceptedFormats[BodyFormatDialogue] {
+			applicableFormat = true
+			for _, name := range pair {
+				if !dialoguePrefixes[name] {
+					return fmt.Errorf("required_pairs dialogue prefix %q is not configured", name)
+				}
 			}
+		}
+		if acceptedFormats[BodyFormatMarkdownFields] {
+			applicableFormat = true
+			for _, name := range pair {
+				if !declared[name] {
+					return fmt.Errorf("required_pairs field %q is not declared", name)
+				}
+			}
+		}
+		if !applicableFormat {
+			return fmt.Errorf("required_pairs requires dialogue or markdown_fields body format")
 		}
 		canonical := pair
 		if canonical[1] < canonical[0] {

@@ -256,7 +256,7 @@ func parseDialogueBody(bodySpec *BodySpec, body []string) (bodyFacts, []bodyVali
 		if value == "" {
 			return facts, []bodyValidationIssue{{field: prefix, message: "dialogue line must not be empty"}}
 		}
-		if !containsString(bodyAllowedPrefixes(bodySpec), prefix) {
+		if !containsString(normalizedDialoguePrefixes(bodySpec), prefix) {
 			if bodySpec == nil || !bodySpec.AllowNamedSpeakers {
 				return facts, []bodyValidationIssue{{field: prefix, message: fmt.Sprintf("dialogue prefix %q is not allowed", prefix)}}
 			}
@@ -270,11 +270,21 @@ func parseDialogueBody(bodySpec *BodySpec, body []string) (bodyFacts, []bodyVali
 	return facts, nil
 }
 
-func bodyAllowedPrefixes(bodySpec *BodySpec) []string {
+func normalizedDialoguePrefixes(bodySpec *BodySpec) []string {
 	if bodySpec == nil {
 		return nil
 	}
-	return bodySpec.AllowedPrefixes
+	prefixes := make([]string, 0, len(bodySpec.AllowedPrefixes))
+	for _, prefix := range bodySpec.AllowedPrefixes {
+		if normalized := normalizeDialoguePrefix(prefix); normalized != "" {
+			prefixes = append(prefixes, normalized)
+		}
+	}
+	return prefixes
+}
+
+func normalizeDialoguePrefix(prefix string) string {
+	return strings.TrimSpace(strings.TrimSuffix(strings.TrimSuffix(strings.TrimSpace(prefix), ":"), "："))
 }
 
 func validateBodyFacts(spec *LayoutSpec, format string, facts bodyFacts) []bodyValidationIssue {

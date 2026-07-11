@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestValidateRowsRejectsTooFewColumns(t *testing.T) {
@@ -345,6 +347,102 @@ func TestParseLayoutSpecRejectsInvalidConditionalBodySchema(t *testing.T) {
 				t.Fatalf("parseLayoutSpec() error = %v, want %q", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestParseLayoutSpecDialoguePairsUseAllowedPrefixNamespaceRoundTrip(t *testing.T) {
+	input := []byte(`
+schema_version: "1"
+name: dialogue-question
+body_format: dialogue
+compatible_body_formats: [json_array]
+version: "1.0.0"
+category: body
+serves: [readability]
+fields:
+  required:
+    - name: q
+    - name: a
+body:
+  min_items: 2
+  allowed_prefixes: ["Q:", "A:"]
+  required_pairs:
+    - [Q, A]
+metadata:
+  author: test
+  provenance: test
+`)
+
+	spec, err := parseLayoutSpec(input)
+	if err != nil {
+		t.Fatalf("parseLayoutSpec() error = %v", err)
+	}
+	encoded, err := yaml.Marshal(spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	roundTripped, err := parseLayoutSpec(encoded)
+	if err != nil {
+		t.Fatalf("parseLayoutSpec(round trip) error = %v", err)
+	}
+	if issues := validateBlockBody(roundTripped, []string{"Q: Why?", "A: Because."}); len(issues) != 0 {
+		t.Fatalf("dialogue body issues = %+v", issues)
+	}
+}
+
+func TestParseLayoutSpecDialoguePairsRejectUndeclaredPrefix(t *testing.T) {
+	input := []byte(`
+schema_version: "1"
+name: invalid-dialogue
+body_format: dialogue
+compatible_body_formats: [json_array]
+version: "1.0.0"
+category: body
+serves: [readability]
+fields:
+  required:
+    - name: q
+    - name: a
+body:
+  allowed_prefixes: ["Q:", "A:"]
+  required_pairs:
+    - [Q, E]
+metadata:
+  author: test
+  provenance: test
+`)
+
+	_, err := parseLayoutSpec(input)
+	if err == nil || !strings.Contains(err.Error(), `required_pairs dialogue prefix "E" is not configured`) {
+		t.Fatalf("parseLayoutSpec() error = %v", err)
+	}
+}
+
+func TestParseLayoutSpecPairsValidateEveryApplicableNamespace(t *testing.T) {
+	input := []byte(`
+schema_version: "1"
+name: mixed-dialogue
+body_format: dialogue
+compatible_body_formats: [markdown_fields]
+version: "1.0.0"
+category: body
+serves: [readability]
+fields:
+  required:
+    - name: q
+    - name: a
+body:
+  allowed_prefixes: ["Q:", "A:"]
+  required_pairs:
+    - [Q, A]
+metadata:
+  author: test
+  provenance: test
+`)
+
+	_, err := parseLayoutSpec(input)
+	if err == nil || !strings.Contains(err.Error(), `required_pairs field "Q" is not declared`) {
+		t.Fatalf("parseLayoutSpec() error = %v", err)
 	}
 }
 
