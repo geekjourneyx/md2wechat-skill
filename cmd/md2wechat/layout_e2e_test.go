@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -96,6 +97,19 @@ func validateRemoteBuildIdentity(got, expected, first string) error {
 		return fmt.Errorf("API drift: conflicting response build ids %q and %q", first, got)
 	}
 	return nil
+}
+
+func validateConformanceResult(identity string, responseReceived bool, requestErr error, expectedBuildID, firstBuildID string) error {
+	if !responseReceived {
+		if requestErr != nil {
+			return requestErr
+		}
+		return fmt.Errorf("network failure: conformance request returned no response")
+	}
+	if err := validateRemoteBuildIdentity(identity, expectedBuildID, firstBuildID); err != nil {
+		return err
+	}
+	return requestErr
 }
 
 func TestDecodeE2EResponse(t *testing.T) {
@@ -292,7 +306,7 @@ func TestConformanceRequestUsesLocalTransport(t *testing.T) {
 		}, nil
 	})}
 	witness := e2eWitness{Module: "demo", Markdown: markdown, Probe: "Visible probe"}
-	if _, err := runConformanceRequest(client, "http://layout.invalid", "secret", witness); err != nil {
+	if _, _, err := runConformanceRequest(client, "http://layout.invalid", "secret", witness); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -356,6 +370,21 @@ func TestValidateRemoteBuildIdentity(t *testing.T) {
 				t.Fatalf("validateRemoteBuildIdentity() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestValidateConformanceResultPreservesFailureCategoryOrder(t *testing.T) {
+	networkErr := errors.New("network failure: connection refused")
+	if err := validateConformanceResult("", false, networkErr, "expected-build", "prior-build"); !errors.Is(err, networkErr) {
+		t.Fatalf("no-response error = %v, want original network failure", err)
+	}
+
+	apiErr := errors.New("API drift: decode envelope")
+	if err := validateConformanceResult("wrong-build", true, apiErr, "expected-build", ""); err == nil || errors.Is(err, apiErr) || !strings.Contains(err.Error(), "build id") {
+		t.Fatalf("response-bearing mismatch error = %v, want build identity failure", err)
+	}
+	if err := validateConformanceResult("expected-build", true, apiErr, "expected-build", ""); !errors.Is(err, apiErr) {
+		t.Fatalf("response-bearing matched error = %v, want original API failure", err)
 	}
 }
 
@@ -608,12 +637,12 @@ func TestE2ELayoutConformance(t *testing.T) {
 					name += "/" + witness.Variant
 				}
 				t.Run(name, func(t *testing.T) {
-					identity, requestErr := runConformanceRequest(client, settings.BaseURL, settings.APIKey, witness)
+					identity, responseReceived, requestErr := runConformanceRequest(client, settings.BaseURL, settings.APIKey, witness)
 					first := ""
 					if identityInitialized {
 						first = remoteIdentity
 					}
-					if err := validateRemoteBuildIdentity(identity, settings.ExpectedBuildID, first); err != nil {
+					if err := validateConformanceResult(identity, responseReceived, requestErr, settings.ExpectedBuildID, first); err != nil {
 						t.Fatal(err)
 					}
 					if identityInitialized && identity != remoteIdentity {
@@ -622,9 +651,6 @@ func TestE2ELayoutConformance(t *testing.T) {
 					if !identityInitialized {
 						remoteIdentity = identity
 						identityInitialized = true
-					}
-					if requestErr != nil {
-						t.Fatal(requestErr)
 					}
 				})
 			}
@@ -868,20 +894,20 @@ func countDOMElements(node *html.Node, element string) int {
 	return count
 }
 
-func runConformanceRequest(client *http.Client, baseURL, apiKey string, witness e2eWitness) (string, error) {
+func runConformanceRequest(client *http.Client, baseURL, apiKey string, witness e2eWitness) (string, bool, error) {
 	resp, err := postConvert(client, baseURL, apiKey, witness.Markdown)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	identity, _ := remoteBuildIdentity(resp.Header)
 	html, err := decodeE2EResponse(resp)
 	if err != nil {
-		return identity, err
+		return identity, true, err
 	}
 	if err := checkConformanceHTML(witness, html); err != nil {
-		return identity, fmt.Errorf("API drift: %w", err)
+		return identity, true, fmt.Errorf("API drift: %w", err)
 	}
-	return identity, nil
+	return identity, true, nil
 }
 
 func remoteBuildIdentity(header http.Header) (string, bool) {
