@@ -26,6 +26,7 @@ var (
 		contentType string
 		industry    string
 		tag         string
+		lifecycle   string
 	}
 	layoutRenderVars    []string
 	layoutValidateFile  string
@@ -51,11 +52,13 @@ var layoutListCmd = &cobra.Command{
 			ContentType: layoutListFilters.contentType,
 			Industry:    layoutListFilters.industry,
 			Tag:         layoutListFilters.tag,
+			Lifecycle:   layoutListFilters.lifecycle,
 		})
 		summaries := make([]map[string]any, 0, len(mods))
 		for _, m := range mods {
 			summaries = append(summaries, map[string]any{
 				"name":          m.Name,
+				"lifecycle":     m.Lifecycle,
 				"body_format":   m.BodyFormat,
 				"category":      m.Category,
 				"serves":        m.Serves,
@@ -187,6 +190,10 @@ func init() {
 	layoutListCmd.Flags().StringVar(&layoutListFilters.contentType, "content-type", "", "filter by content_type")
 	layoutListCmd.Flags().StringVar(&layoutListFilters.industry, "industry", "", "filter by industry")
 	layoutListCmd.Flags().StringVar(&layoutListFilters.tag, "tag", "", "filter by tag")
+	layoutListCmd.Flags().StringVar(
+		&layoutListFilters.lifecycle, "lifecycle", "",
+		"filter by lifecycle (recommended/compatibility; default recommended)",
+	)
 
 	layoutRenderCmd.Flags().StringArrayVar(&layoutRenderVars, "var", nil, "field as KEY=VALUE (repeatable)")
 

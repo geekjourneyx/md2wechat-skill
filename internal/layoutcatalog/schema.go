@@ -9,6 +9,11 @@ const (
 	BodyFormatJSONArray  = "json_array"
 )
 
+const (
+	LifecycleRecommended   = "recommended"
+	LifecycleCompatibility = "compatibility"
+)
+
 var ValidServes = map[string]bool{
 	"attention":    true,
 	"readability":  true,
@@ -21,6 +26,11 @@ var ValidBodyFormats = map[string]bool{
 	BodyFormatRows:       true,
 	BodyFormatJSONObject: true,
 	BodyFormatJSONArray:  true,
+}
+
+var ValidLifecycles = map[string]bool{
+	LifecycleRecommended:   true,
+	LifecycleCompatibility: true,
 }
 
 type FieldSpec struct {
@@ -51,6 +61,7 @@ type LayoutMetadata struct {
 type LayoutSpec struct {
 	SchemaVersion      string         `yaml:"schema_version"`
 	Name               string         `yaml:"name"`
+	Lifecycle          string         `yaml:"lifecycle,omitempty"`
 	BodyFormat         string         `yaml:"body_format,omitempty" json:"body_format,omitempty"`
 	Version            string         `yaml:"version"`
 	Since              string         `yaml:"since,omitempty"`
@@ -77,4 +88,5 @@ type ListFilter struct {
 	ContentType string
 	Industry    string
 	Tag         string
+	Lifecycle   string
 }

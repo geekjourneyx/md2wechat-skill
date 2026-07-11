@@ -111,6 +111,67 @@ metadata:
 	}
 }
 
+func TestCustomLayoutBlankLifecycleDefaultsToRecommended(t *testing.T) {
+	ResetDefaultCatalogForTests()
+	t.Cleanup(ResetDefaultCatalogForTests)
+
+	dir := t.TempDir()
+	yaml := []byte(`schema_version: "1"
+name: custom-current
+version: "1.0.0"
+category: opening
+serves: [attention]
+metadata:
+  author: test
+  provenance: custom
+`)
+	if err := os.WriteFile(filepath.Join(dir, "custom-current.yaml"), yaml, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("MD2WECHAT_LAYOUT_DIR", dir)
+
+	c, err := DefaultCatalog()
+	if err != nil {
+		t.Fatalf("DefaultCatalog() failed: %v", err)
+	}
+	spec, ok := c.Get("custom-current")
+	if !ok {
+		t.Fatal("expected custom-current module to be present")
+	}
+	if spec.Lifecycle != LifecycleRecommended {
+		t.Fatalf("Lifecycle = %q, want %q", spec.Lifecycle, LifecycleRecommended)
+	}
+}
+
+func TestCustomLayoutRejectsInvalidLifecycle(t *testing.T) {
+	ResetDefaultCatalogForTests()
+	t.Cleanup(ResetDefaultCatalogForTests)
+
+	dir := t.TempDir()
+	yaml := []byte(`schema_version: "1"
+name: custom-experimental
+lifecycle: experimental
+version: "1.0.0"
+category: opening
+serves: [attention]
+metadata:
+  author: test
+  provenance: custom
+`)
+	if err := os.WriteFile(filepath.Join(dir, "custom-experimental.yaml"), yaml, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("MD2WECHAT_LAYOUT_DIR", dir)
+
+	_, err := DefaultCatalog()
+	if err == nil {
+		t.Fatal("expected invalid lifecycle to be rejected")
+	}
+	if !strings.Contains(err.Error(), `invalid lifecycle "experimental"`) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestEnvOverrideBeatsLocalDir(t *testing.T) {
 	localDir := t.TempDir()
 	localOpening := filepath.Join(localDir, "opening")

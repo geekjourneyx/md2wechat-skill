@@ -150,6 +150,12 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if spec.Name == "" {
 		return nil, fmt.Errorf("name is required")
 	}
+	if spec.Lifecycle == "" {
+		spec.Lifecycle = LifecycleRecommended
+	}
+	if !ValidLifecycles[spec.Lifecycle] {
+		return nil, fmt.Errorf("invalid lifecycle %q", spec.Lifecycle)
+	}
 	normalizeBodyFormat(&spec)
 	if !ValidBodyFormats[spec.BodyFormat] {
 		return nil, fmt.Errorf("invalid body_format %q", spec.BodyFormat)
@@ -208,8 +214,15 @@ func (c *Catalog) Get(name string) (*LayoutSpec, bool) {
 func (c *Catalog) ListFiltered(f ListFilter) []*LayoutSpec {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+	lifecycle := f.Lifecycle
+	if lifecycle == "" {
+		lifecycle = LifecycleRecommended
+	}
 	out := make([]*LayoutSpec, 0, len(c.modules))
 	for _, m := range c.modules {
+		if m.Lifecycle != lifecycle {
+			continue
+		}
 		if f.Category != "" && m.Category != f.Category {
 			continue
 		}

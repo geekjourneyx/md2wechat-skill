@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -30,6 +32,83 @@ func TestLayoutListJSONIncludesHero(t *testing.T) {
 	if !strings.Contains(string(stdout), `"body_format"`) {
 		t.Errorf("expected body_format in list output, got:\n%s", stdout)
 	}
+}
+
+func TestLayoutListDefaultsToRecommendedLifecycle(t *testing.T) {
+	setupLayoutListLifecycleTest(t)
+
+	stdout := captureStdout(t, func() {
+		if err := layoutListCmd.RunE(layoutListCmd, nil); err != nil {
+			t.Fatalf("layoutListCmd.RunE() error = %v", err)
+		}
+	})
+
+	output := string(stdout)
+	if strings.Contains(output, `"compatibility-only"`) {
+		t.Fatalf("default list unexpectedly included compatibility module:\n%s", stdout)
+	}
+	if !strings.Contains(output, `"lifecycle": "recommended"`) {
+		t.Fatalf("default list did not include recommended lifecycle summaries:\n%s", stdout)
+	}
+}
+
+func TestLayoutListSelectsCompatibilityLifecycle(t *testing.T) {
+	setupLayoutListLifecycleTest(t)
+	layoutListFilters.lifecycle = layoutcatalog.LifecycleCompatibility
+
+	stdout := captureStdout(t, func() {
+		if err := layoutListCmd.RunE(layoutListCmd, nil); err != nil {
+			t.Fatalf("layoutListCmd.RunE() error = %v", err)
+		}
+	})
+
+	output := string(stdout)
+	if !strings.Contains(output, `"compatibility-only"`) {
+		t.Fatalf("compatibility list did not include compatibility module:\n%s", stdout)
+	}
+	if strings.Contains(output, `"hero"`) {
+		t.Fatalf("compatibility list unexpectedly included recommended module:\n%s", stdout)
+	}
+	if !strings.Contains(output, `"lifecycle": "compatibility"`) {
+		t.Fatalf("compatibility list did not include lifecycle summary:\n%s", stdout)
+	}
+}
+
+func setupLayoutListLifecycleTest(t *testing.T) {
+	t.Helper()
+	oldJSON := jsonOutput
+	oldFilters := layoutListFilters
+	t.Cleanup(func() {
+		jsonOutput = oldJSON
+		layoutListFilters = oldFilters
+		layoutcatalog.ResetDefaultCatalogForTests()
+	})
+
+	dir := t.TempDir()
+	yaml := []byte(`schema_version: "1"
+name: compatibility-only
+lifecycle: compatibility
+version: "1.0.0"
+category: opening
+serves: [attention]
+metadata:
+  author: test
+  provenance: custom
+`)
+	if err := os.WriteFile(filepath.Join(dir, "compatibility-only.yaml"), yaml, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("MD2WECHAT_LAYOUT_DIR", dir)
+	jsonOutput = true
+	layoutListFilters = struct {
+		category    string
+		serves      string
+		contentType string
+		industry    string
+		tag         string
+		lifecycle   string
+	}{}
+	layoutcatalog.ResetDefaultCatalogForTests()
 }
 
 func TestLayoutShowJSONReturnsSpec(t *testing.T) {
