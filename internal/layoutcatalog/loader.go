@@ -359,6 +359,9 @@ func validateOpenerSpec(opener *OpenerSpec) error {
 	if opener.Caption && opener.ParamStyle == ParamStyleBracket {
 		return fmt.Errorf("opener caption and bracket param_style are mutually exclusive")
 	}
+	if opener.Caption && len(opener.Params) > 0 {
+		return fmt.Errorf("opener caption and opener params are mutually exclusive")
+	}
 	if len(opener.Params) > 0 && opener.ParamStyle == "" {
 		return fmt.Errorf("opener params require param_style")
 	}

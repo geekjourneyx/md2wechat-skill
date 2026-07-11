@@ -38,20 +38,18 @@ func (c *Catalog) RenderBlock(name string, input RenderInput) (string, error) {
 		return "", fmt.Errorf("%w: %v", ErrInvalidFieldValue, err)
 	}
 
-	if !isStructuredBodyFormat(spec.BodyFormat) {
-		rawBody := input.Body
-		if rawBody == "" {
-			rawBody, _ = lookupString(input.Fields, "body")
+	rawBody := input.Body
+	if rawBody == "" && spec.Body != nil {
+		rawBody, _ = lookupString(input.Fields, "body")
+	}
+	if rawBody != "" {
+		out := renderRawBody(opener, rawBody)
+		primary := *spec
+		primary.CompatibleBodyFormats = nil
+		if err := validateRenderedBody(&primary, rawBody); err != nil {
+			return "", err
 		}
-		if rawBody != "" {
-			out := renderRawBody(opener, rawBody)
-			primary := *spec
-			primary.CompatibleBodyFormats = nil
-			if err := validateRenderedBody(&primary, rawBody); err != nil {
-				return "", err
-			}
-			return out, nil
-		}
+		return out, nil
 	}
 
 	formats := append([]string{spec.BodyFormat}, spec.CompatibleBodyFormats...)
@@ -68,7 +66,7 @@ func (c *Catalog) RenderBlock(name string, input RenderInput) (string, error) {
 			out, renderErr = renderJSONFields(spec, input.Fields, "object", opener)
 		case BodyFormatJSONArray:
 			out, renderErr = renderJSONFields(spec, input.Fields, "array", opener)
-		case BodyFormatFields, "":
+		case BodyFormatFields, BodyFormatMarkdownFields, "":
 			out, renderErr = renderFields(spec, input.Fields, opener)
 		default:
 			continue
@@ -125,7 +123,7 @@ func renderOpenerVars(spec *LayoutSpec, input RenderInput) (map[string]any, erro
 
 func isStructuredBodyFormat(format string) bool {
 	switch format {
-	case BodyFormatFields, BodyFormatRows, BodyFormatJSONObject, BodyFormatJSONArray, "":
+	case BodyFormatFields, BodyFormatMarkdownFields, BodyFormatRows, BodyFormatJSONObject, BodyFormatJSONArray, "":
 		return true
 	default:
 		return false

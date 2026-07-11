@@ -140,19 +140,26 @@ func TestValidateOpenerPreservesLegacyCaptionCompatibility(t *testing.T) {
 	}
 }
 
-func TestRenderOpenerUsesDeclaredParameterOrder(t *testing.T) {
+func TestRenderOpenerSortsParameterKeysIncludingDefaults(t *testing.T) {
 	spec := &LayoutSpec{
 		Name: "gallery-grid",
 		Opener: &OpenerSpec{
 			ParamStyle: ParamStyleBraces,
-			Params:     []ParamSpec{{Name: "columns"}, {Name: "variant"}},
+			Params: []ParamSpec{
+				{Name: "zeta"},
+				{Name: "middle", Default: "m"},
+				{Name: "alpha"},
+			},
 		},
 	}
-	got, err := renderOpener(spec, map[string]any{"variant": "card", "columns": 3})
+	vars := map[string]any{}
+	vars["zeta"] = "z"
+	vars["alpha"] = "a"
+	got, err := renderOpener(spec, vars)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != ":::gallery-grid{columns=3 variant=card}" {
+	if got != ":::gallery-grid{alpha=a middle=m zeta=z}" {
 		t.Fatalf("renderOpener() = %q", got)
 	}
 }
@@ -297,6 +304,7 @@ metadata:
 		{"bracket arity", "opener:\n  param_style: bracket\n  params:\n    - name: left\n    - name: right", "requires exactly one parameter"},
 		{"token arity", "opener:\n  param_style: token", "requires exactly one parameter"},
 		{"caption bracket ambiguity", "opener:\n  caption: true\n  param_style: bracket\n  params:\n    - name: ratio", "caption and bracket"},
+		{"caption params ambiguity", "opener:\n  caption: true\n  param_style: braces\n  params:\n    - name: columns", "caption and opener params"},
 		{"params without style", "opener:\n  params:\n    - name: columns", "params require param_style"},
 		{"invalid param name", "opener:\n  param_style: tokens\n  params:\n    - name: bad.name", "invalid opener param name"},
 	} {

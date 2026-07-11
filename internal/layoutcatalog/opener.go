@@ -2,6 +2,7 @@ package layoutcatalog
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -236,6 +237,7 @@ func renderOpener(spec *LayoutSpec, vars map[string]any) (string, error) {
 	if len(values) == 0 {
 		return base, nil
 	}
+	sort.Strings(values)
 	switch spec.Opener.ParamStyle {
 	case ParamStyleBraces:
 		return base + "{" + strings.Join(values, " ") + "}", nil

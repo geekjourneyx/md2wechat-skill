@@ -178,13 +178,13 @@ func TestLayoutRenderBodyFileComposesBlock(t *testing.T) {
 	layoutRenderBodyFile = bodyPath
 
 	stdout := captureStdout(t, func() {
-		if err := layoutRenderCmd.RunE(layoutRenderCmd, []string{"gallery-grid"}); err != nil {
+		if err := layoutRenderCmd.RunE(layoutRenderCmd, []string{"gallery-caption"}); err != nil {
 			t.Fatalf("layoutRenderCmd.RunE() error = %v", err)
 		}
 	})
 
 	for _, want := range []string{
-		`:::gallery-grid[产品截图]`,
+		`:::gallery-caption[产品截图]`,
 		`![产品界面](https://example.com/a.jpg) | 移动端首页`,
 	} {
 		if !strings.Contains(string(stdout), want) {
@@ -242,7 +242,6 @@ version: "1.0.0"
 category: body
 serves: [readability]
 opener:
-  caption: true
   param_style: braces
   params:
     - name: columns
@@ -254,6 +253,24 @@ metadata:
   provenance: custom
 `)
 	if err := os.WriteFile(filepath.Join(dir, "gallery-grid.yaml"), yaml, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	captionYAML := []byte(`schema_version: "1"
+name: gallery-caption
+lifecycle: recommended
+body_format: markdown_images
+version: "1.0.0"
+category: body
+serves: [readability]
+opener:
+  caption: true
+body:
+  min_images: 1
+metadata:
+  author: test
+  provenance: custom
+`)
+	if err := os.WriteFile(filepath.Join(dir, "gallery-caption.yaml"), captionYAML, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("MD2WECHAT_LAYOUT_DIR", dir)

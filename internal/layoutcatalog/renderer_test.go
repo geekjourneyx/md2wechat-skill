@@ -132,6 +132,125 @@ func TestRenderBlockPreservesLegacyHeroRender(t *testing.T) {
 	}
 }
 
+func TestRenderBlockExplicitBodyTakesPrecedenceAcrossPrimaryFormats(t *testing.T) {
+	tests := []struct {
+		name   string
+		format string
+		spec   *LayoutSpec
+		fields map[string]any
+		body   string
+	}{
+		{
+			name: "fields", format: BodyFormatFields,
+			spec:   &LayoutSpec{Fields: &FieldsSpec{Required: []FieldSpec{{Name: "title"}}}},
+			fields: map[string]any{"title": "Structured"}, body: "title: Raw",
+		},
+		{
+			name: "rows", format: BodyFormatRows,
+			spec:   &LayoutSpec{Rows: &RowsSpec{Delimiter: "|", MinColumns: 2}},
+			fields: map[string]any{"rows": []any{[]any{"Structured", "Row"}}}, body: "Raw|Row",
+		},
+		{
+			name: "json object", format: BodyFormatJSONObject,
+			spec:   &LayoutSpec{Fields: &FieldsSpec{Required: []FieldSpec{{Name: "title"}}}},
+			fields: map[string]any{"title": "Structured"}, body: `{"title":"Raw"}`,
+		},
+		{
+			name: "json array", format: BodyFormatJSONArray,
+			spec:   &LayoutSpec{Fields: &FieldsSpec{Required: []FieldSpec{{Name: "title"}}}},
+			fields: map[string]any{"title": "Structured"}, body: `[{"title":"Raw"}]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewCatalog()
+			tt.spec.Name = "primary"
+			tt.spec.BodyFormat = tt.format
+			c.modules[tt.spec.Name] = tt.spec
+
+			out, err := c.RenderBlock(tt.spec.Name, RenderInput{Fields: tt.fields, Body: tt.body})
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := ":::primary\n" + tt.body + "\n:::\n"
+			if out != want {
+				t.Fatalf("RenderBlock() = %q, want %q", out, want)
+			}
+		})
+	}
+}
+
+func TestRenderLegacyBodyUsesRawPathWhenBodySpecExists(t *testing.T) {
+	c := NewCatalog()
+	c.modules["legacy-fields"] = &LayoutSpec{
+		Name:       "legacy-fields",
+		BodyFormat: BodyFormatFields,
+		Fields:     &FieldsSpec{Required: []FieldSpec{{Name: "title"}}},
+		Body:       &BodySpec{},
+	}
+	out, err := c.Render("legacy-fields", map[string]any{
+		"title": "Structured",
+		"body":  "title: Raw",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := ":::legacy-fields\ntitle: Raw\n:::\n"; out != want {
+		t.Fatalf("Render() = %q, want %q", out, want)
+	}
+}
+
+func TestRenderBlockMarkdownFieldsSupportsStructuredFields(t *testing.T) {
+	c := NewCatalog()
+	c.modules["markdown-card"] = &LayoutSpec{
+		Name:       "markdown-card",
+		BodyFormat: BodyFormatMarkdownFields,
+		Fields:     &FieldsSpec{Required: []FieldSpec{{Name: "title"}}},
+	}
+	out, err := c.RenderBlock("markdown-card", RenderInput{Fields: map[string]any{"title": "Structured"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := ":::markdown-card\ntitle: Structured\n:::\n"; out != want {
+		t.Fatalf("RenderBlock() = %q, want %q", out, want)
+	}
+}
+
+func TestRenderBlockRejectsCaptionWithExplicitOrDefaultParams(t *testing.T) {
+	tests := []struct {
+		name   string
+		param  ParamSpec
+		params map[string]string
+	}{
+		{name: "explicit", param: ParamSpec{Name: "columns"}, params: map[string]string{"columns": "3"}},
+		{name: "default", param: ParamSpec{Name: "columns", Default: "3"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewCatalog()
+			c.modules["gallery"] = &LayoutSpec{
+				Name:       "gallery",
+				BodyFormat: BodyFormatLines,
+				Opener: &OpenerSpec{
+					Caption:    true,
+					ParamStyle: ParamStyleBraces,
+					Params:     []ParamSpec{tt.param},
+				},
+				Body: &BodySpec{MinItems: 1},
+			}
+			_, err := c.RenderBlock("gallery", RenderInput{
+				Params:  tt.params,
+				Caption: "Screenshots",
+				Body:    "One item",
+			})
+			if !errors.Is(err, ErrInvalidFieldValue) {
+				t.Fatalf("RenderBlock() error = %v, want ErrInvalidFieldValue", err)
+			}
+		})
+	}
+}
+
 func TestRenderHeroFields(t *testing.T) {
 	c := NewCatalog()
 	if err := c.Load(); err != nil {
