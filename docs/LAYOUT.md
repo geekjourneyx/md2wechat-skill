@@ -114,6 +114,8 @@ subtitle: 不是好不好看，是读者读不读得完
 
 ### Catalog 计数与 lifecycle
 
+<!-- layout-count-contract: recommended_scenarios=68 recommended_syntaxes=53 compatibility_modules=3 base_enhancements=4 render_syntaxes=60 -->
+
 - 68 个主推高级排版场景条目是上游使用场景维度。
 - 53 个主推 `:::` 语法名是 `layout list --json` 默认返回的 CLI 对象。
 - 3 个 compatibility 模块是 `dialogue`、`gallery`、`longimage`，只用于旧稿迁移。
@@ -1209,15 +1211,25 @@ md2wechat config validate --json
 md2wechat config show --format json | grep api_key
 ```
 
-### 错误 5：`rows` 格式写错（pipe vs JSON）
+### 错误 5：按旧的三种正文格式猜模块语法
 
-部分模块用 pipe 分隔（`a | b | c`），部分用 JSON 对象或数组：
+不要只在 pipe、JSON object、JSON array 之间猜。当前 `body_format` 有九种，合法输入以 `layout show <name> --json` 返回的 schema 为准：
 
-- **Pipe 格式**：metrics, compare, steps, timeline, toc, cards, faq, cases 等
-- **JSON object 格式**：comparison-table, changelog, definition, quote-card, tweet
-- **JSON array 格式**：stat-row, question, resource-list
+| `body_format` | 正文结构 | `layout show` 中要检查的 schema |
+|---|---|---|
+| `fields` | 每行 `key: value` | `Fields`；同时检查字段 required、enum 和 value type |
+| `rows` | 每行一项，以 `Rows.Delimiter` 分列 | `Rows` 和 `Body`；检查最少列数、行 schema 和正文约束 |
+| `json_object` | 单个 JSON 对象 | `Fields` 和 `Body` |
+| `json_array` | JSON 对象数组 | `Fields` 和 `Body` |
+| `markdown_images` | Markdown 图片列表及允许的说明文字 | `Body` 的图片数、条目数和分隔约束 |
+| `markdown_fields` | 可包含 Markdown 图片的重复字段组 | `Fields` 与 `Body.Group` |
+| `split` | 由指定 separator 分开的两段正文 | `Body.Separator` |
+| `lines` | 逐行条目 | `Body` 的 separator、allowed prefixes 和 min items |
+| `dialogue` | 成对前缀或具名说话人行 | `Body.RequiredPairs`、allowed prefixes 和 named-speaker 约束 |
 
-用 `layout show` 查看 `body_format` 和 `Fields` 部分。
+模块开头的 caption、花括号参数和 token 参数不属于正文格式，检查 `Opener`。优先复用 canonical `Example`；只有结构不同的 renderer 分支才查看 `Variants[].Example`。
+
+`question` 的 primary `dialogue` 使用成对 `Q:` / `A:` 行；其 legacy-compatible `json_array` 仅用于兼容旧稿，不应作为新稿推荐写法。
 
 ---
 
