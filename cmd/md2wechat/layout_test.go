@@ -168,6 +168,103 @@ func TestLayoutRenderHeroProducesBlock(t *testing.T) {
 	}
 }
 
+func TestLayoutRenderBodyFileComposesBlock(t *testing.T) {
+	setupComplexLayoutRenderTest(t)
+	bodyPath := filepath.Join(t.TempDir(), "gallery.md")
+	if err := os.WriteFile(bodyPath, []byte("![产品界面](https://example.com/a.jpg) | 移动端首页\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	layoutRenderCaption = "产品截图"
+	layoutRenderBodyFile = bodyPath
+
+	stdout := captureStdout(t, func() {
+		if err := layoutRenderCmd.RunE(layoutRenderCmd, []string{"gallery-grid"}); err != nil {
+			t.Fatalf("layoutRenderCmd.RunE() error = %v", err)
+		}
+	})
+
+	for _, want := range []string{
+		`:::gallery-grid[产品截图]`,
+		`![产品界面](https://example.com/a.jpg) | 移动端首页`,
+	} {
+		if !strings.Contains(string(stdout), want) {
+			t.Fatalf("output missing %q:\n%s", want, stdout)
+		}
+	}
+}
+
+func TestLayoutRenderBodyFileDashReadsStdin(t *testing.T) {
+	setupComplexLayoutRenderTest(t)
+	layoutRenderParams = []string{"columns=2"}
+	layoutRenderBodyFile = "-"
+	stdinReader = strings.NewReader("![移动端](https://example.com/mobile.jpg)\n")
+
+	stdout := captureStdout(t, func() {
+		if err := layoutRenderCmd.RunE(layoutRenderCmd, []string{"gallery-grid"}); err != nil {
+			t.Fatalf("layoutRenderCmd.RunE() error = %v", err)
+		}
+	})
+
+	for _, want := range []string{
+		`:::gallery-grid{columns=2}`,
+		`![移动端](https://example.com/mobile.jpg)`,
+	} {
+		if !strings.Contains(string(stdout), want) {
+			t.Fatalf("output missing %q:\n%s", want, stdout)
+		}
+	}
+}
+
+func setupComplexLayoutRenderTest(t *testing.T) {
+	t.Helper()
+	oldJSON := jsonOutput
+	oldVars := append([]string(nil), layoutRenderVars...)
+	oldParams := append([]string(nil), layoutRenderParams...)
+	oldCaption := layoutRenderCaption
+	oldBodyFile := layoutRenderBodyFile
+	oldReader := stdinReader
+	t.Cleanup(func() {
+		jsonOutput = oldJSON
+		layoutRenderVars = oldVars
+		layoutRenderParams = oldParams
+		layoutRenderCaption = oldCaption
+		layoutRenderBodyFile = oldBodyFile
+		stdinReader = oldReader
+		layoutcatalog.ResetDefaultCatalogForTests()
+	})
+
+	dir := t.TempDir()
+	yaml := []byte(`schema_version: "1"
+name: gallery-grid
+lifecycle: recommended
+body_format: markdown_images
+version: "1.0.0"
+category: body
+serves: [readability]
+opener:
+  caption: true
+  param_style: braces
+  params:
+    - name: columns
+      enum: ["2", "3"]
+body:
+  min_images: 1
+metadata:
+  author: test
+  provenance: custom
+`)
+	if err := os.WriteFile(filepath.Join(dir, "gallery-grid.yaml"), yaml, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("MD2WECHAT_LAYOUT_DIR", dir)
+	jsonOutput = true
+	layoutRenderVars = nil
+	layoutRenderParams = nil
+	layoutRenderCaption = ""
+	layoutRenderBodyFile = ""
+	layoutcatalog.ResetDefaultCatalogForTests()
+}
+
 func TestLayoutValidateUnknownWarns(t *testing.T) {
 	oldJSON := jsonOutput
 	oldStdin := layoutValidateStdin

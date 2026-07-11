@@ -1,9 +1,136 @@
 package layoutcatalog
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
+
+func TestRenderBlockIncludesBraceParamsAndRawBody(t *testing.T) {
+	c := NewCatalog()
+	c.modules["gallery-grid"] = &LayoutSpec{
+		Name:       "gallery-grid",
+		BodyFormat: BodyFormatMarkdownImages,
+		Lifecycle:  LifecycleRecommended,
+		Opener: &OpenerSpec{
+			ParamStyle: ParamStyleBraces,
+			Params: []ParamSpec{
+				{Name: "columns"},
+				{Name: "variant"},
+			},
+		},
+		Body: &BodySpec{MinImages: 1},
+	}
+	out, err := c.RenderBlock("gallery-grid", RenderInput{
+		Params: map[string]string{"variant": "card", "columns": "3"},
+		Body:   "![产品界面](https://example.com/a.jpg) | 移动端首页",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := ":::gallery-grid{columns=3 variant=card}\n![产品界面](https://example.com/a.jpg) | 移动端首页\n:::\n"
+	if out != want {
+		t.Fatalf("%q != %q", out, want)
+	}
+}
+
+func TestRenderBlockIncludesCaption(t *testing.T) {
+	c := NewCatalog()
+	c.modules["gallery"] = &LayoutSpec{
+		Name:       "gallery",
+		BodyFormat: BodyFormatMarkdownImages,
+		Opener:     &OpenerSpec{Caption: true},
+		Body:       &BodySpec{MinImages: 1},
+	}
+	out, err := c.RenderBlock("gallery", RenderInput{
+		Caption: "产品截图",
+		Body:    "![首页](https://example.com/home.jpg)",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := ":::gallery[产品截图]\n![首页](https://example.com/home.jpg)\n:::\n"; out != want {
+		t.Fatalf("%q != %q", out, want)
+	}
+}
+
+func TestRenderBlockIncludesTokenParam(t *testing.T) {
+	c := NewCatalog()
+	c.modules["callout"] = &LayoutSpec{
+		Name:       "callout",
+		BodyFormat: BodyFormatLines,
+		Opener: &OpenerSpec{
+			ParamStyle: ParamStyleToken,
+			Params:     []ParamSpec{{Name: "tone", Enum: []string{"info", "warning"}}},
+		},
+		Body: &BodySpec{MinItems: 1},
+	}
+	out, err := c.RenderBlock("callout", RenderInput{
+		Params: map[string]string{"tone": "warning"},
+		Body:   "发布前请复核。",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := ":::callout warning\n发布前请复核。\n:::\n"; out != want {
+		t.Fatalf("%q != %q", out, want)
+	}
+}
+
+func TestRenderBlockRequiresComplexBody(t *testing.T) {
+	c := NewCatalog()
+	c.modules["gallery"] = &LayoutSpec{
+		Name:       "gallery",
+		BodyFormat: BodyFormatMarkdownImages,
+		Body:       &BodySpec{MinImages: 1},
+	}
+	_, err := c.RenderBlock("gallery", RenderInput{})
+	if !errors.Is(err, ErrInvalidFieldValue) {
+		t.Fatalf("RenderBlock() error = %v, want ErrInvalidFieldValue", err)
+	}
+}
+
+func TestRenderBlockRejectsInvalidOpenerEnum(t *testing.T) {
+	c := NewCatalog()
+	c.modules["callout"] = &LayoutSpec{
+		Name:       "callout",
+		BodyFormat: BodyFormatLines,
+		Opener: &OpenerSpec{
+			ParamStyle: ParamStyleToken,
+			Params:     []ParamSpec{{Name: "tone", Enum: []string{"info", "warning"}}},
+		},
+		Body: &BodySpec{MinItems: 1},
+	}
+	_, err := c.RenderBlock("callout", RenderInput{
+		Params: map[string]string{"tone": "urgent"},
+		Body:   "发布前请复核。",
+	})
+	if !errors.Is(err, ErrInvalidFieldValue) {
+		t.Fatalf("RenderBlock() error = %v, want ErrInvalidFieldValue", err)
+	}
+}
+
+func TestRenderBlockPreservesLegacyHeroRender(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	vars := map[string]any{
+		"eyebrow": "深度观察",
+		"title":   "公众号排版的真问题",
+	}
+	legacy, err := c.Render("hero", vars)
+	if err != nil {
+		t.Fatal(err)
+	}
+	block, err := c.RenderBlock("hero", RenderInput{Fields: vars})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if legacy != block {
+		t.Fatalf("Render() = %q, RenderBlock() = %q", legacy, block)
+	}
+}
 
 func TestRenderHeroFields(t *testing.T) {
 	c := NewCatalog()

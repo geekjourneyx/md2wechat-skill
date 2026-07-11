@@ -13,17 +13,37 @@ var (
 	ErrInvalidFieldValue    = errors.New("invalid field value")
 )
 
+type RenderInput struct {
+	Fields  map[string]any
+	Params  map[string]string
+	Caption string
+	Body    string
+}
+
 func (c *Catalog) Render(name string, vars map[string]any) (string, error) {
+	return c.RenderBlock(name, RenderInput{Fields: vars})
+}
+
+func (c *Catalog) RenderBlock(name string, input RenderInput) (string, error) {
 	spec, ok := c.Get(name)
 	if !ok {
 		return "", fmt.Errorf("%w: %s", ErrUnknownModule, name)
 	}
-	opener, err := renderOpener(spec, vars)
+	openerVars, err := renderOpenerVars(spec, input)
 	if err != nil {
 		return "", err
 	}
-	if spec.Body != nil {
-		if rawBody, ok := lookupString(vars, "body"); ok && rawBody != "" {
+	opener, err := renderOpener(spec, openerVars)
+	if err != nil {
+		return "", fmt.Errorf("%w: %v", ErrInvalidFieldValue, err)
+	}
+
+	if !isStructuredBodyFormat(spec.BodyFormat) {
+		rawBody := input.Body
+		if rawBody == "" {
+			rawBody, _ = lookupString(input.Fields, "body")
+		}
+		if rawBody != "" {
 			out := renderRawBody(opener, rawBody)
 			primary := *spec
 			primary.CompatibleBodyFormats = nil
@@ -40,16 +60,16 @@ func (c *Catalog) Render(name string, vars map[string]any) (string, error) {
 		var renderErr error
 		switch format {
 		case BodyFormatRows:
-			if _, ok := vars["rows"]; !ok {
+			if _, ok := input.Fields["rows"]; !ok {
 				continue
 			}
-			out, renderErr = renderRows(spec, vars, opener)
+			out, renderErr = renderRows(spec, input.Fields, opener)
 		case BodyFormatJSONObject:
-			out, renderErr = renderJSONFields(spec, vars, "object", opener)
+			out, renderErr = renderJSONFields(spec, input.Fields, "object", opener)
 		case BodyFormatJSONArray:
-			out, renderErr = renderJSONFields(spec, vars, "array", opener)
-		case BodyFormatFields, BodyFormatMarkdownFields, "":
-			out, renderErr = renderFields(spec, vars, opener)
+			out, renderErr = renderJSONFields(spec, input.Fields, "array", opener)
+		case BodyFormatFields, "":
+			out, renderErr = renderFields(spec, input.Fields, opener)
 		default:
 			continue
 		}
@@ -64,7 +84,52 @@ func (c *Catalog) Render(name string, vars map[string]any) (string, error) {
 		}
 		return out, nil
 	}
+	if !isStructuredBodyFormat(spec.BodyFormat) {
+		primary := *spec
+		primary.CompatibleBodyFormats = nil
+		if err := validateRenderedBody(&primary, ""); err != nil {
+			return "", err
+		}
+	}
 	return "", fmt.Errorf("%w: no accepted body format supports structured rendering", ErrInvalidFieldValue)
+}
+
+func renderOpenerVars(spec *LayoutSpec, input RenderInput) (map[string]any, error) {
+	vars := make(map[string]any, len(input.Fields)+len(input.Params)+1)
+	for name, value := range input.Fields {
+		vars[name] = value
+	}
+	if len(input.Params) > 0 {
+		if spec.Opener == nil {
+			return nil, fmt.Errorf("%w: %s does not support opener parameters", ErrInvalidFieldValue, spec.Name)
+		}
+		declared := make(map[string]bool, len(spec.Opener.Params))
+		for _, param := range spec.Opener.Params {
+			declared[param.Name] = true
+		}
+		for name, value := range input.Params {
+			if !declared[name] {
+				return nil, fmt.Errorf("%w: %s has no opener parameter %q", ErrInvalidFieldValue, spec.Name, name)
+			}
+			vars[name] = value
+		}
+	}
+	if input.Caption != "" {
+		if spec.Opener == nil || !spec.Opener.Caption {
+			return nil, fmt.Errorf("%w: %s does not support an opener caption", ErrInvalidFieldValue, spec.Name)
+		}
+		vars["caption"] = input.Caption
+	}
+	return vars, nil
+}
+
+func isStructuredBodyFormat(format string) bool {
+	switch format {
+	case BodyFormatFields, BodyFormatRows, BodyFormatJSONObject, BodyFormatJSONArray, "":
+		return true
+	default:
+		return false
+	}
 }
 
 func renderFields(spec *LayoutSpec, vars map[string]any, opener string) (string, error) {

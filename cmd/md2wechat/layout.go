@@ -28,9 +28,12 @@ var (
 		tag         string
 		lifecycle   string
 	}
-	layoutRenderVars    []string
-	layoutValidateFile  string
-	layoutValidateStdin bool
+	layoutRenderVars     []string
+	layoutRenderParams   []string
+	layoutRenderCaption  string
+	layoutRenderBodyFile string
+	layoutValidateFile   string
+	layoutValidateStdin  bool
 )
 
 var layoutCmd = &cobra.Command{
@@ -98,7 +101,7 @@ var layoutShowCmd = &cobra.Command{
 
 var layoutRenderCmd = &cobra.Command{
 	Use:   "render <name>",
-	Short: "Render a :::module ... ::: block from --var KEY=VALUE pairs",
+	Short: "Render a :::module ... ::: block",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := layoutcatalog.DefaultCatalog()
@@ -107,13 +110,13 @@ var layoutRenderCmd = &cobra.Command{
 		}
 		vars := map[string]any{}
 		for _, kv := range layoutRenderVars {
-			i := strings.Index(kv, "=")
-			if i < 0 {
+			key, value, ok := strings.Cut(kv, "=")
+			if !ok {
 				return wrapCLIError(codeLayoutInvalidFieldValue,
 					fmt.Errorf("invalid --var %q (want KEY=VALUE)", kv),
 					"invalid var")
 			}
-			vars[kv[:i]] = kv[i+1:]
+			vars[key] = value
 		}
 		if raw, ok := vars["rows"]; ok {
 			if s, isStr := raw.(string); isStr && strings.HasPrefix(s, "[") {
@@ -123,7 +126,38 @@ var layoutRenderCmd = &cobra.Command{
 				}
 			}
 		}
-		out, err := c.Render(args[0], vars)
+		params := map[string]string{}
+		for _, kv := range layoutRenderParams {
+			key, value, ok := strings.Cut(kv, "=")
+			if !ok {
+				return wrapCLIError(codeLayoutInvalidFieldValue,
+					fmt.Errorf("invalid --param %q (want KEY=VALUE)", kv),
+					"invalid param")
+			}
+			params[key] = value
+		}
+
+		var body string
+		if layoutRenderBodyFile != "" {
+			var content []byte
+			var readErr error
+			if layoutRenderBodyFile == "-" {
+				content, readErr = io.ReadAll(stdinReader)
+			} else {
+				content, readErr = os.ReadFile(layoutRenderBodyFile)
+			}
+			if readErr != nil {
+				return wrapCLIError(codeError, readErr, "read layout body")
+			}
+			body = string(content)
+		}
+
+		out, err := c.RenderBlock(args[0], layoutcatalog.RenderInput{
+			Fields:  vars,
+			Params:  params,
+			Caption: layoutRenderCaption,
+			Body:    body,
+		})
 		if err != nil {
 			switch {
 			case errors.Is(err, layoutcatalog.ErrUnknownModule):
@@ -196,6 +230,9 @@ func init() {
 	)
 
 	layoutRenderCmd.Flags().StringArrayVar(&layoutRenderVars, "var", nil, "field as KEY=VALUE (repeatable)")
+	layoutRenderCmd.Flags().StringArrayVar(&layoutRenderParams, "param", nil, "opener parameter as KEY=VALUE (repeatable)")
+	layoutRenderCmd.Flags().StringVar(&layoutRenderCaption, "caption", "", "bracket caption")
+	layoutRenderCmd.Flags().StringVar(&layoutRenderBodyFile, "body-file", "", "raw module body file; use - for stdin")
 
 	layoutValidateCmd.Flags().StringVar(&layoutValidateFile, "file", "", "path to markdown file")
 	layoutValidateCmd.Flags().BoolVar(&layoutValidateStdin, "stdin", false, "read markdown from stdin")
