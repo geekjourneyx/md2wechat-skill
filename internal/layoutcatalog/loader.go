@@ -150,6 +150,9 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if spec.Name == "" {
 		return nil, fmt.Errorf("name is required")
 	}
+	if err := validateLayoutModuleName(spec.Name); err != nil {
+		return nil, err
+	}
 	if spec.Name == reservedModuleName {
 		return nil, fmt.Errorf("layout module name %q is reserved", spec.Name)
 	}

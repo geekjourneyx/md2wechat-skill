@@ -220,6 +220,24 @@ func TestRenderBlockExplicitBodyTakesPrecedenceAcrossPrimaryFormats(t *testing.T
 	}
 }
 
+func TestRenderBlockRawBodyAcceptsCompatibleFormat(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	body := `[{"q":"支持吗？","a":"支持。"}]`
+	out, err := c.RenderBlock("question", RenderInput{Body: body})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := ":::question\n" + body + "\n:::\n"; out != want {
+		t.Fatalf("RenderBlock() = %q, want %q", out, want)
+	}
+	if report := c.Validate(out); len(report.Errors) != 0 {
+		t.Fatalf("rendered compatible body failed validation: %+v", report.Errors)
+	}
+}
+
 func TestRenderLegacyBodyUsesRawPathWhenBodySpecExists(t *testing.T) {
 	c := NewCatalog()
 	c.modules["legacy-fields"] = &LayoutSpec{

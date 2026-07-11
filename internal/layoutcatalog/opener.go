@@ -21,14 +21,14 @@ func parseBlockOpener(line string) (ParsedOpener, error) {
 		return ParsedOpener{}, fmt.Errorf("layout opener must start with a triple-colon marker")
 	}
 	rest := strings.TrimPrefix(line, ":::")
-	nameEnd := 0
-	for nameEnd < len(rest) && isModuleNameChar(rest[nameEnd], nameEnd == 0) {
-		nameEnd++
-	}
-	if nameEnd == 0 {
-		return ParsedOpener{}, fmt.Errorf("layout opener requires a valid module name")
+	nameEnd := strings.IndexAny(rest, "[{ \t")
+	if nameEnd < 0 {
+		nameEnd = len(rest)
 	}
 	name := rest[:nameEnd]
+	if err := validateLayoutModuleName(name); err != nil {
+		return ParsedOpener{}, err
+	}
 	if name == reservedModuleName {
 		return ParsedOpener{}, fmt.Errorf("%q is reserved and cannot be a layout module name", name)
 	}
@@ -78,6 +78,18 @@ func parseBlockOpener(line string) (ParsedOpener, error) {
 	default:
 		return ParsedOpener{}, fmt.Errorf("invalid layout opener suffix")
 	}
+}
+
+func validateLayoutModuleName(name string) error {
+	if name == "" || !isModuleNameChar(name[0], true) {
+		return fmt.Errorf("invalid layout module name %q (must match ^[a-z][a-z0-9_-]*$)", name)
+	}
+	for i := 1; i < len(name); i++ {
+		if !isModuleNameChar(name[i], false) {
+			return fmt.Errorf("invalid layout module name %q (must match ^[a-z][a-z0-9_-]*$)", name)
+		}
+	}
+	return nil
 }
 
 func isModuleNameChar(ch byte, first bool) bool {
@@ -210,6 +222,9 @@ func renderOpener(spec *LayoutSpec, vars map[string]any) (string, error) {
 }
 
 func renderOpenerWithOrder(spec *LayoutSpec, vars map[string]any, order openerParamOrder) (string, error) {
+	if err := validateLayoutModuleName(spec.Name); err != nil {
+		return "", err
+	}
 	if spec.Name == reservedModuleName {
 		return "", fmt.Errorf("layout module name %q is reserved", spec.Name)
 	}

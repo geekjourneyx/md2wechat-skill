@@ -29,6 +29,9 @@ func (c *Catalog) RenderBlock(name string, input RenderInput) (string, error) {
 }
 
 func (c *Catalog) renderBlock(name string, input RenderInput, order openerParamOrder) (string, error) {
+	if err := validateLayoutModuleName(name); err != nil {
+		return "", fmt.Errorf("%w: %v", ErrInvalidFieldValue, err)
+	}
 	spec, ok := c.Get(name)
 	if !ok {
 		return "", fmt.Errorf("%w: %s", ErrUnknownModule, name)
@@ -48,9 +51,7 @@ func (c *Catalog) renderBlock(name string, input RenderInput, order openerParamO
 	}
 	if rawBody != "" {
 		out := renderRawBody(opener, rawBody)
-		primary := *spec
-		primary.CompatibleBodyFormats = nil
-		if err := validateRenderedBody(&primary, rawBody); err != nil {
+		if err := validateRenderedBody(spec, rawBody); err != nil {
 			return "", err
 		}
 		return out, nil

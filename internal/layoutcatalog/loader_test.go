@@ -1,6 +1,7 @@
 package layoutcatalog
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -89,6 +90,62 @@ metadata:
 				t.Fatalf("parseLayoutSpec() error = %v, want reserved-name rejection", err)
 			}
 		})
+	}
+}
+
+func TestInvalidCustomModuleNamesCannotLoadRenderOrValidate(t *testing.T) {
+	for _, name := range []string{"Bad", "bad.name", "_bad", "bad/name", "bad name"} {
+		t.Run(name, func(t *testing.T) {
+			yaml := []byte(`schema_version: "1"
+name: "` + name + `"
+body_format: fields
+version: "1.0.0"
+category: opening
+serves: [attention]
+fields:
+  required:
+    - name: title
+metadata:
+  author: test
+  provenance: custom
+`)
+			if _, err := parseLayoutSpec(yaml); err == nil || !strings.Contains(err.Error(), "invalid layout module name") {
+				t.Fatalf("parseLayoutSpec(%q) error = %v", name, err)
+			}
+
+			c := NewCatalog()
+			c.modules[name] = &LayoutSpec{
+				Name: name, BodyFormat: BodyFormatFields,
+				Fields: &FieldsSpec{Required: []FieldSpec{{Name: "title"}}},
+			}
+			if _, err := c.RenderBlock(name, RenderInput{Fields: map[string]any{"title": "Value"}}); !errors.Is(err, ErrInvalidFieldValue) {
+				t.Fatalf("RenderBlock(%q) error = %v, want ErrInvalidFieldValue", name, err)
+			}
+			report := c.Validate(":::" + name + "\ntitle: Value\n:::\n")
+			if len(report.Errors) == 0 && len(report.Warnings) == 0 {
+				t.Fatalf("Validate(%q) resolved an invalid module name without diagnostics", name)
+			}
+		})
+	}
+}
+
+func TestLoadFromDirRejectsInvalidModuleName(t *testing.T) {
+	dir := t.TempDir()
+	yaml := []byte(`schema_version: "1"
+name: Bad
+version: "1.0.0"
+category: opening
+serves: [attention]
+metadata:
+  author: test
+  provenance: custom
+`)
+	if err := os.WriteFile(filepath.Join(dir, "bad.yaml"), yaml, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c := NewCatalog()
+	if err := c.loadFromDir(dir); err == nil || !strings.Contains(err.Error(), "invalid layout module name") {
+		t.Fatalf("loadFromDir() error = %v", err)
 	}
 }
 

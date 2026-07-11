@@ -75,6 +75,64 @@ func TestLayoutListSelectsCompatibilityLifecycle(t *testing.T) {
 	}
 }
 
+func TestLayoutListSelectsRecommendedLifecycleExplicitly(t *testing.T) {
+	setupLayoutListLifecycleTest(t)
+	layoutListFilters.lifecycle = layoutcatalog.LifecycleRecommended
+
+	stdout := captureStdout(t, func() {
+		if err := layoutListCmd.RunE(layoutListCmd, nil); err != nil {
+			t.Fatalf("layoutListCmd.RunE() error = %v", err)
+		}
+	})
+
+	output := string(stdout)
+	if !strings.Contains(output, `"hero"`) {
+		t.Fatalf("recommended list did not include hero:\n%s", stdout)
+	}
+	if strings.Contains(output, `"compatibility-only"`) {
+		t.Fatalf("recommended list unexpectedly included compatibility module:\n%s", stdout)
+	}
+}
+
+func TestLayoutListRejectsUnsupportedLifecycle(t *testing.T) {
+	setupLayoutListLifecycleTest(t)
+	layoutListFilters.lifecycle = "experimental"
+
+	oldExit := exitFunc
+	exitCode := 0
+	exitFunc = func(code int) { exitCode = code }
+	t.Cleanup(func() { exitFunc = oldExit })
+
+	var stdout []byte
+	stderr := captureStderr(t, func() {
+		stdout = captureStdout(t, func() {
+			err := layoutListCmd.RunE(layoutListCmd, nil)
+			if err == nil {
+				t.Fatal("layoutListCmd.RunE() error = nil, want invalid lifecycle error")
+			}
+			responseError(err)
+		})
+	})
+
+	if len(stderr) != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr)
+	}
+	if exitCode != 1 {
+		t.Fatalf("exit code = %d, want 1", exitCode)
+	}
+
+	var response cliResponse
+	if err := json.Unmarshal(stdout, &response); err != nil {
+		t.Fatalf("unmarshal response: %v\n%s", err, stdout)
+	}
+	if response.Success || response.Code != codeLayoutInvalidFilter {
+		t.Fatalf("unexpected response: %#v", response)
+	}
+	if response.Message != `invalid lifecycle "experimental": expected recommended or compatibility` {
+		t.Fatalf("message = %q", response.Message)
+	}
+}
+
 func setupLayoutListLifecycleTest(t *testing.T) {
 	t.Helper()
 	oldJSON := jsonOutput

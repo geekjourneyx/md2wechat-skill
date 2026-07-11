@@ -49,6 +49,14 @@ var layoutListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List available layout modules",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		switch layoutListFilters.lifecycle {
+		case "", layoutcatalog.LifecycleRecommended, layoutcatalog.LifecycleCompatibility:
+		default:
+			return newCLIError(
+				codeLayoutInvalidFilter,
+				fmt.Sprintf("invalid lifecycle %q: expected recommended or compatibility", layoutListFilters.lifecycle),
+			)
+		}
 		c, err := layoutcatalog.DefaultCatalog()
 		if err != nil {
 			return wrapCLIError(codeError, err, "load layout catalog")
