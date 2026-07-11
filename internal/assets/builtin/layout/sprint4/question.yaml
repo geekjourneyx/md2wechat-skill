@@ -29,9 +29,11 @@ fields:
     - name: q
       description: 问题内容（JSON key：q，以问句形式表达）
       example: "模块是否支持所有主题？"
+      value_type: string
     - name: a
       description: 回答内容（JSON key：a，简洁直接）
       example: "是的，所有主题都会渲染这些模块。"
+      value_type: string
   optional: []
 body:
   min_items: 2

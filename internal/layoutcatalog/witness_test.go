@@ -244,6 +244,33 @@ func TestParseLayoutSpecValidatesVariantRules(t *testing.T) {
 	}
 }
 
+func TestParseLayoutSpecValidatesFieldValueTypesAndDefaultRules(t *testing.T) {
+	tests := []struct {
+		name, field, extra, want string
+	}{
+		{name: "string type", field: "    - {name: title, value_type: string}\n"},
+		{name: "legacy any type", field: "    - {name: title}\n"},
+		{name: "unknown value type", field: "    - {name: title, value_type: number}\n", want: "value_type"},
+		{name: "unknown default required field", field: "    - {name: title}\n", extra: "  required_when_no_variant: [missing]\n", want: "required_when_no_variant"},
+		{name: "unknown default required-any field", field: "    - {name: title}\n", extra: "  required_any_when_no_variant:\n    - [title, missing]\n", want: "required_any_when_no_variant"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			yaml := baseLayoutYAML + "fields:\n  optional:\n" + tt.field + tt.extra
+			_, err := parseLayoutSpec([]byte(yaml))
+			if tt.want == "" {
+				if err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("error = %v, want category %q", err, tt.want)
+			}
+		})
+	}
+}
+
 func TestValidatorIndependentNegativeBoundaries(t *testing.T) {
 	tests := []struct {
 		name, markdown, category string

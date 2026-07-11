@@ -55,6 +55,7 @@ type FieldSpec struct {
 	Description string   `yaml:"description,omitempty"`
 	Enum        []string `yaml:"enum,omitempty"`
 	Example     string   `yaml:"example,omitempty"`
+	ValueType   string   `yaml:"value_type,omitempty"`
 }
 
 type RowsSpec struct {
@@ -65,17 +66,21 @@ type RowsSpec struct {
 }
 
 type FieldsSpec struct {
-	Required    []FieldSpec      `yaml:"required,omitempty"`
-	Optional    []FieldSpec      `yaml:"optional,omitempty"`
-	RequiredAny [][]string       `yaml:"required_any,omitempty"`
-	OutputOrder []string         `yaml:"output_order,omitempty"`
-	Shapes      []FieldShapeSpec `yaml:"shapes,omitempty"`
+	Required                 []FieldSpec      `yaml:"required,omitempty"`
+	Optional                 []FieldSpec      `yaml:"optional,omitempty"`
+	RequiredAny              [][]string       `yaml:"required_any,omitempty"`
+	RequiredWhenNoVariant    []string         `yaml:"required_when_no_variant,omitempty"`
+	RequiredAnyWhenNoVariant [][]string       `yaml:"required_any_when_no_variant,omitempty"`
+	OutputOrder              []string         `yaml:"output_order,omitempty"`
+	Shapes                   []FieldShapeSpec `yaml:"shapes,omitempty"`
 }
 
 type FieldShapeSpec struct {
-	Field     string `yaml:"field"`
-	Separator string `yaml:"separator"`
-	MinParts  int    `yaml:"min_parts"`
+	Field         string `yaml:"field"`
+	Separator     string `yaml:"separator"`
+	MinParts      int    `yaml:"min_parts"`
+	ItemSeparator string `yaml:"item_separator,omitempty"`
+	ItemMinParts  int    `yaml:"item_min_parts,omitempty"`
 }
 
 type FieldGroupSpec struct {

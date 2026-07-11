@@ -274,6 +274,9 @@ func validateFieldsSpec(fields *FieldsSpec) (map[string]bool, error) {
 		if declared[field.Name] {
 			return nil, fmt.Errorf("duplicate field %q", field.Name)
 		}
+		if field.ValueType != "" && field.ValueType != "string" {
+			return nil, fmt.Errorf("field %q has invalid value_type %q", field.Name, field.ValueType)
+		}
 		declared[field.Name] = true
 	}
 	seenGroups := map[string]bool{}
@@ -302,6 +305,31 @@ func validateFieldsSpec(fields *FieldsSpec) (map[string]bool, error) {
 		}
 		seenGroups[key] = true
 	}
+	seenDefaultRequired := map[string]bool{}
+	for _, name := range fields.RequiredWhenNoVariant {
+		if !declared[name] {
+			return nil, fmt.Errorf("required_when_no_variant field %q is not declared", name)
+		}
+		if seenDefaultRequired[name] {
+			return nil, fmt.Errorf("duplicate required_when_no_variant field %q", name)
+		}
+		seenDefaultRequired[name] = true
+	}
+	for _, group := range fields.RequiredAnyWhenNoVariant {
+		if len(group) == 0 {
+			return nil, fmt.Errorf("required_any_when_no_variant group must not be empty")
+		}
+		seen := map[string]bool{}
+		for _, name := range group {
+			if !declared[name] {
+				return nil, fmt.Errorf("required_any_when_no_variant field %q is not declared", name)
+			}
+			if seen[name] {
+				return nil, fmt.Errorf("duplicate required_any_when_no_variant field %q", name)
+			}
+			seen[name] = true
+		}
+	}
 	seenOutput := map[string]bool{}
 	for _, name := range fields.OutputOrder {
 		if !declared[name] {
@@ -328,6 +356,12 @@ func validateFieldShapeSpecs(shapes []FieldShapeSpec, declared map[string]bool, 
 		}
 		if shape.MinParts <= 1 {
 			return fmt.Errorf("%s shape min_parts must be greater than 1", owner)
+		}
+		if shape.ItemSeparator == "" && shape.ItemMinParts != 0 {
+			return fmt.Errorf("%s shape item_separator is required with item_min_parts", owner)
+		}
+		if shape.ItemSeparator != "" && shape.ItemMinParts <= 1 {
+			return fmt.Errorf("%s shape item_min_parts must be greater than 1", owner)
 		}
 	}
 	return nil

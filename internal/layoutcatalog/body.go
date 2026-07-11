@@ -22,7 +22,8 @@ type bodyField struct {
 type bodyFacts struct {
 	fields      []bodyField
 	fieldValues map[string][]string
-	jsonItems   []map[string][]string
+	fieldTypes  map[string][]string
+	jsonItems   []jsonItemFacts
 	imageCount  int
 	itemCount   int
 }
@@ -33,7 +34,10 @@ func validateBlockBody(spec *LayoutSpec, body []string) []bodyValidationIssue {
 	bestParseIssues := 0
 	for i, format := range formats {
 		facts, parseIssues := parseBodyFacts(spec, format, body)
-		issues := append(parseIssues, validateBodyFacts(spec, format, facts)...)
+		issues := parseIssues
+		if len(parseIssues) == 0 {
+			issues = append(issues, validateBodyFacts(spec, format, facts)...)
+		}
 		if len(issues) == 0 {
 			return nil
 		}
@@ -59,13 +63,15 @@ func parseBodyFacts(spec *LayoutSpec, format string, body []string) (bodyFacts, 
 		facts.imageCount = countMarkdownImages(body)
 		return facts, nil
 	case BodyFormatJSONObject, BodyFormatJSONArray:
-		fields, items, err := parseJSONBodyData(body, format)
+		fields, types, items, err := parseJSONBodyData(body, format)
 		if err != nil {
 			return facts, []bodyValidationIssue{{message: err.Error()}}
 		}
 		for name, value := range fields {
-			facts.addField(name, value)
+			facts.fields = append(facts.fields, bodyField{name: name, value: value})
+			facts.fieldValues[name] = append(facts.fieldValues[name], value)
 		}
+		facts.fieldTypes = types
 		facts.jsonItems = items
 		facts.itemCount = len(items)
 		return facts, nil
@@ -87,12 +93,13 @@ func parseBodyFacts(spec *LayoutSpec, format string, body []string) (bodyFacts, 
 }
 
 func newBodyFacts() bodyFacts {
-	return bodyFacts{fieldValues: map[string][]string{}}
+	return bodyFacts{fieldValues: map[string][]string{}, fieldTypes: map[string][]string{}}
 }
 
 func (facts *bodyFacts) addField(name, value string) {
 	facts.fields = append(facts.fields, bodyField{name: name, value: value})
 	facts.fieldValues[name] = append(facts.fieldValues[name], value)
+	facts.fieldTypes[name] = append(facts.fieldTypes[name], "string")
 }
 
 func (facts *bodyFacts) addDeclaredFields(fields *FieldsSpec, body []string) {
@@ -261,7 +268,11 @@ func parseDialogueBody(bodySpec *BodySpec, body []string) (bodyFacts, []bodyVali
 		if value == "" {
 			return facts, []bodyValidationIssue{{field: prefix, message: "dialogue line must not be empty"}}
 		}
-		if !containsString(normalizedDialoguePrefixes(bodySpec), prefix) {
+		configured := containsString(normalizedDialoguePrefixes(bodySpec), prefix)
+		if configured && fullWidthSeparator {
+			return facts, []bodyValidationIssue{{field: prefix, message: "configured dialogue prefixes require an ASCII colon"}}
+		}
+		if !configured {
 			if bodySpec == nil || !bodySpec.AllowNamedSpeakers {
 				return facts, []bodyValidationIssue{{field: prefix, message: fmt.Sprintf("dialogue prefix %q is not allowed", prefix)}}
 			}
@@ -316,7 +327,7 @@ func validateBodyFacts(spec *LayoutSpec, format string, facts bodyFacts) []bodyV
 	if formatSupportsDeclaredFields(format) {
 		if format == BodyFormatJSONArray && len(facts.jsonItems) > 0 {
 			for index, item := range facts.jsonItems {
-				itemIssues := validateStructuredFields(spec, item)
+				itemIssues := validateStructuredFields(spec, item.values, item.types)
 				for _, issue := range itemIssues {
 					issue.message = fmt.Sprintf("item %d: %s", index+1, issue.message)
 					issues = append(issues, issue)
@@ -324,16 +335,28 @@ func validateBodyFacts(spec *LayoutSpec, format string, facts bodyFacts) []bodyV
 			}
 			return issues
 		}
-		issues = append(issues, validateStructuredFields(spec, facts.fieldValues)...)
+		issues = append(issues, validateStructuredFields(spec, facts.fieldValues, facts.fieldTypes)...)
 	}
 	return issues
 }
 
-func validateStructuredFields(spec *LayoutSpec, values map[string][]string) []bodyValidationIssue {
+func validateStructuredFields(spec *LayoutSpec, values, types map[string][]string) []bodyValidationIssue {
 	var issues []bodyValidationIssue
 	active, selectorPresent, selectorIssues := resolveVariant(spec.Variants, values)
 	issues = append(issues, selectorIssues...)
-	issues = append(issues, validateFields(spec.Fields, spec.Variants, values, selectorPresent)...)
+	fieldIssues := validateFields(spec.Fields, spec.Variants, values, types, !selectorPresent)
+	for _, issue := range fieldIssues {
+		duplicateSelectorError := false
+		for _, selectorIssue := range selectorIssues {
+			if issue.field == selectorIssue.field && strings.Contains(issue.message, "must be one of") {
+				duplicateSelectorError = true
+				break
+			}
+		}
+		if !duplicateSelectorError {
+			issues = append(issues, issue)
+		}
+	}
 	if len(selectorIssues) == 0 && active != nil {
 		issues = append(issues, validateVariantFields(*active, values)...)
 	}
@@ -473,34 +496,43 @@ func validateFieldGroups(group *FieldGroupSpec, fields []bodyField) []bodyValida
 	return nil
 }
 
-func validateFields(fields *FieldsSpec, variants []VariantSpec, values map[string][]string, skipRequired bool) []bodyValidationIssue {
+func validateFields(fields *FieldsSpec, variants []VariantSpec, values, types map[string][]string, applyDefaultRules bool) []bodyValidationIssue {
 	if fields == nil {
 		return nil
 	}
 	var issues []bodyValidationIssue
-	if !skipRequired {
-		for _, field := range fields.Required {
-			value := lastNonEmptyValue(values[field.Name])
-			if value == "" {
-				issues = append(issues, bodyValidationIssue{field: field.Name, message: "required field missing", cause: ErrMissingRequiredField})
-				continue
-			}
-			if field.Name != "type" && field.Name != "variant" {
-				if err := checkFieldEnum(field, variants, value); err != nil {
-					issues = append(issues, bodyValidationIssue{field: field.Name, message: err.Error()})
-				}
-			}
+	for _, field := range fields.Required {
+		value := lastNonEmptyValue(values[field.Name])
+		if value == "" {
+			issues = append(issues, bodyValidationIssue{field: field.Name, message: "required field missing", cause: ErrMissingRequiredField})
+			continue
 		}
+		issues = append(issues, validateFieldValue(field, variants, value, lastNonEmptyValue(types[field.Name]))...)
 	}
 	for _, field := range fields.Optional {
-		if value := lastNonEmptyValue(values[field.Name]); value != "" && field.Name != "type" && field.Name != "variant" {
-			if err := checkFieldEnum(field, variants, value); err != nil {
-				issues = append(issues, bodyValidationIssue{field: field.Name, message: err.Error()})
-			}
+		if value := lastNonEmptyValue(values[field.Name]); value != "" {
+			issues = append(issues, validateFieldValue(field, variants, value, lastNonEmptyValue(types[field.Name]))...)
 		}
 	}
-	if !skipRequired {
-		for _, group := range fields.RequiredAny {
+	for _, group := range fields.RequiredAny {
+		found := false
+		for _, name := range group {
+			if hasNonEmptyValue(values[name]) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			issues = append(issues, bodyValidationIssue{message: fmt.Sprintf("at least one of %v is required", group), cause: ErrMissingRequiredField})
+		}
+	}
+	if applyDefaultRules {
+		for _, name := range fields.RequiredWhenNoVariant {
+			if !hasNonEmptyValue(values[name]) {
+				issues = append(issues, bodyValidationIssue{field: name, message: "required field missing when no variant is selected", cause: ErrMissingRequiredField})
+			}
+		}
+		for _, group := range fields.RequiredAnyWhenNoVariant {
 			found := false
 			for _, name := range group {
 				if hasNonEmptyValue(values[name]) {
@@ -509,11 +541,27 @@ func validateFields(fields *FieldsSpec, variants []VariantSpec, values map[strin
 				}
 			}
 			if !found {
-				issues = append(issues, bodyValidationIssue{message: fmt.Sprintf("at least one of %v is required", group), cause: ErrMissingRequiredField})
+				issues = append(issues, bodyValidationIssue{message: fmt.Sprintf("at least one of %v is required when no variant is selected", group), cause: ErrMissingRequiredField})
 			}
 		}
 	}
 	issues = append(issues, validateFieldShapes(fields.Shapes, values)...)
+	return issues
+}
+
+func validateFieldValue(field FieldSpec, variants []VariantSpec, value, actualType string) []bodyValidationIssue {
+	var issues []bodyValidationIssue
+	if err := checkFieldEnum(field, variants, value); err != nil {
+		issues = append(issues, bodyValidationIssue{field: field.Name, message: err.Error()})
+	}
+	if field.ValueType == "string" {
+		if actualType == "" {
+			actualType = "string"
+		}
+		if actualType != "string" {
+			issues = append(issues, bodyValidationIssue{field: field.Name, message: fmt.Sprintf("field %s must be a string, got %s", field.Name, actualType), cause: ErrInvalidFieldValue})
+		}
+	}
 	return issues
 }
 
@@ -524,14 +572,28 @@ func validateFieldShapes(shapes []FieldShapeSpec, values map[string][]string) []
 			if strings.TrimSpace(value) == "" {
 				continue
 			}
-			parts := 0
+			var parts []string
 			for _, part := range strings.Split(value, shape.Separator) {
 				if strings.TrimSpace(part) != "" {
-					parts++
+					parts = append(parts, strings.TrimSpace(part))
 				}
 			}
-			if parts < shape.MinParts {
+			if len(parts) < shape.MinParts {
 				issues = append(issues, bodyValidationIssue{field: shape.Field, message: fmt.Sprintf("field %s requires at least %d parts separated by %q", shape.Field, shape.MinParts, shape.Separator), cause: ErrInvalidFieldValue})
+				continue
+			}
+			if shape.ItemSeparator != "" {
+				for _, part := range parts {
+					nested := strings.Split(part, shape.ItemSeparator)
+					valid := len(nested) >= shape.ItemMinParts
+					for i := 0; valid && i < shape.ItemMinParts; i++ {
+						valid = strings.TrimSpace(nested[i]) != ""
+					}
+					if !valid {
+						issues = append(issues, bodyValidationIssue{field: shape.Field, message: fmt.Sprintf("each %s entry requires at least %d non-empty parts separated by %q", shape.Field, shape.ItemMinParts, shape.ItemSeparator), cause: ErrInvalidFieldValue})
+						break
+					}
+				}
 			}
 		}
 	}

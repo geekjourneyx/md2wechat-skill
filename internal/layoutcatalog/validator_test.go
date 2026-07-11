@@ -258,6 +258,8 @@ func TestRendererFalsePositiveBoundaries(t *testing.T) {
 		{name: "formula has two parts", markdown: ":::infographic\ntype: formula\ntitle: 公式\nformula: 判断 + 行动\n:::\n", accepted: true},
 		{name: "tradeoff needs two parts", markdown: ":::infographic\ntype: tradeoff\ntitle: 取舍\ntradeoffs: 速度:快\n:::\n"},
 		{name: "tradeoff has two parts", markdown: ":::infographic\ntype: tradeoff\ntitle: 取舍\ntradeoffs: 速度:快 | 稳定:高\n:::\n", accepted: true},
+		{name: "tradeoff rejects malformed entry", markdown: ":::infographic\ntype: tradeoff\ntitle: 取舍\ntradeoffs: 速度:快 | 缺少值\n:::\n"},
+		{name: "tradeoff rejects empty second segment", markdown: ":::infographic\ntype: tradeoff\ntitle: 取舍\ntradeoffs: 速度::快 | 稳定:高\n:::\n"},
 		{name: "annotate point needs four parts", markdown: ":::image-annotate\nimage: https://example.com/a.png\npoint: 01 | 20 | 30\n:::\n"},
 		{name: "annotate point has four parts", markdown: ":::image-annotate\nimage: https://example.com/a.png\npoint: 01 | 20 | 30 | 标题\n:::\n", accepted: true},
 		{name: "inactive unknown variant", markdown: ":::infographic\ntype: thesis\nvariant: unknown\ntitle: 判断\n:::\n", field: "variant", maxErrors: 1},

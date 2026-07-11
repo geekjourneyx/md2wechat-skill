@@ -23,10 +23,8 @@ anti_pattern: |
   highlight 写成描述性语句而非判断；
   body 写太长变成第二个正文段落。
 fields:
-  required:
-    - name: highlight
-      description: 一句话总结
-      example: "先把结构搭稳，再让主题接管气质"
+  required: []
+  required_when_no_variant: [highlight]
   optional:
     - name: variant
       description: 总结结构变体
@@ -35,6 +33,9 @@ fields:
     - name: eyebrow
       description: 标签词
       example: "一句话总结"
+    - name: highlight
+      description: 一句话总结
+      example: "先把结构搭稳，再让主题接管气质"
     - name: title
       description: 摘要标题
       example: "发布前带走三点"

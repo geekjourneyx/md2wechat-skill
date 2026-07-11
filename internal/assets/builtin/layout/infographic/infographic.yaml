@@ -170,7 +170,7 @@ variants:
     use_when: 需要说明方案取舍
     required: [title, tradeoffs]
     shapes:
-      - {field: tradeoffs, separator: "|", min_parts: 2}
+      - {field: tradeoffs, separator: "|", min_parts: 2, item_separator: ":", item_min_parts: 2}
     example: |
       :::infographic
       type: tradeoff

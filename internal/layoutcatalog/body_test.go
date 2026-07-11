@@ -138,6 +138,11 @@ func TestValidateBlockBodyMatrix(t *testing.T) {
 			body: []string{"Q: Why?", "A: Because."},
 		},
 		{
+			name: "dialogue rejects full-width delimiter for configured pair",
+			spec: &LayoutSpec{BodyFormat: BodyFormatDialogue, Body: &BodySpec{AllowedPrefixes: []string{"Q:", "A:"}, RequiredPairs: [][2]string{{"Q", "A"}}}},
+			body: []string{"Q：Why?", "A：Because."}, wantErr: "ASCII colon",
+		},
+		{
 			name: "dialogue accepts configured alternate pair with ascii colon",
 			spec: &LayoutSpec{BodyFormat: BodyFormatDialogue, Body: &BodySpec{AllowedPrefixes: []string{"U", "E"}, RequiredPairs: [][2]string{{"U", "E"}}}},
 			body: []string{"U: Question", "E: Answer"},
@@ -256,9 +261,12 @@ func TestQuestionPairAndJSONArrayItemBoundaries(t *testing.T) {
 		{name: "answer before question", markdown: ":::question\nA: Answer.\nQ: Question?\n:::\n"},
 		{name: "two questions before answer", markdown: ":::question\nQ: One?\nQ: Two?\nA: Answer.\n:::\n"},
 		{name: "trailing answer", markdown: ":::question\nQ: One?\nA: One.\nA: Extra.\n:::\n"},
+		{name: "full-width configured prefixes", markdown: ":::question\nQ：One?\nA：One.\n:::\n"},
 		{name: "complete JSON items", markdown: ":::question\n[{\"q\":\"One?\",\"a\":\"One.\"},{\"q\":\"Two?\",\"a\":\"Two.\"}]\n:::\n", accepted: true},
 		{name: "split JSON fields", markdown: ":::question\n[{\"q\":\"One?\"},{\"a\":\"One.\"}]\n:::\n"},
 		{name: "second JSON item incomplete", markdown: ":::question\n[{\"q\":\"One?\",\"a\":\"One.\"},{\"q\":\"Two?\"}]\n:::\n"},
+		{name: "numeric JSON question", markdown: ":::question\n[{\"q\":42,\"a\":\"Answer.\"}]\n:::\n"},
+		{name: "boolean JSON answer", markdown: ":::question\n[{\"q\":\"Question?\",\"a\":true}]\n:::\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -271,6 +279,13 @@ func TestQuestionPairAndJSONArrayItemBoundaries(t *testing.T) {
 	report := c.Validate(":::question\n[{\"q\":\"One?\"},{\"a\":\"One.\"}]\n:::\n")
 	if len(report.Errors) == 0 || !strings.Contains(report.Errors[0].Message, "item 1") {
 		t.Fatalf("split JSON error = %+v, want per-item error", report.Errors)
+	}
+	comparison := `:::comparison-table
+{"left":{"title":"A","items":["one","two"]},"right":{"title":"B","items":["three","four"]}}
+:::
+`
+	if report := c.Validate(comparison); len(report.Errors) != 0 {
+		t.Fatalf("array-valued compatibility fields failed: %+v", report.Errors)
 	}
 }
 
@@ -344,6 +359,8 @@ func TestParseLayoutSpecFieldShapeAndOutputOrderSchema(t *testing.T) {
 		{name: "unknown shape field", fields: "  shapes:\n    - {field: missing, separator: '|', min_parts: 2}\n", want: "shape field"},
 		{name: "empty separator", fields: "  shapes:\n    - {field: items, separator: '', min_parts: 2}\n", want: "separator"},
 		{name: "small minimum", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 1}\n", want: "greater than 1"},
+		{name: "item shape missing separator", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 2, item_min_parts: 2}\n", want: "item_separator"},
+		{name: "item shape small minimum", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 2, item_separator: ':', item_min_parts: 1}\n", want: "item_min_parts"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -359,6 +376,45 @@ func TestParseLayoutSpecFieldShapeAndOutputOrderSchema(t *testing.T) {
 				t.Fatalf("error = %v, want category %q", err, tt.want)
 			}
 		})
+	}
+}
+
+func TestDefaultOnlyRequirementsComposeWithVariants(t *testing.T) {
+	spec := &LayoutSpec{
+		Name: "demo", BodyFormat: BodyFormatFields,
+		Fields: &FieldsSpec{
+			Required:              []FieldSpec{{Name: "title"}},
+			Optional:              []FieldSpec{{Name: "variant"}, {Name: "density"}},
+			RequiredWhenNoVariant: []string{"density"},
+		},
+		Variants: []VariantSpec{{Name: "compact", Required: []string{"density"}}},
+	}
+	c := NewCatalog()
+	c.modules[spec.Name] = spec
+	tests := []struct {
+		name, markdown string
+		accepted       bool
+	}{
+		{name: "default complete", markdown: ":::demo\ntitle: T\ndensity: normal\n:::\n", accepted: true},
+		{name: "default missing density", markdown: ":::demo\ntitle: T\n:::\n"},
+		{name: "variant complete", markdown: ":::demo\nvariant: compact\ntitle: T\ndensity: compact\n:::\n", accepted: true},
+		{name: "variant cannot skip base title", markdown: ":::demo\nvariant: compact\ndensity: compact\n:::\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			report := c.Validate(tt.markdown)
+			if got := len(report.Errors) == 0; got != tt.accepted {
+				t.Fatalf("accepted = %v, want %v; errors=%+v", got, tt.accepted, report.Errors)
+			}
+		})
+	}
+}
+
+func TestSelectorEnumWithoutVariantsStillValidates(t *testing.T) {
+	c := NewCatalog()
+	c.modules["demo"] = &LayoutSpec{Name: "demo", BodyFormat: BodyFormatFields, Fields: &FieldsSpec{Optional: []FieldSpec{{Name: "type", Enum: []string{"known"}}}}}
+	if report := c.Validate(":::demo\ntype: unknown\n:::\n"); len(report.Errors) == 0 || report.Errors[0].Field != "type" {
+		t.Fatalf("report = %+v, want type enum error", report)
 	}
 }
 

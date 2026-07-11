@@ -87,11 +87,16 @@ func (c *Catalog) validateBlock(opener ParsedOpener, body []string, line int, r 
 }
 
 func parseJSONBodyFields(body []string, bodyFormat string) (map[string]string, error) {
-	fields, _, err := parseJSONBodyData(body, bodyFormat)
+	fields, _, _, err := parseJSONBodyData(body, bodyFormat)
 	return fields, err
 }
 
-func parseJSONBodyData(body []string, bodyFormat string) (map[string]string, []map[string][]string, error) {
+type jsonItemFacts struct {
+	values map[string][]string
+	types  map[string][]string
+}
+
+func parseJSONBodyData(body []string, bodyFormat string) (map[string]string, map[string][]string, []jsonItemFacts, error) {
 	rawLines := make([]string, 0, len(body))
 	for _, ln := range body {
 		trimmed := strings.TrimSpace(strings.TrimRight(ln, "\r"))
@@ -100,29 +105,31 @@ func parseJSONBodyData(body []string, bodyFormat string) (map[string]string, []m
 		}
 	}
 	if len(rawLines) == 0 {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	raw := strings.Join(rawLines, "\n")
 	switch bodyFormat {
 	case BodyFormatJSONObject:
 		if !strings.HasPrefix(raw, "{") {
-			return nil, nil, fmt.Errorf("%w: expected JSON object body", ErrInvalidFieldValue)
+			return nil, nil, nil, fmt.Errorf("%w: expected JSON object body", ErrInvalidFieldValue)
 		}
 	case BodyFormatJSONArray:
 		if !strings.HasPrefix(raw, "[") {
-			return nil, nil, fmt.Errorf("%w: expected JSON array body", ErrInvalidFieldValue)
+			return nil, nil, nil, fmt.Errorf("%w: expected JSON array body", ErrInvalidFieldValue)
 		}
 	}
 
 	fields := map[string]string{}
 	var decoded any
 	if err := json.Unmarshal([]byte(raw), &decoded); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	collectJSONFields(fields, "", decoded)
-	var items []map[string][]string
+	types := map[string][]string{}
+	collectJSONTypes(types, "", decoded)
+	var items []jsonItemFacts
 	if array, ok := decoded.([]any); ok {
-		items = make([]map[string][]string, 0, len(array))
+		items = make([]jsonItemFacts, 0, len(array))
 		for _, item := range array {
 			flat := map[string]string{}
 			collectJSONFields(flat, "", item)
@@ -130,10 +137,58 @@ func parseJSONBodyData(body []string, bodyFormat string) (map[string]string, []m
 			for name, value := range flat {
 				values[name] = []string{value}
 			}
-			items = append(items, values)
+			itemTypes := map[string][]string{}
+			collectJSONTypes(itemTypes, "", item)
+			items = append(items, jsonItemFacts{values: values, types: itemTypes})
 		}
 	}
-	return fields, items, nil
+	return fields, types, items, nil
+}
+
+func collectJSONTypes(types map[string][]string, prefix string, value any) {
+	switch typed := value.(type) {
+	case map[string]any:
+		for key, item := range typed {
+			name := key
+			if prefix != "" {
+				name = prefix + "." + key
+			}
+			types[name] = append(types[name], jsonValueType(item))
+			switch nested := item.(type) {
+			case map[string]any:
+				collectJSONTypes(types, name, nested)
+			case []any:
+				for _, child := range nested {
+					if object, ok := child.(map[string]any); ok {
+						collectJSONTypes(types, name, object)
+					}
+				}
+			}
+		}
+	case []any:
+		for _, item := range typed {
+			collectJSONTypes(types, prefix, item)
+		}
+	}
+}
+
+func jsonValueType(value any) string {
+	switch value.(type) {
+	case string:
+		return "string"
+	case float64:
+		return "number"
+	case bool:
+		return "boolean"
+	case []any:
+		return "array"
+	case map[string]any:
+		return "object"
+	case nil:
+		return "null"
+	default:
+		return "unknown"
+	}
 }
 
 func collectJSONFields(fields map[string]string, prefix string, value any) {
