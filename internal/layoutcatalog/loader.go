@@ -150,6 +150,9 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if spec.Name == "" {
 		return nil, fmt.Errorf("name is required")
 	}
+	if spec.Name == reservedModuleName {
+		return nil, fmt.Errorf("layout module name %q is reserved", spec.Name)
+	}
 	if spec.Lifecycle == "" {
 		spec.Lifecycle = LifecycleRecommended
 	}
@@ -211,8 +214,8 @@ func validateOpenerSpec(opener *OpenerSpec) error {
 	}
 	seen := make(map[string]bool, len(opener.Params))
 	for _, param := range opener.Params {
-		if param.Name == "" {
-			return fmt.Errorf("opener parameter name is required")
+		if !isValidOpenerParamName(param.Name) {
+			return fmt.Errorf("invalid opener param name %q", param.Name)
 		}
 		if seen[param.Name] {
 			return fmt.Errorf("duplicate opener param %q", param.Name)

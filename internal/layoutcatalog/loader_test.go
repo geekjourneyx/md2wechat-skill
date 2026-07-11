@@ -72,6 +72,46 @@ metadata:
 	}
 }
 
+func TestParseLayoutSpecRejectsReservedModuleName(t *testing.T) {
+	for _, provenance := range []string{"builtin", "custom"} {
+		t.Run(provenance, func(t *testing.T) {
+			yaml := []byte(`schema_version: "1"
+name: block
+version: "1.0.0"
+category: opening
+serves: [attention]
+metadata:
+  author: test
+  provenance: ` + provenance + `
+`)
+			_, err := parseLayoutSpec(yaml)
+			if err == nil || !strings.Contains(err.Error(), "reserved") {
+				t.Fatalf("parseLayoutSpec() error = %v, want reserved-name rejection", err)
+			}
+		})
+	}
+}
+
+func TestLoadFromDirRejectsReservedModuleName(t *testing.T) {
+	dir := t.TempDir()
+	yaml := []byte(`schema_version: "1"
+name: block
+version: "1.0.0"
+category: opening
+serves: [attention]
+metadata:
+  author: test
+  provenance: custom
+`)
+	if err := os.WriteFile(filepath.Join(dir, "block.yaml"), yaml, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c := NewCatalog()
+	if err := c.loadFromDir(dir); err == nil || !strings.Contains(err.Error(), "reserved") {
+		t.Fatalf("loadFromDir() error = %v, want reserved-name rejection", err)
+	}
+}
+
 func TestParseLayoutSpecRejectsInvalidBodyFormat(t *testing.T) {
 	yaml := []byte(`schema_version: "1"
 name: bad

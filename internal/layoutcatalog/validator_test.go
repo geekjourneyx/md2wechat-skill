@@ -139,6 +139,24 @@ func TestValidateInvalidBlockOpenerErrors(t *testing.T) {
 	}
 }
 
+func TestValidateReservedBlockNameAlwaysErrors(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, opener := range []string{":::block", ":::block[hero]", ":::block{type=hero}"} {
+		t.Run(opener, func(t *testing.T) {
+			r := c.Validate(opener + "\n:::\n")
+			if len(r.Errors) == 0 || r.Errors[0].Message != "invalid layout block opener" {
+				t.Fatalf("reserved block opener report = %+v", r)
+			}
+			if len(r.Warnings) != 0 {
+				t.Fatalf("reserved block name must not degrade to unknown warning: %+v", r.Warnings)
+			}
+		})
+	}
+}
+
 func TestValidateJSONFields(t *testing.T) {
 	c := NewCatalog()
 	if err := c.Load(); err != nil {

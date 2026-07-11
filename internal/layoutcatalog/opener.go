@@ -86,6 +86,9 @@ func parseAssignments(raw string) (map[string]string, error) {
 	}
 	params := make(map[string]string, len(fields))
 	for _, field := range fields {
+		if strings.ContainsAny(field, "＝：") {
+			return nil, fmt.Errorf("invalid full-width assignment punctuation in opener parameter")
+		}
 		if strings.Count(field, "=") != 1 {
 			return nil, fmt.Errorf("invalid opener parameter %q", field)
 		}
@@ -93,12 +96,29 @@ func parseAssignments(raw string) (map[string]string, error) {
 		if parts[0] == "" || parts[1] == "" {
 			return nil, fmt.Errorf("opener parameter keys and values must not be empty")
 		}
+		if !isValidOpenerParamName(parts[0]) {
+			return nil, fmt.Errorf("invalid opener param name %q", parts[0])
+		}
 		if _, exists := params[parts[0]]; exists {
 			return nil, fmt.Errorf("duplicate opener parameter %q", parts[0])
 		}
 		params[parts[0]] = parts[1]
 	}
 	return params, nil
+}
+
+func isValidOpenerParamName(name string) bool {
+	if name == "" || name[0] < 'a' || name[0] > 'z' {
+		return false
+	}
+	for i := 1; i < len(name); i++ {
+		ch := name[i]
+		if ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch >= '0' && ch <= '9' || ch == '_' || ch == '-' {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func validateOpener(parsed ParsedOpener, spec *OpenerSpec) (ParsedOpener, error) {
@@ -178,6 +198,9 @@ func stringAllowed(value string, enum []string) bool {
 }
 
 func renderOpener(spec *LayoutSpec, vars map[string]any) (string, error) {
+	if spec.Name == reservedModuleName {
+		return "", fmt.Errorf("layout module name %q is reserved", spec.Name)
+	}
 	base := ":::" + spec.Name
 	if spec.Opener == nil {
 		if caption, ok := lookupString(vars, "caption"); ok && caption != "" {
@@ -185,12 +208,14 @@ func renderOpener(spec *LayoutSpec, vars map[string]any) (string, error) {
 		}
 		return base, nil
 	}
+	if err := validateOpenerSpec(spec.Opener); err != nil {
+		return "", err
+	}
 	if spec.Opener.Caption {
 		if caption, ok := lookupString(vars, "caption"); ok && caption != "" {
 			return renderBracket(base, caption)
 		}
 	}
-
 	values := make([]string, 0, len(spec.Opener.Params))
 	for _, param := range spec.Opener.Params {
 		value, ok := lookupString(vars, param.Name)
@@ -200,8 +225,8 @@ func renderOpener(spec *LayoutSpec, vars map[string]any) (string, error) {
 		if value == "" {
 			continue
 		}
-		if strings.ContainsAny(value, " \t\r\n") {
-			return "", fmt.Errorf("opener parameter %s must be one token", param.Name)
+		if err := validateRenderedOpenerValue(spec.Opener.ParamStyle, param.Name, value); err != nil {
+			return "", err
 		}
 		if !stringAllowed(value, param.Enum) {
 			return "", fmt.Errorf("opener parameter %s must be one of %v, got %q", param.Name, param.Enum, value)
@@ -228,6 +253,31 @@ func renderOpener(spec *LayoutSpec, vars map[string]any) (string, error) {
 	default:
 		return base, nil
 	}
+}
+
+func validateRenderedOpenerValue(style, name, value string) error {
+	if strings.ContainsAny(value, "\r\n") {
+		return fmt.Errorf("opener parameter %s must stay on one line", name)
+	}
+	switch style {
+	case ParamStyleBracket:
+		if strings.ContainsAny(value, "[]") {
+			return fmt.Errorf("bracket opener parameter %s contains bracket punctuation", name)
+		}
+	case ParamStyleBraces:
+		if strings.ContainsAny(value, " \t={}＝：") {
+			return fmt.Errorf("braced opener parameter %s contains unsupported grammar characters", name)
+		}
+	case ParamStyleTokens:
+		if strings.ContainsAny(value, " \t=＝：") {
+			return fmt.Errorf("token opener parameter %s contains unsupported grammar characters", name)
+		}
+	case ParamStyleToken:
+		if strings.ContainsAny(value, " \t=＝：[]{}") {
+			return fmt.Errorf("raw token opener parameter %s contains unsupported grammar characters", name)
+		}
+	}
+	return nil
 }
 
 func renderBracket(base, value string) (string, error) {
