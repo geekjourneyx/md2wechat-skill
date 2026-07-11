@@ -148,21 +148,11 @@ Use this decision frame:
 - `memorability`: make one judgment, quote, metric, or brand anchor stick.
 - `conversion`: help readers save, follow, inquire, share, or buy.
 
-Use `layout list --json` and `layout show <name> --json` to inspect `body_format`. It is the module body syntax contract:
+Use CLI discovery as the source of truth for layout syntax instead of memorizing or guessing `body_format` values:
 
-- `fields`
-- `rows`
-- `json_object`
-- `json_array`
-- `markdown_images`
-- `markdown_fields`
-- `split`
-- `lines`
-- `dialogue`
-
-Inspect the opener, body schema, canonical executable example, and any structurally distinct variant examples with `layout show <name> --json`. Reuse the canonical witness instead of guessing syntax. Use `layout render` when structured variables are enough; for complex blocks pass raw content with `--body-file` (or `--body-file -` for stdin), then validate the generated Markdown.
-
-Default discovery returns recommended modules. Query `layout list --lifecycle compatibility --json` only when migrating existing `dialogue`, `gallery`, or `longimage` blocks; do not recommend compatibility layouts for new articles. Before selecting a module for API conversion, require `remote_renderer_available: true` from `layout list --json`. Local `layout validate` proves schema acceptance, not that a custom YAML has a remote HTML renderer or that a target API deployment supports it.
+- Inspect the opener, body schema, canonical executable example, and structurally distinct variants with `layout show <name> --json`. Reuse the canonical witness.
+- Use `layout render` for structured fields and `--body-file` (or `--body-file -` for stdin) for complex bodies, then validate the generated Markdown.
+- Default discovery returns recommended modules. Use `layout list --lifecycle compatibility --json` only for old-content migration. For API conversion, require `remote_renderer_available: true`; local validation alone does not prove remote renderer deployment.
 
 Default module discipline:
 
