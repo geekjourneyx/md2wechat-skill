@@ -24,39 +24,74 @@ func TestLoadBuiltinIncludesHero(t *testing.T) {
 	}
 }
 
-func TestEnvOverrideTrumpsBuiltin(t *testing.T) {
-	ResetDefaultCatalogForTests()
-	t.Cleanup(ResetDefaultCatalogForTests)
-
+func TestCatalogIgnoresEnvironmentLayoutDirectory(t *testing.T) {
 	dir := t.TempDir()
-	override := filepath.Join(dir, "opening")
-	if err := os.MkdirAll(override, 0o755); err != nil {
+	writeLayoutOverride(t, dir)
+	t.Setenv("MD2WECHAT_LAYOUT_DIR", dir)
+
+	assertCatalogIgnoresOverride(t)
+}
+
+func TestCatalogIgnoresUserLayoutDirectory(t *testing.T) {
+	home := t.TempDir()
+	writeLayoutOverride(t, filepath.Join(home, ".config", "md2wechat", "layout"))
+	t.Setenv("HOME", home)
+
+	assertCatalogIgnoresOverride(t)
+}
+
+func TestCatalogIgnoresWorkingDirectoryLayout(t *testing.T) {
+	previous, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	writeLayoutOverride(t, filepath.Join(root, "layout"))
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(previous); err != nil {
+			t.Errorf("restore working directory: %v", err)
+		}
+	})
+
+	assertCatalogIgnoresOverride(t)
+}
+
+func writeLayoutOverride(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	yaml := []byte(`schema_version: "1"
-name: hero
-version: "999.0.0"
+name: user-only
+version: "1.0.0"
 category: opening
 serves: [attention]
 metadata:
   author: test
-  provenance: override
+  provenance: custom
 example: |
-  :::hero
+  :::user-only
   :::
 `)
-	if err := os.WriteFile(filepath.Join(override, "hero.yaml"), yaml, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "user-only.yaml"), yaml, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("MD2WECHAT_LAYOUT_DIR", dir)
+	if err := os.WriteFile(filepath.Join(dir, "broken.yaml"), []byte("not: [valid"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
 
+func assertCatalogIgnoresOverride(t *testing.T) {
+	t.Helper()
 	c := NewCatalog()
 	if err := c.Load(); err != nil {
 		t.Fatalf("Load() failed: %v", err)
 	}
-	spec, _ := c.Get("hero")
-	if spec.Version != "999.0.0" {
-		t.Errorf("override not applied: version = %q", spec.Version)
+	if _, ok := c.Get("user-only"); ok {
+		t.Fatal("user-only module was loaded outside the embedded catalog")
 	}
 }
 
@@ -96,7 +131,7 @@ metadata:
 	}
 }
 
-func TestInvalidCustomModuleNamesCannotLoadRenderOrValidate(t *testing.T) {
+func TestInvalidModuleNamesCannotParseRenderOrValidate(t *testing.T) {
 	for _, name := range []string{"Bad", "bad.name", "_bad", "bad/name", "bad name"} {
 		t.Run(name, func(t *testing.T) {
 			yaml := []byte(`schema_version: "1"
@@ -135,46 +170,6 @@ example: |
 	}
 }
 
-func TestLoadFromDirRejectsInvalidModuleName(t *testing.T) {
-	dir := t.TempDir()
-	yaml := []byte(`schema_version: "1"
-name: Bad
-version: "1.0.0"
-category: opening
-serves: [attention]
-metadata:
-  author: test
-  provenance: custom
-`)
-	if err := os.WriteFile(filepath.Join(dir, "bad.yaml"), yaml, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	c := NewCatalog()
-	if err := c.loadFromDir(dir); err == nil || !strings.Contains(err.Error(), "invalid layout module name") {
-		t.Fatalf("loadFromDir() error = %v", err)
-	}
-}
-
-func TestLoadFromDirRejectsReservedModuleName(t *testing.T) {
-	dir := t.TempDir()
-	yaml := []byte(`schema_version: "1"
-name: block
-version: "1.0.0"
-category: opening
-serves: [attention]
-metadata:
-  author: test
-  provenance: custom
-`)
-	if err := os.WriteFile(filepath.Join(dir, "block.yaml"), yaml, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	c := NewCatalog()
-	if err := c.loadFromDir(dir); err == nil || !strings.Contains(err.Error(), "reserved") {
-		t.Fatalf("loadFromDir() error = %v, want reserved-name rejection", err)
-	}
-}
-
 func TestParseLayoutSpecRejectsInvalidBodyFormat(t *testing.T) {
 	yaml := []byte(`schema_version: "1"
 name: bad
@@ -209,74 +204,6 @@ metadata:
 	}
 }
 
-func TestLoadFromDirRequiresRecommendedExecutableWitness(t *testing.T) {
-	dir := t.TempDir()
-	yaml := []byte(`schema_version: "1"
-name: no-witness
-lifecycle: recommended
-body_format: fields
-version: "1.0.0"
-category: opening
-serves: [attention]
-fields:
-  required:
-    - name: title
-metadata:
-  author: test
-  provenance: custom
-`)
-	if err := os.WriteFile(filepath.Join(dir, "no-witness.yaml"), yaml, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	c := NewCatalog()
-	if err := c.loadFromDir(dir); err == nil || !strings.Contains(err.Error(), "canonical example") {
-		t.Fatalf("loadFromDir() error = %v, want canonical witness rejection", err)
-	}
-}
-
-func TestBuiltinAndOverrideSourcesAreRuntimeFacts(t *testing.T) {
-	builtin, err := BuiltinCatalog()
-	if err != nil {
-		t.Fatal(err)
-	}
-	hero, ok := builtin.Get("hero")
-	if !ok || hero.Source != LayoutSourceBuiltin {
-		t.Fatalf("builtin hero source = %q, found=%v", hero.Source, ok)
-	}
-
-	dir := t.TempDir()
-	yaml := []byte(`schema_version: "1"
-name: local-card
-lifecycle: recommended
-body_format: fields
-version: "1.0.0"
-category: opening
-serves: [attention]
-fields:
-  required:
-    - name: title
-example: |
-  :::local-card
-  title: Local
-  :::
-metadata:
-  author: test
-  provenance: custom
-`)
-	if err := os.WriteFile(filepath.Join(dir, "local-card.yaml"), yaml, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	c := NewCatalog()
-	c.modules = map[string]*LayoutSpec{}
-	if err := c.loadFromDir(dir); err != nil {
-		t.Fatal(err)
-	}
-	local, ok := c.Get("local-card")
-	if !ok || local.Source != LayoutSourceOverride {
-		t.Fatalf("override source = %q, found=%v", local.Source, ok)
-	}
-}
-
 func TestParseLayoutSpecDefaultsLegacyBodyFormat(t *testing.T) {
 	yaml := []byte(`schema_version: "1"
 name: legacy
@@ -299,124 +226,45 @@ metadata:
 	}
 }
 
-func TestCustomLayoutBlankLifecycleDefaultsToRecommended(t *testing.T) {
-	ResetDefaultCatalogForTests()
-	t.Cleanup(ResetDefaultCatalogForTests)
-
-	dir := t.TempDir()
+func TestParseLayoutSpecDefaultsBlankLifecycleToRecommended(t *testing.T) {
 	yaml := []byte(`schema_version: "1"
-name: custom-current
+name: current
 version: "1.0.0"
 category: opening
 serves: [attention]
 example: |
-  :::custom-current
+  :::current
   :::
 metadata:
   author: test
-  provenance: custom
+  provenance: test-fixture
 `)
-	if err := os.WriteFile(filepath.Join(dir, "custom-current.yaml"), yaml, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("MD2WECHAT_LAYOUT_DIR", dir)
-
-	c, err := DefaultCatalog()
+	spec, err := parseLayoutSpec(yaml)
 	if err != nil {
-		t.Fatalf("DefaultCatalog() failed: %v", err)
-	}
-	spec, ok := c.Get("custom-current")
-	if !ok {
-		t.Fatal("expected custom-current module to be present")
+		t.Fatalf("parseLayoutSpec() failed: %v", err)
 	}
 	if spec.Lifecycle != LifecycleRecommended {
 		t.Fatalf("Lifecycle = %q, want %q", spec.Lifecycle, LifecycleRecommended)
 	}
 }
 
-func TestCustomLayoutRejectsInvalidLifecycle(t *testing.T) {
-	ResetDefaultCatalogForTests()
-	t.Cleanup(ResetDefaultCatalogForTests)
-
-	dir := t.TempDir()
+func TestParseLayoutSpecRejectsInvalidLifecycle(t *testing.T) {
 	yaml := []byte(`schema_version: "1"
-name: custom-experimental
+name: experimental
 lifecycle: experimental
 version: "1.0.0"
 category: opening
 serves: [attention]
 metadata:
   author: test
-  provenance: custom
+  provenance: test-fixture
 `)
-	if err := os.WriteFile(filepath.Join(dir, "custom-experimental.yaml"), yaml, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("MD2WECHAT_LAYOUT_DIR", dir)
-
-	_, err := DefaultCatalog()
+	_, err := parseLayoutSpec(yaml)
 	if err == nil {
 		t.Fatal("expected invalid lifecycle to be rejected")
 	}
 	if !strings.Contains(err.Error(), `invalid lifecycle "experimental"`) {
 		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestEnvOverrideBeatsLocalDir(t *testing.T) {
-	localDir := t.TempDir()
-	localOpening := filepath.Join(localDir, "opening")
-	if err := os.MkdirAll(localOpening, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	localYAML := []byte(`schema_version: "1"
-name: hero
-version: "2.0.0"
-category: opening
-serves: [attention]
-metadata:
-  author: local
-  provenance: local
-example: |
-  :::hero
-  :::
-`)
-	if err := os.WriteFile(filepath.Join(localOpening, "hero.yaml"), localYAML, 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	envDir := t.TempDir()
-	envOpening := filepath.Join(envDir, "opening")
-	if err := os.MkdirAll(envOpening, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	envYAML := []byte(`schema_version: "1"
-name: hero
-version: "3.0.0"
-category: opening
-serves: [attention]
-metadata:
-  author: env
-  provenance: env
-example: |
-  :::hero
-  :::
-`)
-	if err := os.WriteFile(filepath.Join(envOpening, "hero.yaml"), envYAML, 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	t.Setenv("MD2WECHAT_LAYOUT_DIR", envDir)
-	ResetDefaultCatalogForTests()
-	t.Cleanup(ResetDefaultCatalogForTests)
-
-	c := NewCatalog()
-	if err := c.Load(); err != nil {
-		t.Fatalf("Load() failed: %v", err)
-	}
-	spec, _ := c.Get("hero")
-	if spec.Version != "3.0.0" {
-		t.Errorf("env override should win, got version %q", spec.Version)
 	}
 }
 

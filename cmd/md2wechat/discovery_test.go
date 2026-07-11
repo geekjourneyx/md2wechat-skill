@@ -752,39 +752,19 @@ func TestBuildCapabilitiesDataIncludesLayoutWithoutUnreleasedFormat(t *testing.T
 	}
 }
 
-func TestLayoutCapabilitiesKeepBuiltinCountsSeparateFromOverrides(t *testing.T) {
-	dir := t.TempDir()
-	yaml := []byte(`schema_version: "1"
-name: local-capability
-lifecycle: recommended
-body_format: fields
-version: "1.0.0"
-category: opening
-serves: [attention]
-fields:
-  required:
-    - name: title
-example: |
-  :::local-capability
-  title: Local
-  :::
-metadata:
-  author: test
-  provenance: custom
-`)
-	if err := os.WriteFile(filepath.Join(dir, "local-capability.yaml"), yaml, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("MD2WECHAT_LAYOUT_DIR", dir)
-	layoutcatalog.ResetDefaultCatalogForTests()
-	t.Cleanup(layoutcatalog.ResetDefaultCatalogForTests)
-
+func TestLayoutCapabilitiesExposeSingleCatalogCounts(t *testing.T) {
 	layout := buildLayoutCapabilityData()
 	if layout["recommended_syntax_count"] != 53 || layout["render_syntax_count"] != 60 {
-		t.Fatalf("builtin capability counts drifted: %#v", layout)
+		t.Fatalf("layout capability counts drifted: %#v", layout)
 	}
-	if layout["effective_recommended_syntax_count"] != 54 || layout["local_override_module_count"] != 1 {
-		t.Fatalf("effective capability counts missing override boundary: %#v", layout)
+	for _, obsolete := range []string{
+		"effective_recommended_syntax_count",
+		"effective_compatibility_module_count",
+		"local_override_module_count",
+	} {
+		if _, ok := layout[obsolete]; ok {
+			t.Fatalf("layout capability still exposes obsolete %q: %#v", obsolete, layout)
+		}
 	}
 }
 

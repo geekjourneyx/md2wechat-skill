@@ -886,38 +886,11 @@ When the user has not chosen a theme or module, use discovery output as facts an
 
 Keep the source Markdown read-only: create a temporary formatted Markdown artifact with rendered `:::module` blocks, run `layout validate` on that generated file, then pass the generated Markdown to `/api/convert`. Saving generated Markdown near the source requires explicit user confirmation.
 
-For complex bodies, pass raw body content with `layout render <name> --body-file <path>` or stdin via `--body-file -`; use `--param KEY=VALUE` for opener parameters and `--caption` for the bracket caption. Local `layout validate` proves catalog/schema acceptance only. It does not prove that a custom YAML has a deployed remote HTML renderer or that the current API target renders it.
+For complex bodies, pass raw body content with `layout render <name> --body-file <path>` or stdin via `--body-file -`; use `--param KEY=VALUE` for opener parameters and `--caption` for the bracket caption. Local `layout validate` proves catalog/schema acceptance only; production rendering support is established by release conformance against the target API.
 
 ### What does "unknown layout module" in validate output mean?
 
-`layout validate` warns (does not error) for `:::module-name` blocks it does not recognize. This is intentional — it allows forward-compatible documents. If the module name is a typo, fix it by checking `md2wechat layout list --json`. If it's a new custom module, add a YAML spec to `~/.config/md2wechat/layout/<category>/<name>.yaml`.
-
-### How do I add a custom layout module so the CLI recognizes it?
-
-Create a YAML file following the schema:
-
-```yaml
-schema_version: "1"
-name: my-module
-version: "1.0.0"
-category: custom
-serves: [attention]
-fields:
-  required:
-    - name: title
-      description: "Main heading"
-      example: "Hello"
-metadata:
-  author: yourname
-  provenance: custom
-  inspired_by: "my-design-system#my-module"
-example: |
-  :::my-module
-  title: Hello
-  :::
-```
-
-Save it to `~/.config/md2wechat/layout/custom/my-module.yaml`. The CLI picks it up on next run — no restart needed. YAML keys are strict, and recommended modules require the executable `example`. `layout list --json` reports the entry as `source: override` and `remote_renderer_available: false`; local validation does not deploy a remote HTML renderer.
+`layout validate` warns (does not error) for `:::module-name` blocks it does not recognize. This preserves forward compatibility with documents produced by newer CLI releases. Check the spelling with `md2wechat layout list --json`; if the document requires a module absent from the current embedded catalog, upgrade the CLI or replace it with a discovered module.
 
 ---
 

@@ -124,7 +124,6 @@ func isolateDoctorEnv(t *testing.T) {
 	t.Setenv("MD2WECHAT_BASE_URL", "")
 	t.Setenv("CONVERT_MODE", "")
 	t.Setenv("DEFAULT_THEME", "")
-	t.Setenv("MD2WECHAT_LAYOUT_DIR", "")
 	t.Setenv("MD2WECHAT_THEMES_DIR", "")
 }
 

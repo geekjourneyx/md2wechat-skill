@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Made the embedded advanced-layout catalog the single source of truth. The CLI no longer loads layout modules from the user config directory, project `layout/` directory, or `MD2WECHAT_LAYOUT_DIR`, and layout discovery no longer exposes override-specific fields or counts.
+
 ## [2.10.1] - 2026-07-08
 
 ### Changed

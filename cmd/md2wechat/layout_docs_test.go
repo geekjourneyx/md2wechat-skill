@@ -116,23 +116,32 @@ func TestLayoutDocumentationBodyFormatTroubleshootingContract(t *testing.T) {
 	}
 }
 
-func TestLayoutDocumentationExplainsOverrideRendererBoundary(t *testing.T) {
-	discovery := readDocumentationFile(t, "../../docs/DISCOVERY.md")
-	for _, key := range []string{
-		"effective_recommended_syntax_count",
-		"effective_compatibility_module_count",
-		"local_override_module_count",
-		"remote_renderer_available",
-	} {
-		if !strings.Contains(discovery, key) {
-			t.Errorf("docs/DISCOVERY.md must document %q", key)
+func TestLayoutDocumentationDeclaresBuiltinOnlyCatalog(t *testing.T) {
+	files := []string{
+		"../../docs/LAYOUT.md",
+		"../../docs/DISCOVERY.md",
+		"../../docs/FAQ.md",
+		"../../skills/md2wechat/SKILL.md",
+		"../../platforms/openclaw/md2wechat/SKILL.md",
+	}
+	for _, path := range files {
+		text := readDocumentationFile(t, path)
+		for _, obsolete := range []string{
+			"MD2WECHAT_LAYOUT_DIR",
+			"~/.config/md2wechat/layout",
+			"effective_recommended_syntax_count",
+			"effective_compatibility_module_count",
+			"local_override_module_count",
+			"remote_renderer_available",
+		} {
+			if strings.Contains(text, obsolete) {
+				t.Errorf("%s still documents removed layout override contract %q", path, obsolete)
+			}
 		}
 	}
-	for _, path := range []string{"../../skills/md2wechat/SKILL.md", "../../platforms/openclaw/md2wechat/SKILL.md"} {
-		text := readDocumentationFile(t, path)
-		if !strings.Contains(text, "remote_renderer_available") {
-			t.Errorf("%s must route API layout choices through remote_renderer_available", path)
-		}
+	discovery := readDocumentationFile(t, "../../docs/DISCOVERY.md")
+	if !strings.Contains(discovery, "内置 catalog 是唯一事实源") {
+		t.Error("docs/DISCOVERY.md must declare the embedded catalog as the single source of truth")
 	}
 	releaseCheck := readDocumentationFile(t, "../../scripts/release-check.sh")
 	if !strings.Contains(releaseCheck, "-run '^TestLayoutDocumentation'") {
@@ -142,7 +151,8 @@ func TestLayoutDocumentationExplainsOverrideRendererBoundary(t *testing.T) {
 
 func TestLayoutDocumentationE2EFixtureMatchesCurrentCatalog(t *testing.T) {
 	markdown := readDocumentationFile(t, "../../examples/layout-e2e-test.md")
-	catalog, err := layoutcatalog.BuiltinCatalog()
+	catalog := layoutcatalog.NewCatalog()
+	err := catalog.Load()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -152,7 +152,7 @@ Use CLI discovery as the source of truth for layout syntax instead of memorizing
 
 - Inspect the opener, body schema, canonical executable example, and structurally distinct variants with `layout show <name> --json`. Reuse the canonical witness.
 - Use `layout render` for structured fields and `--body-file` (or `--body-file -` for stdin) for complex bodies, then validate the generated Markdown.
-- Default discovery returns recommended modules. Use `layout list --lifecycle compatibility --json` only for old-content migration. For API conversion, require `remote_renderer_available: true`; local validation alone does not prove remote renderer deployment.
+- Default discovery returns recommended modules. Use `layout list --lifecycle compatibility --json` only for old-content migration. Local validation proves syntax acceptance only; production support is a release-conformance fact.
 
 Default module discipline:
 

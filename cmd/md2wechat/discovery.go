@@ -440,30 +440,15 @@ func buildTitleHookLevelsCapabilityData() []map[string]any {
 }
 
 func buildLayoutCapabilityData() map[string]any {
-	builtin, err := layoutcatalog.BuiltinCatalog()
+	catalog, err := layoutcatalog.DefaultCatalog()
 	if err != nil {
 		return map[string]any{
 			"available": false,
 			"error":     err.Error(),
 		}
 	}
-	effective, err := layoutcatalog.DefaultCatalog()
-	if err != nil {
-		return map[string]any{
-			"available": false,
-			"error":     err.Error(),
-		}
-	}
-	modules := builtin.ListFiltered(layoutcatalog.ListFilter{})
-	compatibilityModules := builtin.ListFiltered(layoutcatalog.ListFilter{Lifecycle: layoutcatalog.LifecycleCompatibility})
-	effectiveModules := effective.ListFiltered(layoutcatalog.ListFilter{})
-	effectiveCompatibility := effective.ListFiltered(layoutcatalog.ListFilter{Lifecycle: layoutcatalog.LifecycleCompatibility})
-	localOverrideCount := 0
-	for _, module := range append(append([]*layoutcatalog.LayoutSpec{}, effectiveModules...), effectiveCompatibility...) {
-		if module.Source == layoutcatalog.LayoutSourceOverride {
-			localOverrideCount++
-		}
-	}
+	modules := catalog.ListFiltered(layoutcatalog.ListFilter{})
+	compatibilityModules := catalog.ListFiltered(layoutcatalog.ListFilter{Lifecycle: layoutcatalog.LifecycleCompatibility})
 	categorySet := map[string]struct{}{}
 	for _, module := range modules {
 		categorySet[module.Category] = struct{}{}
@@ -475,21 +460,18 @@ func buildLayoutCapabilityData() map[string]any {
 	sort.Strings(categories)
 
 	return map[string]any{
-		"available":                            true,
-		"module_count":                         len(modules),
-		"recommended_syntax_count":             len(modules),
-		"recommended_scenario_count":           recommendedLayoutScenarioCount,
-		"compatibility_module_count":           len(compatibilityModules),
-		"effective_recommended_syntax_count":   len(effectiveModules),
-		"effective_compatibility_module_count": len(effectiveCompatibility),
-		"local_override_module_count":          localOverrideCount,
-		"base_enhancement_count":               baseLayoutEnhancementCount,
-		"render_syntax_count":                  renderLayoutSyntaxCount,
-		"supports_validate":                    true,
-		"api_mode_only":                        true,
-		"schema_version":                       layoutcatalog.SchemaVersion,
-		"serves":                               []string{"attention", "readability", "memorability", "conversion"},
-		"categories":                           categories,
+		"available":                  true,
+		"module_count":               len(modules),
+		"recommended_syntax_count":   len(modules),
+		"recommended_scenario_count": recommendedLayoutScenarioCount,
+		"compatibility_module_count": len(compatibilityModules),
+		"base_enhancement_count":     baseLayoutEnhancementCount,
+		"render_syntax_count":        renderLayoutSyntaxCount,
+		"supports_validate":          true,
+		"api_mode_only":              true,
+		"schema_version":             layoutcatalog.SchemaVersion,
+		"serves":                     []string{"attention", "readability", "memorability", "conversion"},
+		"categories":                 categories,
 	}
 }
 

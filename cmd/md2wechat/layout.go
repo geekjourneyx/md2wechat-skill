@@ -77,19 +77,16 @@ var layoutListCmd = &cobra.Command{
 		})
 		summaries := make([]map[string]any, 0, len(mods))
 		for _, m := range mods {
-			remoteRendererAvailable := m.Source == layoutcatalog.LayoutSourceBuiltin
 			summaries = append(summaries, map[string]any{
-				"name":                      m.Name,
-				"lifecycle":                 m.Lifecycle,
-				"body_format":               m.BodyFormat,
-				"category":                  m.Category,
-				"serves":                    m.Serves,
-				"content_types":             m.ContentTypes,
-				"industry":                  m.Industry,
-				"tags":                      m.Tags,
-				"version":                   m.Version,
-				"source":                    m.Source,
-				"remote_renderer_available": remoteRendererAvailable,
+				"name":          m.Name,
+				"lifecycle":     m.Lifecycle,
+				"body_format":   m.BodyFormat,
+				"category":      m.Category,
+				"serves":        m.Serves,
+				"content_types": m.ContentTypes,
+				"industry":      m.Industry,
+				"tags":          m.Tags,
+				"version":       m.Version,
 			})
 		}
 		responseSuccessWith(codeLayoutShown, "layout modules", map[string]any{

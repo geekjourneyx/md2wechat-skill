@@ -51,7 +51,11 @@ type e2eSettings struct {
 const layoutConformanceRequestTimeout = 30 * time.Second
 
 func layoutConformanceCatalog() (*layoutcatalog.Catalog, error) {
-	return layoutcatalog.BuiltinCatalog()
+	catalog := layoutcatalog.NewCatalog()
+	if err := catalog.Load(); err != nil {
+		return nil, err
+	}
+	return catalog, nil
 }
 
 func layoutConformanceHTTPClient() *http.Client {
@@ -621,39 +625,6 @@ func TestCollectAllE2EWitnessesHasStable80WitnessContract(t *testing.T) {
 	}
 	if got := len(groups[0].Witnesses) + len(groups[1].Witnesses); got != 80 {
 		t.Fatalf("witness count = %d, want 80", got)
-	}
-}
-
-func TestLayoutConformanceCatalogIgnoresLocalOverrides(t *testing.T) {
-	dir := t.TempDir()
-	yaml := []byte(`schema_version: "1"
-name: local-e2e
-lifecycle: recommended
-body_format: fields
-version: "1.0.0"
-category: opening
-serves: [attention]
-fields:
-  required:
-    - name: title
-example: |
-  :::local-e2e
-  title: Local
-  :::
-metadata:
-  author: test
-  provenance: custom
-`)
-	if err := os.WriteFile(filepath.Join(dir, "local-e2e.yaml"), yaml, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("MD2WECHAT_LAYOUT_DIR", dir)
-	c, err := layoutConformanceCatalog()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, ok := c.Get("local-e2e"); ok {
-		t.Fatal("production conformance catalog included a local override")
 	}
 }
 

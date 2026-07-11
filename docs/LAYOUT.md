@@ -24,7 +24,6 @@
 - [四、一篇完整文章示例](#四一篇完整文章示例)
 - [五、Agent 工作流](#五agent-工作流)
 - [六、常见错误排查](#六常见错误排查)
-- [七、自定义模块](#七自定义模块)
 
 ---
 
@@ -1230,73 +1229,6 @@ md2wechat config show --format json | grep api_key
 模块开头的 caption、花括号参数和 token 参数不属于正文格式，检查 `Opener`。优先复用 canonical `Example`；只有结构不同的 renderer 分支才查看 `Variants[].Example`。
 
 `question` 的 primary `dialogue` 使用成对 `Q:` / `A:` 行；其 legacy-compatible `json_array` 仅用于兼容旧稿，不应作为新稿推荐写法。
-
----
-
-## 七、自定义模块
-
-如果内置推荐模块不够用，可以添加自定义模块。
-
-### 创建自定义模块 YAML
-
-在 `~/.config/md2wechat/layout/<category>/<name>.yaml` 创建文件：
-
-本地 YAML 只扩展或覆盖 CLI 的 discovery、render 和 validate 契约，不能在远端 API 中凭空创建 HTML renderer。自定义名称在远端没有对应实现时，即使本地 validate 通过，也不应宣称已可渲染。`layout list --json` 会把这类条目标记为 `source: override`、`remote_renderer_available: false`。
-
-YAML 使用严格字段检查：拼错或未支持的键会阻止 catalog 加载。recommended 模块必须提供一个能通过相同 schema 校验的 canonical `example`；结构不同的 variant 还必须提供自己的 `use_when` 和 `example`。
-
-```yaml
-schema_version: "1"
-name: my-module
-version: "1.0.0"
-since: "2.1.0"
-category: custom
-serves: [attention]
-content_types: [opinion]
-industry: [general]
-tags: [custom]
-position: body
-when_to_use: |
-  说明什么时候用这个自定义模块。
-when_not_to_use: |
-  说明什么时候不该用。
-anti_pattern: |
-  常见错误。
-fields:
-  required:
-    - name: title
-      description: 标题
-      example: "示例标题"
-  optional:
-    - name: body
-      description: 正文
-      example: "示例正文"
-example: |
-  :::my-module
-  title: 这是我的自定义模块
-  body: 正文内容
-  :::
-metadata:
-  author: your-name
-  provenance: custom
-```
-
-### 验证自定义模块
-
-```bash
-# 保存后，直接可用（无需重启）
-md2wechat layout list --json | grep my-module
-md2wechat layout show my-module --json
-```
-
-### 4 级 Override 优先级
-
-| 优先级 | 来源 | 路径 |
-|--------|------|------|
-| 1（最低） | 内置模块 | 二进制嵌入 |
-| 2 | 用户全局 | `~/.config/md2wechat/layout/` |
-| 3 | 项目本地 | `./layout/` |
-| 4（最高） | 环境变量 | `$MD2WECHAT_LAYOUT_DIR` |
 
 ---
 

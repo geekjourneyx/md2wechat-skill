@@ -366,26 +366,26 @@ func TestBuiltinExecutableWitnessesAreComplete(t *testing.T) {
 	}
 }
 
-func TestCustomLayoutWithoutExamplesRemainsCompatible(t *testing.T) {
+func TestSchemaParsingDefersExecutableWitnessRequirementToCatalogLoad(t *testing.T) {
 	spec, err := parseLayoutSpec([]byte(`schema_version: "1"
-name: custom
+name: schema-fixture
 body_format: fields
 version: "1.0.0"
 category: opening
 serves: [attention]
 metadata:
   author: test
-  provenance: custom
+  provenance: test-fixture
 `))
 	if err != nil {
-		t.Fatalf("custom layout without examples failed to load: %v", err)
+		t.Fatalf("schema fixture without examples failed to parse: %v", err)
 	}
 	if spec.Example != "" || len(spec.Variants) != 0 {
 		t.Fatalf("unexpected witness metadata: example=%q variants=%v", spec.Example, spec.Variants)
 	}
 }
 
-func TestCustomVariantWithoutWitnessMetadataRemainsCompatible(t *testing.T) {
+func TestSchemaParsingDefersVariantWitnessMetadataToCatalogLoad(t *testing.T) {
 	spec, err := parseLayoutSpec([]byte(baseLayoutYAML + `fields:
   optional:
     - name: variant
@@ -395,10 +395,10 @@ variants:
     required: [title]
 `))
 	if err != nil {
-		t.Fatalf("custom variant without witness metadata failed to load: %v", err)
+		t.Fatalf("variant without witness metadata failed to parse: %v", err)
 	}
 	if len(spec.Variants) != 1 || spec.Variants[0].Example != "" || spec.Variants[0].UseWhen != "" {
-		t.Fatalf("unexpected custom variant: %+v", spec.Variants)
+		t.Fatalf("unexpected variant: %+v", spec.Variants)
 	}
 }
 

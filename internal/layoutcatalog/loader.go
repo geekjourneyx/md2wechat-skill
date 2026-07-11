@@ -3,8 +3,6 @@ package layoutcatalog
 import (
 	"bytes"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -13,8 +11,6 @@ import (
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/assets"
 )
-
-const layoutDirEnvVar = "MD2WECHAT_LAYOUT_DIR"
 
 type Catalog struct {
 	mu      sync.RWMutex
@@ -29,17 +25,6 @@ var (
 
 func NewCatalog() *Catalog {
 	return &Catalog{modules: map[string]*LayoutSpec{}}
-}
-
-// BuiltinCatalog returns the renderer-backed catalog without local overrides.
-func BuiltinCatalog() (*Catalog, error) {
-	c := NewCatalog()
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if err := c.loadBuiltin(); err != nil {
-		return nil, fmt.Errorf("load builtin layout: %w", err)
-	}
-	return c, nil
 }
 
 func DefaultCatalog() (*Catalog, error) {
@@ -67,29 +52,7 @@ func (c *Catalog) Load() error {
 	if err := c.loadBuiltin(); err != nil {
 		return fmt.Errorf("load builtin layout: %w", err)
 	}
-	for _, dir := range overrideDirs() {
-		if dir == "" {
-			continue
-		}
-		if err := c.loadFromDir(dir); err != nil {
-			return fmt.Errorf("load layout dir %s: %w", dir, err)
-		}
-	}
 	return nil
-}
-
-func overrideDirs() []string {
-	var dirs []string
-	if home, err := os.UserHomeDir(); err == nil {
-		dirs = append(dirs, filepath.Join(home, ".config", "md2wechat", "layout"))
-	}
-	if cwd, err := os.Getwd(); err == nil {
-		dirs = append(dirs, filepath.Join(cwd, "layout"))
-	}
-	if envDir := strings.TrimSpace(os.Getenv(layoutDirEnvVar)); envDir != "" {
-		dirs = append(dirs, envDir)
-	}
-	return dirs
 }
 
 func (c *Catalog) loadBuiltin() error {
@@ -111,7 +74,6 @@ func (c *Catalog) loadBuiltin() error {
 			if err != nil {
 				return fmt.Errorf("parse builtin %s/%s: %w", cat, name, err)
 			}
-			spec.Source = LayoutSourceBuiltin
 			if err := validateLoadedWitnesses(spec); err != nil {
 				return fmt.Errorf("validate builtin %s/%s: %w", cat, name, err)
 			}
@@ -119,44 +81,6 @@ func (c *Catalog) loadBuiltin() error {
 		}
 	}
 	return nil
-}
-
-func (c *Catalog) loadFromDir(dir string) error {
-	info, err := os.Stat(dir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	if !info.IsDir() {
-		return nil
-	}
-	return filepath.Walk(dir, func(p string, fi os.FileInfo, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if fi.IsDir() {
-			return nil
-		}
-		if !strings.HasSuffix(fi.Name(), ".yaml") && !strings.HasSuffix(fi.Name(), ".yml") {
-			return nil
-		}
-		data, err := os.ReadFile(p)
-		if err != nil {
-			return err
-		}
-		spec, err := parseLayoutSpec(data)
-		if err != nil {
-			return fmt.Errorf("parse %s: %w", p, err)
-		}
-		spec.Source = LayoutSourceOverride
-		if err := validateLoadedWitnesses(spec); err != nil {
-			return fmt.Errorf("validate %s: %w", p, err)
-		}
-		c.modules[spec.Name] = spec
-		return nil
-	})
 }
 
 func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
