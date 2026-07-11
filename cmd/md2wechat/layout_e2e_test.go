@@ -767,22 +767,6 @@ func htmlpkgParse(rendered string) (*html.Node, error) {
 	return html.Parse(strings.NewReader(rendered))
 }
 
-func hasDOMAttribute(node *html.Node, name string) bool {
-	if node.Type == html.ElementNode {
-		for _, attr := range node.Attr {
-			if attr.Key == name {
-				return true
-			}
-		}
-	}
-	for child := node.FirstChild; child != nil; child = child.NextSibling {
-		if hasDOMAttribute(child, name) {
-			return true
-		}
-	}
-	return false
-}
-
 func hasDOMAttributeValue(node *html.Node, name, value string) bool {
 	if node.Type == html.ElementNode {
 		for _, attr := range node.Attr {

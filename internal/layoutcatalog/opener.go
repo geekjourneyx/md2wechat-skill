@@ -18,7 +18,7 @@ const (
 func parseBlockOpener(line string) (ParsedOpener, error) {
 	line = strings.TrimRight(line, " \t\r")
 	if !strings.HasPrefix(line, ":::") {
-		return ParsedOpener{}, fmt.Errorf("layout opener must start with :::")
+		return ParsedOpener{}, fmt.Errorf("layout opener must start with a triple-colon marker")
 	}
 	rest := strings.TrimPrefix(line, ":::")
 	nameEnd := 0

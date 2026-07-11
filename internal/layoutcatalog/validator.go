@@ -86,11 +86,6 @@ func (c *Catalog) validateBlock(opener ParsedOpener, body []string, line int, r 
 	}
 }
 
-func parseJSONBodyFields(body []string, bodyFormat string) (map[string]string, error) {
-	fields, _, _, err := parseJSONBodyData(body, bodyFormat)
-	return fields, err
-}
-
 type jsonItemFacts struct {
 	values map[string][]string
 	types  map[string][]string
