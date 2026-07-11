@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -141,6 +142,91 @@ func TestLayoutShowJSONReturnsSpec(t *testing.T) {
 	spec, _ := data["spec"].(map[string]any)
 	if spec["body_format"] != layoutcatalog.BodyFormatFields {
 		t.Fatalf("expected hero body_format fields, got %#v", spec["body_format"])
+	}
+}
+
+func TestLayoutListCompatibilityIsolation(t *testing.T) {
+	oldJSON := jsonOutput
+	oldFilters := layoutListFilters
+	t.Cleanup(func() {
+		jsonOutput = oldJSON
+		layoutListFilters = oldFilters
+		layoutcatalog.ResetDefaultCatalogForTests()
+	})
+	jsonOutput = true
+	layoutcatalog.ResetDefaultCatalogForTests()
+
+	listNames := func(lifecycle string) []string {
+		t.Helper()
+		layoutListFilters = struct {
+			category, serves, contentType, industry, tag, lifecycle string
+		}{lifecycle: lifecycle}
+		stdout := captureStdout(t, func() {
+			if err := layoutListCmd.RunE(layoutListCmd, nil); err != nil {
+				t.Fatalf("layoutListCmd.RunE() error = %v", err)
+			}
+		})
+		var response struct {
+			Data struct {
+				Count   int `json:"count"`
+				Modules []struct {
+					Name string `json:"name"`
+				} `json:"modules"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(stdout, &response); err != nil {
+			t.Fatalf("invalid json: %v\n%s", err, stdout)
+		}
+		names := make([]string, 0, len(response.Data.Modules))
+		for _, module := range response.Data.Modules {
+			names = append(names, module.Name)
+		}
+		if response.Data.Count != len(names) {
+			t.Fatalf("count = %d, modules = %d", response.Data.Count, len(names))
+		}
+		return names
+	}
+
+	defaultNames := listNames("")
+	if len(defaultNames) != 53 {
+		t.Fatalf("default count = %d, want 53", len(defaultNames))
+	}
+	if got := buildLayoutCapabilityData()["module_count"]; got != 53 {
+		t.Fatalf("capability module_count = %#v, want 53", got)
+	}
+	for _, legacy := range []string{"dialogue", "gallery", "longimage"} {
+		if slices.Contains(defaultNames, legacy) {
+			t.Fatalf("default list includes compatibility module %q", legacy)
+		}
+	}
+	compatibilityNames := listNames(layoutcatalog.LifecycleCompatibility)
+	if want := []string{"dialogue", "gallery", "longimage"}; !slices.Equal(compatibilityNames, want) {
+		t.Fatalf("compatibility modules = %v, want %v", compatibilityNames, want)
+	}
+}
+
+func TestLayoutShowCompatibilityGallery(t *testing.T) {
+	oldJSON := jsonOutput
+	t.Cleanup(func() {
+		jsonOutput = oldJSON
+		layoutcatalog.ResetDefaultCatalogForTests()
+	})
+	jsonOutput = true
+	layoutcatalog.ResetDefaultCatalogForTests()
+
+	stdout := captureStdout(t, func() {
+		if err := layoutShowCmd.RunE(layoutShowCmd, []string{"gallery"}); err != nil {
+			t.Fatalf("layoutShowCmd.RunE() error = %v", err)
+		}
+	})
+	var response map[string]any
+	if err := json.Unmarshal(stdout, &response); err != nil {
+		t.Fatalf("invalid json: %v\n%s", err, stdout)
+	}
+	data, _ := response["data"].(map[string]any)
+	spec, _ := data["spec"].(map[string]any)
+	if spec["Name"] != "gallery" || spec["Lifecycle"] != layoutcatalog.LifecycleCompatibility {
+		t.Fatalf("gallery spec = %#v", spec)
 	}
 }
 

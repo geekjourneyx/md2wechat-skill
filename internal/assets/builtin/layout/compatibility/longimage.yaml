@@ -1,0 +1,31 @@
+schema_version: "1"
+name: longimage
+lifecycle: compatibility
+body_format: markdown_images
+version: "1.0.0"
+since: "1.5.0"
+category: compatibility
+serves: [readability]
+content_types: [tutorial, report, announcement]
+industry: [general]
+tags: [compatibility, legacy, image, longimage]
+position: body
+when_to_use: |
+  迁移仍使用 :::longimage[...] 包裹单张长图的旧稿时使用。
+when_not_to_use: |
+  新内容优先使用 image-text；对比、标注、步骤和信息卡场景分别使用
+  image-compare、image-annotate、image-steps 和 infographic。
+anti_pattern: |
+  缺少图片或放入多张图片会导致校验失败；不要用兼容容器替代结构化的新模块。
+body:
+  min_images: 1
+  max_images: 1
+example: |
+  :::longimage
+  ![长图](https://example.com/longimage.jpg)
+  :::
+example_assert_contains: "![长图](https://example.com/longimage.jpg)"
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#longimage"

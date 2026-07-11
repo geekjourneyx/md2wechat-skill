@@ -61,6 +61,13 @@ type freeLayoutContract struct {
 	example                     string
 }
 
+type compatibilityLayoutContract struct {
+	format, replacement string
+	opener              *OpenerSpec
+	body                *BodySpec
+	example             string
+}
+
 func TestFreeLayoutModuleContracts(t *testing.T) {
 	contracts := map[string]freeLayoutContract{
 		"split": {
@@ -452,6 +459,118 @@ func TestBuiltinRecommendedModuleSetMatchesUpstream(t *testing.T) {
 		t.Fatalf("got %#v, want %#v", got, want)
 	}
 }
+
+func TestBuiltinCompatibilityModuleSetMatchesUpstream(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	got := moduleNames(c.ListFiltered(ListFilter{Lifecycle: LifecycleCompatibility}))
+	want := slices.Clone(compatibilityModuleNames)
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Fatalf("got %#v, want %#v", got, want)
+	}
+}
+
+func TestCompatibilityModuleContracts(t *testing.T) {
+	contracts := map[string]compatibilityLayoutContract{
+		"gallery": {
+			format: BodyFormatMarkdownImages, replacement: "gallery-grid",
+			opener: &OpenerSpec{Caption: true}, body: &BodySpec{MinImages: 1},
+			example: galleryCompatibilityGuideSnippet,
+		},
+		"dialogue": {
+			format: BodyFormatDialogue, replacement: "dialogue-pair",
+			opener: &OpenerSpec{Caption: true}, body: &BodySpec{MinItems: 1, AllowNamedSpeakers: true},
+			example: dialogueCompatibilityGuideSnippet,
+		},
+		"longimage": {
+			format: BodyFormatMarkdownImages, replacement: "image-text",
+			opener: nil, body: &BodySpec{MinImages: 1, MaxImages: 1},
+			example: longimageCompatibilityGuideSnippet,
+		},
+	}
+
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for name, contract := range contracts {
+		t.Run(name, func(t *testing.T) {
+			spec, ok := c.Get(name)
+			if !ok {
+				t.Fatalf("missing %s", name)
+			}
+			if spec.Lifecycle != LifecycleCompatibility {
+				t.Errorf("lifecycle = %q, want %q", spec.Lifecycle, LifecycleCompatibility)
+			}
+			if spec.BodyFormat != contract.format {
+				t.Errorf("body_format = %q, want %q", spec.BodyFormat, contract.format)
+			}
+			if !reflect.DeepEqual(spec.Opener, contract.opener) {
+				t.Errorf("opener = %#v, want %#v", spec.Opener, contract.opener)
+			}
+			if !reflect.DeepEqual(spec.Body, contract.body) {
+				t.Errorf("body = %#v, want %#v", spec.Body, contract.body)
+			}
+			if !strings.Contains(spec.WhenNotToUse, contract.replacement) {
+				t.Errorf("when_not_to_use = %q, want replacement %q", spec.WhenNotToUse, contract.replacement)
+			}
+			if len(spec.PairsWellWith) != 0 || len(spec.Variants) != 0 {
+				t.Errorf("compatibility module leaked recommendation guidance: pairs=%v variants=%v", spec.PairsWellWith, spec.Variants)
+			}
+			if spec.Example != contract.example {
+				t.Errorf("canonical migration witness differs\ngot:  %q\nwant: %q", spec.Example, contract.example)
+			}
+			if err := checkExecutableWitness(c, spec.Name, "", spec.Example, spec.ExampleAssertContains); err != nil {
+				t.Fatalf("witness invalid: %v", err)
+			}
+		})
+	}
+}
+
+func TestCompatibilityModuleRejectedCases(t *testing.T) {
+	tests := []struct {
+		name, markdown, category string
+	}{
+		{name: "gallery requires an image", markdown: ":::gallery[空画廊]\n只有文字\n:::\n", category: "at least 1 image"},
+		{name: "dialogue requires full-width named separator", markdown: ":::dialogue[旧稿]\n用户: 你好\n:::\n", category: "full-width colon"},
+		{name: "longimage allows one image", markdown: ":::longimage[旧稿]\n![一](https://example.com/1.jpg)\n![二](https://example.com/2.jpg)\n:::\n", category: "at most 1 image"},
+	}
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			report := c.Validate(tt.markdown)
+			if len(report.Errors) == 0 {
+				t.Fatal("expected validation error")
+			}
+			if !strings.Contains(report.Errors[0].Message, tt.category) {
+				t.Fatalf("error = %q, want category %q", report.Errors[0].Message, tt.category)
+			}
+		})
+	}
+}
+
+const galleryCompatibilityGuideSnippet = `:::gallery[主题画廊]
+![图一](https://example.com/1.png)
+![图二](https://example.com/2.png)
+:::
+`
+
+const dialogueCompatibilityGuideSnippet = `:::dialogue[主题对话]
+甲：你好
+乙：你好
+:::
+`
+
+const longimageCompatibilityGuideSnippet = `:::longimage
+![长图](https://example.com/longimage.jpg)
+:::
+`
 
 func TestKnownDriftContractsAreCalibrated(t *testing.T) {
 	calibratedFields := map[string]struct {

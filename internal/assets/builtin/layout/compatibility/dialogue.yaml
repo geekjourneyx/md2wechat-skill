@@ -1,0 +1,33 @@
+schema_version: "1"
+name: dialogue
+lifecycle: compatibility
+body_format: dialogue
+version: "1.0.0"
+since: "1.5.0"
+category: compatibility
+serves: [readability]
+content_types: [tutorial, interview, announcement]
+industry: [general]
+tags: [compatibility, legacy, dialogue, interview]
+position: body
+when_to_use: |
+  迁移仍使用 :::dialogue[...] 和中文命名说话人的旧稿时使用。
+when_not_to_use: |
+  新访谈、问答和双人视角内容优先使用 dialogue-pair。
+anti_pattern: |
+  空对话会导致校验失败；legacy 命名说话人必须使用中文全角冒号“：”。
+opener:
+  caption: true
+body:
+  min_items: 1
+  allow_named_speakers: true
+example: |
+  :::dialogue[主题对话]
+  甲：你好
+  乙：你好
+  :::
+example_assert_contains: "甲：你好"
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#dialogue"
