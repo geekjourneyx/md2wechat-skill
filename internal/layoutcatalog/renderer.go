@@ -56,7 +56,10 @@ func (c *Catalog) Render(name string, vars map[string]any) (string, error) {
 		if renderErr != nil {
 			return "", renderErr
 		}
-		if err := validateRenderedOutput(spec, out); err != nil {
+		selected := *spec
+		selected.BodyFormat = format
+		selected.CompatibleBodyFormats = nil
+		if err := validateRenderedOutput(&selected, out); err != nil {
 			return "", err
 		}
 		return out, nil

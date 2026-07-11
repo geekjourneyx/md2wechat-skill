@@ -239,9 +239,11 @@ func parseDialogueBody(bodySpec *BodySpec, body []string) (bodyFacts, []bodyVali
 		}
 		idx := strings.Index(line, ":")
 		separatorWidth := len(":")
+		fullWidthSeparator := false
 		if fullWidth := strings.Index(line, "："); idx < 0 || (fullWidth >= 0 && fullWidth < idx) {
 			idx = fullWidth
 			separatorWidth = len("：")
+			fullWidthSeparator = true
 		}
 		if idx < 0 {
 			return facts, []bodyValidationIssue{{message: "dialogue line requires a speaker prefix"}}
@@ -254,8 +256,13 @@ func parseDialogueBody(bodySpec *BodySpec, body []string) (bodyFacts, []bodyVali
 		if value == "" {
 			return facts, []bodyValidationIssue{{field: prefix, message: "dialogue line must not be empty"}}
 		}
-		if !containsString(bodyAllowedPrefixes(bodySpec), prefix) && (bodySpec == nil || !bodySpec.AllowNamedSpeakers) {
-			return facts, []bodyValidationIssue{{field: prefix, message: fmt.Sprintf("dialogue prefix %q is not allowed", prefix)}}
+		if !containsString(bodyAllowedPrefixes(bodySpec), prefix) {
+			if bodySpec == nil || !bodySpec.AllowNamedSpeakers {
+				return facts, []bodyValidationIssue{{field: prefix, message: fmt.Sprintf("dialogue prefix %q is not allowed", prefix)}}
+			}
+			if !fullWidthSeparator {
+				return facts, []bodyValidationIssue{{field: prefix, message: "legacy named speakers require a full-width colon"}}
+			}
 		}
 		facts.addField(prefix, value)
 		facts.itemCount++

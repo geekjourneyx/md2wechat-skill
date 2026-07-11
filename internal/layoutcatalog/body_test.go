@@ -136,6 +136,11 @@ func TestValidateBlockBodyMatrix(t *testing.T) {
 			body: []string{"Q: Why?", "A: Because."},
 		},
 		{
+			name: "dialogue accepts configured alternate pair with ascii colon",
+			spec: &LayoutSpec{BodyFormat: BodyFormatDialogue, Body: &BodySpec{AllowedPrefixes: []string{"U", "E"}, RequiredPairs: [][2]string{{"U", "E"}}}},
+			body: []string{"U: Question", "E: Answer"},
+		},
+		{
 			name: "dialogue rejects configured single side",
 			spec: &LayoutSpec{BodyFormat: BodyFormatDialogue, Body: &BodySpec{AllowedPrefixes: []string{"U", "E"}, RequiredPairs: [][2]string{{"U", "E"}}}},
 			body: []string{"U: Question"}, wantErr: "E",
@@ -144,6 +149,16 @@ func TestValidateBlockBodyMatrix(t *testing.T) {
 			name: "dialogue accepts named speakers when enabled",
 			spec: &LayoutSpec{BodyFormat: BodyFormatDialogue, Body: &BodySpec{AllowNamedSpeakers: true, MinItems: 2}},
 			body: []string{"读者：为什么？", "作者：因为。"},
+		},
+		{
+			name: "dialogue rejects named speakers with ascii colon",
+			spec: &LayoutSpec{BodyFormat: BodyFormatDialogue, Body: &BodySpec{AllowNamedSpeakers: true, MinItems: 2}},
+			body: []string{"Reader: Why?", "Author: Because."}, wantErr: "full-width colon",
+		},
+		{
+			name: "dialogue rejects https urls as named speakers",
+			spec: &LayoutSpec{BodyFormat: BodyFormatDialogue, Body: &BodySpec{AllowNamedSpeakers: true, MinItems: 2}},
+			body: []string{"https://example.com/one", "https://example.com/two"}, wantErr: "full-width colon",
 		},
 		{
 			name: "dialogue rejects empty prefix",
@@ -254,6 +269,85 @@ metadata:
 	}
 }
 
+func conditionalSchemaYAML(fields, body string) []byte {
+	return []byte(fmt.Sprintf(`
+schema_version: "1"
+name: conditional
+body_format: markdown_fields
+version: "1.0.0"
+category: body
+serves: [readability]
+%s
+%s
+metadata:
+  author: test
+  provenance: test
+`, fields, body))
+}
+
+func TestParseLayoutSpecRejectsInvalidConditionalBodySchema(t *testing.T) {
+	declaredFields := `fields:
+  optional:
+    - name: image
+    - name: caption
+    - name: step
+    - name: desc`
+	tests := []struct {
+		name    string
+		fields  string
+		body    string
+		wantErr string
+	}{
+		{name: "valid conditional schema", fields: declaredFields, body: `body:
+  min_images: 1
+  max_images: 2
+  min_items: 0
+  required_pairs:
+    - [image, caption]
+  group:
+    start: step
+    required: [step, desc]
+    min: 1`},
+		{name: "zero max is unbounded", fields: declaredFields, body: "body:\n  min_images: 2\n  max_images: 0"},
+		{name: "negative min images", fields: declaredFields, body: "body:\n  min_images: -1", wantErr: "min_images must be nonnegative"},
+		{name: "negative max images", fields: declaredFields, body: "body:\n  max_images: -1", wantErr: "max_images must be nonnegative"},
+		{name: "negative min items", fields: declaredFields, body: "body:\n  min_items: -1", wantErr: "min_items must be nonnegative"},
+		{name: "max images below min", fields: declaredFields, body: "body:\n  min_images: 2\n  max_images: 1", wantErr: "max_images must be at least min_images"},
+		{name: "empty required any group", fields: declaredFields + "\n  required_any:\n    - []", body: "", wantErr: "required_any group must not be empty"},
+		{name: "unknown required any field", fields: declaredFields + "\n  required_any:\n    - [image, missing]", body: "", wantErr: "required_any field \"missing\" is not declared"},
+		{name: "duplicate required any field", fields: declaredFields + "\n  required_any:\n    - [image, image]", body: "", wantErr: "duplicate required_any field \"image\""},
+		{name: "duplicate required any group", fields: declaredFields + "\n  required_any:\n    - [image, caption]\n    - [caption, image]", body: "", wantErr: "duplicate required_any group"},
+		{name: "duplicate field declaration", fields: declaredFields + "\n    - name: image", body: "", wantErr: "duplicate field \"image\""},
+		{name: "empty required pair field", fields: declaredFields, body: "body:\n  required_pairs:\n    - [image, \"\"]", wantErr: "required_pairs fields must not be empty"},
+		{name: "unknown required pair field", fields: declaredFields, body: "body:\n  required_pairs:\n    - [image, missing]", wantErr: "required_pairs field \"missing\" is not declared"},
+		{name: "same required pair field", fields: declaredFields, body: "body:\n  required_pairs:\n    - [image, image]", wantErr: "required_pairs fields must be distinct"},
+		{name: "duplicate required pair", fields: declaredFields, body: "body:\n  required_pairs:\n    - [image, caption]\n    - [image, caption]", wantErr: "duplicate required_pairs pair"},
+		{name: "reverse duplicate required pair", fields: declaredFields, body: "body:\n  required_pairs:\n    - [image, caption]\n    - [caption, image]", wantErr: "duplicate required_pairs pair"},
+		{name: "empty group start", fields: declaredFields, body: "body:\n  group:\n    start: \"\"\n    required: [step]\n    min: 1", wantErr: "group.start must not be empty"},
+		{name: "unknown group start", fields: declaredFields, body: "body:\n  group:\n    start: missing\n    required: [step]\n    min: 1", wantErr: "group.start field \"missing\" is not declared"},
+		{name: "empty group required", fields: declaredFields, body: "body:\n  group:\n    start: step\n    required: []\n    min: 1", wantErr: "group.required must not be empty"},
+		{name: "empty group required field", fields: declaredFields, body: "body:\n  group:\n    start: step\n    required: [\"\"]\n    min: 1", wantErr: "group.required fields must not be empty"},
+		{name: "unknown group required field", fields: declaredFields, body: "body:\n  group:\n    start: step\n    required: [missing]\n    min: 1", wantErr: "group.required field \"missing\" is not declared"},
+		{name: "duplicate group required field", fields: declaredFields, body: "body:\n  group:\n    start: step\n    required: [desc, desc]\n    min: 1", wantErr: "duplicate group.required field \"desc\""},
+		{name: "negative group min", fields: declaredFields, body: "body:\n  group:\n    start: step\n    required: [step]\n    min: -1", wantErr: "group.min must be nonnegative"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parseLayoutSpec(conditionalSchemaYAML(tt.fields, tt.body))
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("parseLayoutSpec() error = %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("parseLayoutSpec() error = %v, want %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func dialogueJSONSpec() *LayoutSpec {
 	return &LayoutSpec{
 		Name:                  "question-next",
@@ -338,6 +432,32 @@ func TestRenderSelectsCompatibleStructuredFormat(t *testing.T) {
 	}
 	if report := c.Validate(out); len(report.Errors) != 0 {
 		t.Fatalf("rendered output does not pass shared validation: %+v", report.Errors)
+	}
+}
+
+func TestRenderSelectedFormatCannotPassViaLooseCompatibilityFormat(t *testing.T) {
+	c := NewCatalog()
+	c.modules["strict-json"] = &LayoutSpec{
+		Name:                  "strict-json",
+		BodyFormat:            BodyFormatJSONObject,
+		CompatibleBodyFormats: []string{BodyFormatLines},
+		Fields:                &FieldsSpec{Required: []FieldSpec{{Name: "title"}}},
+		Body:                  &BodySpec{MinItems: 1},
+	}
+
+	_, err := c.Render("strict-json", map[string]any{})
+	if !errors.Is(err, ErrMissingRequiredField) {
+		t.Fatalf("Render() error = %v, want selected JSON missing-field error", err)
+	}
+}
+
+func TestRenderCompatibleJSONMissingFieldPreservesSentinel(t *testing.T) {
+	c := NewCatalog()
+	c.modules["question-next"] = dialogueJSONSpec()
+
+	_, err := c.Render("question-next", map[string]any{"q": "Why?"})
+	if !errors.Is(err, ErrMissingRequiredField) {
+		t.Fatalf("Render() error = %v, want ErrMissingRequiredField", err)
 	}
 }
 

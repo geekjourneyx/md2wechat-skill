@@ -187,6 +187,13 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 			return nil, fmt.Errorf("invalid serves value: %q", s)
 		}
 	}
+	declaredFields, err := validateFieldsSpec(spec.Fields)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateBodySpec(spec.Body, declaredFields); err != nil {
+		return nil, err
+	}
 	if seenBodyFormats[BodyFormatRows] && spec.Rows == nil {
 		return nil, fmt.Errorf("body_format rows requires rows")
 	}
@@ -197,6 +204,120 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 		return nil, fmt.Errorf("metadata.author and metadata.provenance are required")
 	}
 	return &spec, nil
+}
+
+func validateFieldsSpec(fields *FieldsSpec) (map[string]bool, error) {
+	declared := map[string]bool{}
+	if fields == nil {
+		return declared, nil
+	}
+	for _, field := range append(append([]FieldSpec{}, fields.Required...), fields.Optional...) {
+		if strings.TrimSpace(field.Name) == "" {
+			return nil, fmt.Errorf("field name must not be empty")
+		}
+		if declared[field.Name] {
+			return nil, fmt.Errorf("duplicate field %q", field.Name)
+		}
+		declared[field.Name] = true
+	}
+	seenGroups := map[string]bool{}
+	for _, group := range fields.RequiredAny {
+		if len(group) == 0 {
+			return nil, fmt.Errorf("required_any group must not be empty")
+		}
+		seenFields := map[string]bool{}
+		for _, name := range group {
+			if strings.TrimSpace(name) == "" {
+				return nil, fmt.Errorf("required_any fields must not be empty")
+			}
+			if !declared[name] {
+				return nil, fmt.Errorf("required_any field %q is not declared", name)
+			}
+			if seenFields[name] {
+				return nil, fmt.Errorf("duplicate required_any field %q", name)
+			}
+			seenFields[name] = true
+		}
+		canonical := append([]string(nil), group...)
+		sort.Strings(canonical)
+		key := strings.Join(canonical, "\x00")
+		if seenGroups[key] {
+			return nil, fmt.Errorf("duplicate required_any group")
+		}
+		seenGroups[key] = true
+	}
+	return declared, nil
+}
+
+func validateBodySpec(body *BodySpec, declared map[string]bool) error {
+	if body == nil {
+		return nil
+	}
+	if body.MinImages < 0 {
+		return fmt.Errorf("min_images must be nonnegative")
+	}
+	if body.MaxImages < 0 {
+		return fmt.Errorf("max_images must be nonnegative")
+	}
+	if body.MinItems < 0 {
+		return fmt.Errorf("min_items must be nonnegative")
+	}
+	if body.MaxImages != 0 && body.MaxImages < body.MinImages {
+		return fmt.Errorf("max_images must be at least min_images when nonzero")
+	}
+	seenPairs := map[string]bool{}
+	for _, pair := range body.RequiredPairs {
+		if strings.TrimSpace(pair[0]) == "" || strings.TrimSpace(pair[1]) == "" {
+			return fmt.Errorf("required_pairs fields must not be empty")
+		}
+		if pair[0] == pair[1] {
+			return fmt.Errorf("required_pairs fields must be distinct")
+		}
+		for _, name := range pair {
+			if !declared[name] {
+				return fmt.Errorf("required_pairs field %q is not declared", name)
+			}
+		}
+		canonical := pair
+		if canonical[1] < canonical[0] {
+			canonical[0], canonical[1] = canonical[1], canonical[0]
+		}
+		key := canonical[0] + "\x00" + canonical[1]
+		if seenPairs[key] {
+			return fmt.Errorf("duplicate required_pairs pair")
+		}
+		seenPairs[key] = true
+	}
+	if body.Group == nil {
+		return nil
+	}
+	group := body.Group
+	if strings.TrimSpace(group.Start) == "" {
+		return fmt.Errorf("group.start must not be empty")
+	}
+	if !declared[group.Start] {
+		return fmt.Errorf("group.start field %q is not declared", group.Start)
+	}
+	if len(group.Required) == 0 {
+		return fmt.Errorf("group.required must not be empty")
+	}
+	seenRequired := map[string]bool{}
+	for _, name := range group.Required {
+		if strings.TrimSpace(name) == "" {
+			return fmt.Errorf("group.required fields must not be empty")
+		}
+		if !declared[name] {
+			return fmt.Errorf("group.required field %q is not declared", name)
+		}
+		if seenRequired[name] {
+			return fmt.Errorf("duplicate group.required field %q", name)
+		}
+		seenRequired[name] = true
+	}
+	if group.Min < 0 {
+		return fmt.Errorf("group.min must be nonnegative")
+	}
+	return nil
 }
 
 func validateOpenerSpec(opener *OpenerSpec) error {
