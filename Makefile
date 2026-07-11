@@ -83,10 +83,9 @@ release-check:
 quality-gates:
 	@bash scripts/quality-gates.sh
 
-# E2E: layout module catalog vs /api/convert consistency (requires running server)
+# E2E: layout module catalog vs production /api/convert consistency (opt-in)
 e2e-layout:
-	MD2WECHAT_E2E=1 MD2WECHAT_BASE_URL=$${MD2WECHAT_BASE_URL:-http://localhost:3000} \
-		go test ./cmd/md2wechat -run E2E -v
+	@./scripts/layout-conformance.sh
 
 # 安装到 GOPATH/bin
 install:

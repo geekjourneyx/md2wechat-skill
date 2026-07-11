@@ -874,7 +874,8 @@ md2wechat doctor --json
 ### How do I discover layout modules supported in API mode?
 
 ```bash
-md2wechat layout list --json           # all 43 modules
+md2wechat layout list --json           # 53 recommended modules (default lifecycle)
+md2wechat layout list --lifecycle compatibility --json  # 3 legacy compatibility modules
 md2wechat layout list --serves attention --json   # attention-grabbing modules
 md2wechat layout show hero --json      # full spec with fields and example
 ```

@@ -22,6 +22,20 @@
 - 可用的图片服务配置
 - 微信接口白名单已放通当前执行机 IP
 
+### 高级排版 API 一致性
+
+高级排版 conformance 默认离线跳过，不属于 `go test ./...` 的外部网络前提。显式执行：
+
+```bash
+make e2e-layout
+```
+
+该目标固定请求 `https://md2wechat.app`，从 `~/.config/md2wechat/config.yaml` 读取 `api.md2wechat_key`；`MD2WECHAT_API_KEY` 可覆盖配置文件。API key 只进入 `X-API-Key` 请求头，不会出现在命令行、JSONL 报告或测试日志中。
+
+报告默认写入 `/tmp/md2wechat-layout-conformance.jsonl`，可通过 `LAYOUT_CONFORMANCE_OUTPUT` 改路径。每个 recommended canonical witness、声明的 variant witness和三个 compatibility witness 都是独立子测试；任一 module marker、稳定正文、精确 variant 分支属性、语义 DOM 约束或原始 fence 不一致都会失败。
+
+远端若返回 build identity header，报告优先记录该值；否则只记录固定 target 与 UTC 观测时间，并明确标记为非 commit 证据。失败类别区分 authentication、API drift 与 network failure。
+
 执行过的基础自检：
 
 ```bash

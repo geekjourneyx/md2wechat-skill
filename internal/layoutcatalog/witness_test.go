@@ -1,9 +1,120 @@
 package layoutcatalog
 
 import (
+	"os"
+	"slices"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
+
+type recommendedScenarioMap struct {
+	SourceCommit               string   `yaml:"source_commit"`
+	SourceFile                 string   `yaml:"source_file"`
+	GuideOnlyRecommendedSyntax []string `yaml:"guide_only_recommended_syntax"`
+	Scenarios                  []struct {
+		ID      string `yaml:"id"`
+		Module  string `yaml:"module"`
+		Variant string `yaml:"variant,omitempty"`
+	} `yaml:"scenarios"`
+}
+
+func TestRecommendedScenarioMappingMatchesPinnedSources(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	m := readRecommendedScenarioMap(t)
+	if m.SourceCommit != "989a335" || m.SourceFile != "lib/advanced-module-groups.ts" {
+		t.Fatalf("source = %q:%q", m.SourceCommit, m.SourceFile)
+	}
+	if len(m.Scenarios) != 68 {
+		t.Fatalf("scenario count = %d", len(m.Scenarios))
+	}
+
+	seenIDs, coveredModules := map[string]bool{}, map[string]bool{}
+	for _, scenario := range m.Scenarios {
+		if scenario.ID == "" || seenIDs[scenario.ID] {
+			t.Fatalf("invalid duplicate id %q", scenario.ID)
+		}
+		seenIDs[scenario.ID] = true
+		spec, ok := c.Get(scenario.Module)
+		if !ok || spec.Lifecycle != LifecycleRecommended {
+			t.Fatalf("invalid target %+v", scenario)
+		}
+		assertScenarioHasWitness(t, spec, scenario.Variant)
+		coveredModules[scenario.Module] = true
+	}
+	if len(coveredModules) != 48 {
+		t.Fatalf("covered module count = %d, want 48", len(coveredModules))
+	}
+	wantGuideOnly := []string{
+		"figure-caption", "gallery-grid", "gallery-story", "svg-reveal", "svg-swipe-gallery",
+	}
+	slices.Sort(m.GuideOnlyRecommendedSyntax)
+	if !slices.Equal(m.GuideOnlyRecommendedSyntax, wantGuideOnly) {
+		t.Fatalf("guide-only syntax = %v", m.GuideOnlyRecommendedSyntax)
+	}
+	diff := missingRecommendedNames(recommendedModuleNames, coveredModules)
+	slices.Sort(diff)
+	if !slices.Equal(diff, wantGuideOnly) {
+		t.Fatalf("scenario-source gap = %v, want %v", diff, wantGuideOnly)
+	}
+}
+
+func readRecommendedScenarioMap(t *testing.T) recommendedScenarioMap {
+	t.Helper()
+	data, err := os.ReadFile("testdata/recommended_scenarios.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mapping recommendedScenarioMap
+	if err := yaml.Unmarshal(data, &mapping); err != nil {
+		t.Fatal(err)
+	}
+	return mapping
+}
+
+func assertScenarioHasWitness(t *testing.T, spec *LayoutSpec, variant string) {
+	t.Helper()
+	if variant == "" {
+		if err := checkExecutableWitness(NewCatalogWithSpec(spec), spec.Name, "", spec.Example, spec.ExampleAssertContains); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	for _, candidate := range spec.Variants {
+		if candidate.Name != variant && !slices.Contains(candidate.Aliases, variant) {
+			continue
+		}
+		c := NewCatalogWithSpec(spec)
+		if err := c.ValidateWitness(WitnessContract{
+			Module: spec.Name, Variant: candidate.Name, VariantAliases: candidate.Aliases,
+			Example: candidate.Example, AssertContains: candidate.AssertContains,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	t.Fatalf("%s has no declared witness for variant %q", spec.Name, variant)
+}
+
+func NewCatalogWithSpec(spec *LayoutSpec) *Catalog {
+	c := NewCatalog()
+	c.modules[spec.Name] = spec
+	return c
+}
+
+func missingRecommendedNames(names []string, covered map[string]bool) []string {
+	var missing []string
+	for _, name := range names {
+		if !covered[name] {
+			missing = append(missing, name)
+		}
+	}
+	return missing
+}
 
 func TestExecutableWitnessContract(t *testing.T) {
 	c := NewCatalog()

@@ -1,0 +1,77 @@
+source_commit: "989a335"
+source_file: lib/advanced-module-groups.ts
+guide_only_recommended_syntax:
+  - figure-caption
+  - gallery-grid
+  - gallery-story
+  - svg-reveal
+  - svg-swipe-gallery
+scenarios:
+  - {id: hero-editorial, module: hero, variant: editorial}
+  - {id: hero-briefing, module: hero, variant: briefing}
+  - {id: hero-story, module: hero, variant: story}
+  - {id: cards, module: cards}
+  - {id: part, module: part}
+  - {id: toc, module: toc}
+  - {id: label-title, module: label-title}
+  - {id: audience-fit, module: audience-fit}
+  - {id: verdict, module: verdict}
+  - {id: myth-fact, module: myth-fact}
+  - {id: bridge, module: bridge}
+  - {id: manifesto, module: manifesto}
+  - {id: infographic-thesis, module: infographic, variant: thesis}
+  - {id: infographic-formula, module: infographic, variant: formula}
+  - {id: infographic-pullquote, module: infographic, variant: pullquote}
+  - {id: infographic-contrast, module: infographic, variant: contrast}
+  - {id: infographic-diagnosis, module: infographic, variant: diagnosis}
+  - {id: infographic-number, module: infographic, variant: number}
+  - {id: infographic-path, module: infographic, variant: path}
+  - {id: infographic-anatomy, module: infographic, variant: anatomy}
+  - {id: infographic-tradeoff, module: infographic, variant: tradeoff}
+  - {id: infographic-evidence-chain, module: infographic, variant: evidence-chain}
+  - {id: infographic-micro-case, module: infographic, variant: micro-case}
+  - {id: metrics, module: metrics}
+  - {id: compare, module: compare}
+  - {id: steps, module: steps}
+  - {id: timeline, module: timeline}
+  - {id: quote-light, module: quote, variant: light}
+  - {id: quote-brand, module: quote, variant: brand}
+  - {id: quote-proof, module: quote, variant: proof}
+  - {id: image-text, module: image-text}
+  - {id: image-compare, module: image-compare}
+  - {id: image-annotate, module: image-annotate}
+  - {id: image-steps, module: image-steps}
+  - {id: image-phone-shot, module: image-phone-shot}
+  - {id: author-card, module: author-card}
+  - {id: series, module: series}
+  - {id: subscribe, module: subscribe}
+  - {id: people, module: people}
+  - {id: cases, module: cases}
+  - {id: pricing, module: pricing}
+  - {id: faq, module: faq}
+  - {id: logos, module: logos}
+  - {id: checklist, module: checklist}
+  - {id: toolbox, module: toolbox}
+  - {id: specs, module: specs}
+  - {id: notice, module: notice}
+  - {id: summary-legacy, module: summary}
+  - {id: summary-three, module: summary, variant: three}
+  - {id: summary-decision, module: summary, variant: decision}
+  - {id: summary-save, module: summary, variant: save}
+  - {id: cta-save-follow, module: cta, variant: save-follow}
+  - {id: cta-consult, module: cta, variant: consult}
+  - {id: cta-trial, module: cta, variant: trial}
+  - {id: callout, module: callout}
+  - {id: callout-warning, module: callout}
+  - {id: quote-card, module: quote-card}
+  - {id: stat-row, module: stat-row}
+  - {id: definition, module: definition}
+  - {id: tweet, module: tweet}
+  - {id: question, module: question}
+  - {id: comparison-table, module: comparison-table}
+  - {id: changelog, module: changelog}
+  - {id: resource-list, module: resource-list}
+  - {id: split, module: split}
+  - {id: flow, module: flow}
+  - {id: matrix, module: matrix}
+  - {id: dialogue-pair, module: dialogue-pair}

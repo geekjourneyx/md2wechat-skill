@@ -52,7 +52,12 @@ md2wechat capabilities --json
   },
   "layout": {
     "available": true,
-    "module_count": 43,
+    "module_count": 53,
+    "recommended_syntax_count": 53,
+    "recommended_scenario_count": 68,
+    "compatibility_module_count": 3,
+    "base_enhancement_count": 4,
+    "render_syntax_count": 60,
     "supports_validate": true,
     "api_mode_only": true,
     "schema_version": "1"
@@ -384,7 +389,7 @@ Prompt catalog 的加载优先级为：
 
 ## Layout Module Discovery (:::module Syntax)
 
-The `layout` subcommand exposes the built-in catalog of 43 advanced WeChat layout modules (`:::module` syntax) for AI agents.
+The `layout` subcommand exposes 53 recommended advanced WeChat layout syntaxes (`:::module`) by default. Discovery separately reports 68 upstream scenarios, 3 compatibility modules, 4 base enhancements, and 60 total render syntaxes; these counts are not interchangeable.
 
 ### Commands
 
@@ -428,7 +433,7 @@ When the user says "帮我排版这篇文章" without naming a theme or module, 
 
 Custom module YAMLs are merged in this order (later wins):
 
-1. **Builtin** — 43 embedded modules (shipped with binary)
+1. **Builtin** — 53 recommended modules plus 3 compatibility modules (shipped with binary)
 2. `~/.config/md2wechat/layout/` — user-global overrides
 3. `./layout/` — project-local overrides
 4. `$MD2WECHAT_LAYOUT_DIR` — env var (highest priority)

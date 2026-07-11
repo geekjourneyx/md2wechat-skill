@@ -38,7 +38,7 @@ md2wechat 把公众号发布流程拆成一组可验证的 CLI 命令：
 |---|---|
 | Markdown 转微信 HTML | `convert`，支持预览、上传图片、创建草稿 |
 | 发布前检查 | `inspect --json` 输出标题、摘要、图片、cover、draft readiness |
-| 稳定排版 | API 模式返回确定性 HTML，支持 48 个主题和 43 个高级排版模块 |
+| 稳定排版 | API 模式返回确定性 HTML，支持 48 个主题和 53 个推荐高级排版语法 |
 | Agent 自动化 | `capabilities`、`doctor`、`themes`、`layout`、`providers` 等 discovery 命令 |
 | 内容生产 | `write`、`humanize`、`title suggest`、`generate_cover`、`generate_infographic` |
 | 多账号发布 | 命名公众号账号，本地只读发现，不输出 Secret |
@@ -82,7 +82,7 @@ API 模式适合需要稳定输出、多人协作、批量发布或 Agent 自动
 |---|---|---|
 | 输出方式 | 生成 prompt，由外部 LLM 继续处理 | 直接返回微信 HTML |
 | 主题 | 3 个基础主题 | 48 个专业主题 |
-| 高级排版模块 | 不支持 | 43 个 `:::module` 模块 |
+| 高级排版模块 | 不支持 | 53 个推荐 `:::module` 语法 |
 | 输出一致性 | 取决于外部 LLM | 同样输入得到同样输出 |
 | 响应速度 | 取决于外部 LLM | 秒级 |
 | 发布自动化 | 适合实验 | 适合团队、客户号、矩阵号 |
@@ -90,7 +90,7 @@ API 模式适合需要稳定输出、多人协作、批量发布或 Agent 自动
 专业能力包括：
 
 - 48 个微信渲染精调主题：[theme-gallery](https://md2wechat.app/theme-gallery)
-- 43 个高级排版模块：[docs/LAYOUT.md](docs/LAYOUT.md)
+- 53 个推荐高级排版语法：[docs/LAYOUT.md](docs/LAYOUT.md)
 - 多公众号账号：[docs/CONFIG.md](docs/CONFIG.md)
 - 微信接口固定出口：[docs/WECHAT-CREDENTIALS.md](docs/WECHAT-CREDENTIALS.md)
 - 发布前 readiness 检查：[docs/DISCOVERY.md](docs/DISCOVERY.md)
@@ -219,7 +219,7 @@ md2wechat layout validate --file article.md --json
 | [USAGE](docs/USAGE.md) | 命令完整说明 |
 | [DISCOVERY](docs/DISCOVERY.md) | Agent discovery 契约 |
 | [ADVISE](docs/ADVISE.md) | 已有文章的可选增强建议 |
-| [LAYOUT](docs/LAYOUT.md) | 43 个高级排版模块 |
+| [LAYOUT](docs/LAYOUT.md) | 高级排版模块教程与 discovery 用法 |
 | [HUMANIZE](docs/HUMANIZE.md) | AI 去痕与 authentic 写作 |
 | [AGENT_IMAGE_GEN](docs/AGENT_IMAGE_GEN.md) | 宿主 Agent Image Gen 工作流 |
 | [CONFIG](docs/CONFIG.md) | 配置字段和环境变量 |

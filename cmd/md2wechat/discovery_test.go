@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -720,6 +721,25 @@ func TestBuildCapabilitiesDataIncludesLayoutWithoutUnreleasedFormat(t *testing.T
 	wantModuleCount := len(cat.ListFiltered(layoutcatalog.ListFilter{}))
 	if layout["module_count"] != wantModuleCount {
 		t.Fatalf("layout module_count = %#v, want %d", layout["module_count"], wantModuleCount)
+	}
+	if layout["module_count"] != 53 {
+		t.Fatalf("layout module_count = %#v, want 53", layout["module_count"])
+	}
+	if layout["recommended_syntax_count"] != 53 {
+		t.Fatalf("recommended_syntax_count = %#v", layout)
+	}
+	if layout["recommended_scenario_count"] != 68 {
+		t.Fatalf("recommended_scenario_count = %#v", layout)
+	}
+	if layout["compatibility_module_count"] != 3 {
+		t.Fatalf("compatibility_module_count = %#v", layout)
+	}
+	if layout["base_enhancement_count"] != 4 || layout["render_syntax_count"] != 60 {
+		t.Fatalf("render count contract = %#v", layout)
+	}
+	wantCategories := []string{"brand", "conversion", "evidence", "free-layout", "infographic", "interactive", "judgment", "opening", "sprint4"}
+	if got := layout["categories"]; !reflect.DeepEqual(got, wantCategories) {
+		t.Fatalf("layout categories = %#v, want %#v", got, wantCategories)
 	}
 	if layout["api_mode_only"] != true {
 		t.Fatalf("layout api_mode_only = %#v", layout["api_mode_only"])

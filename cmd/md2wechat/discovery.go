@@ -448,6 +448,7 @@ func buildLayoutCapabilityData() map[string]any {
 		}
 	}
 	modules := cat.ListFiltered(layoutcatalog.ListFilter{})
+	compatibilityModules := cat.ListFiltered(layoutcatalog.ListFilter{Lifecycle: layoutcatalog.LifecycleCompatibility})
 	categorySet := map[string]struct{}{}
 	for _, module := range modules {
 		categorySet[module.Category] = struct{}{}
@@ -459,13 +460,18 @@ func buildLayoutCapabilityData() map[string]any {
 	sort.Strings(categories)
 
 	return map[string]any{
-		"available":         true,
-		"module_count":      len(modules),
-		"supports_validate": true,
-		"api_mode_only":     true,
-		"schema_version":    layoutcatalog.SchemaVersion,
-		"serves":            []string{"attention", "readability", "memorability", "conversion"},
-		"categories":        categories,
+		"available":                  true,
+		"module_count":               len(modules),
+		"recommended_syntax_count":   len(modules),
+		"recommended_scenario_count": recommendedLayoutScenarioCount,
+		"compatibility_module_count": len(compatibilityModules),
+		"base_enhancement_count":     baseLayoutEnhancementCount,
+		"render_syntax_count":        renderLayoutSyntaxCount,
+		"supports_validate":          true,
+		"api_mode_only":              true,
+		"schema_version":             layoutcatalog.SchemaVersion,
+		"serves":                     []string{"attention", "readability", "memorability", "conversion"},
+		"categories":                 categories,
 	}
 }
 

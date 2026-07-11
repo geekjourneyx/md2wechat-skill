@@ -3,7 +3,7 @@
 > **前提**：高级排版模块是 **API 模式**专属功能。`convert` 命令默认即 API 模式，无需额外参数。  
 > 如需 API 访问权限，请联系作者咨询。
 
-本教程从零开始，带你掌握 43 个微信公众号高级排版模块的完整用法。不需要设计背景，照着用就行。
+本教程讲解微信公众号高级排版模块的核心用法。当前数量与完整规格以 `md2wechat capabilities --json`、`layout list --json` 和 `layout show` 为准；默认 discovery 返回 53 个推荐语法。
 
 ---
 
@@ -101,7 +101,7 @@ subtitle: 不是好不好看，是读者读不读得完
 ### 第 1 步：发现有哪些模块
 
 ```bash
-# 列出全部 43 个模块
+# 列出全部推荐模块
 md2wechat layout list --json
 
 # 按目的筛选（最常用）
@@ -243,7 +243,7 @@ cta_text: ↓ 3 分钟，一个判断
 ```
 :::toc[阅读导航]
 01 | 问题定义 | 为什么现有排版让读者离开
-02 | 模块原理 | 43 个模块各自解决什么
+02 | 模块原理 | 推荐模块各自解决什么
 03 | 实战示例 | 一篇观点文的完整排版过程
 :::
 ```
@@ -260,7 +260,7 @@ cta_text: ↓ 3 分钟，一个判断
 :::cards[本文结构]
 PART 01 | 问题 | 读者为什么不读你的文章 | accent
 PART 02 | 原理 | 排版如何降低阅读决策成本 | default
-PART 03 | 实战 | 43 个模块的选择逻辑 | default
+PART 03 | 实战 | 推荐模块的选择逻辑 | default
 PART 04 | 行动 | 今天就能上手的 3 步方法 | default
 :::
 ```
@@ -277,7 +277,7 @@ PART 04 | 行动 | 今天就能上手的 3 步方法 | default
 :::part
 eyebrow: PART 02
 title: 模块选择逻辑
-body: 不是每篇文章都需要 43 个模块。核心是：每件事做一个，做好一个。
+body: 不是每篇文章都需要用遍推荐模块。核心是：每件事做一个，做好一个。
 :::
 ```
 
@@ -362,7 +362,7 @@ title: 公众号创作者正在经历什么
 2023.01 | 初版上线 | 支持基础 Markdown 转换
 2023.09 | 主题系统 | 推出 48 个专业主题
 2024.03 | Prompt Catalog | AI 图片生成集成
-2025.01 | Layout Catalog | 43 个高级排版模块发布
+2025.01 | Layout Catalog | 高级排版模块目录发布
 :::
 ```
 
@@ -859,7 +859,7 @@ A: 不需要，照着字段填写就行。
 
 ```
 :::resource-list
-[{"icon":"🛠","name":"md2wechat CLI","url":"https://github.com/geekjourneyx/md2wechat-skill","desc":"Markdown 转微信的命令行工具"},{"icon":"📖","name":"Layout 教程","url":"https://github.com/geekjourneyx/md2wechat-skill/blob/main/docs/LAYOUT.md","desc":"本教程，43 个模块详解"}]
+[{"icon":"🛠","name":"md2wechat CLI","url":"https://github.com/geekjourneyx/md2wechat-skill","desc":"Markdown 转微信的命令行工具"},{"icon":"📖","name":"Layout 教程","url":"https://github.com/geekjourneyx/md2wechat-skill/blob/main/docs/LAYOUT.md","desc":"高级排版模块核心教程"}]
 :::
 ```
 
@@ -873,7 +873,7 @@ A: 不需要，照着字段填写就行。
 
 ```
 :::comparison-table
-{"left":{"title":"AI 模式","items":["灵活度高","支持多种风格","不需要 API Key"]},"right":{"title":"API 模式","items":["稳定一致","支持 43 个排版模块","支持 48 个专业主题"]}}
+{"left":{"title":"AI 模式","items":["灵活度高","支持多种风格","不需要 API Key"]},"right":{"title":"API 模式","items":["稳定一致","支持高级排版模块","支持 48 个专业主题"]}}
 :::
 ```
 
@@ -952,7 +952,7 @@ fact | 选最少的模块，每件事做好一个
 让读者读完愿意行动 | conversion | cta / faq / checklist | default
 :::
 
-每个模块只服务其中一件事。一篇文章不需要 43 个模块，只需要每件事做对一个。
+每个模块只服务其中一件事。一篇文章不需要用遍推荐模块，只需要每件事做对一个。
 
 :::steps[选模块的方法]
 01 | 判断文章类型 | 观点文 / 数据报告 / 教程 / 产品发布
@@ -1140,7 +1140,7 @@ md2wechat config show --format json | grep api_key
 
 ## 七、自定义模块
 
-如果内置的 43 个模块不够用，可以添加自定义模块。
+如果内置推荐模块不够用，可以添加自定义模块。
 
 ### 创建自定义模块 YAML
 
