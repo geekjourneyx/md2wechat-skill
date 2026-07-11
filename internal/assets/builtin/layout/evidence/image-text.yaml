@@ -1,5 +1,6 @@
 schema_version: "1"
 name: image-text
+lifecycle: recommended
 body_format: fields
 version: "1.0.0"
 since: "1.5.0"
@@ -46,6 +47,8 @@ fields:
     - name: alt
       description: 图片替代文字，提升可访问性
       example: "图文双栏示例图片"
+  required_any:
+    - [title, body]
 example: |
   :::image-text
   layout: right

@@ -97,6 +97,34 @@ func TestBuiltinVariantWitnesses(t *testing.T) {
 	}
 }
 
+func TestBuiltinExecutableWitnessesAreComplete(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, spec := range c.ListFiltered(ListFilter{}) {
+		t.Run(spec.Name+"/canonical", func(t *testing.T) {
+			if err := checkExecutableWitness(c, spec.Name, "", spec.Example, spec.ExampleAssertContains); err != nil {
+				t.Fatal(err)
+			}
+		})
+		for _, variant := range spec.Variants {
+			variant := variant
+			t.Run(spec.Name+"/"+variant.Name, func(t *testing.T) {
+				if strings.TrimSpace(variant.UseWhen) == "" {
+					t.Fatal("variant use_when is required")
+				}
+				if err := c.ValidateWitness(WitnessContract{
+					Module: spec.Name, Variant: variant.Name, VariantAliases: variant.Aliases,
+					Example: variant.Example, AssertContains: variant.AssertContains,
+				}); err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
+	}
+}
+
 func TestCustomLayoutWithoutExamplesRemainsCompatible(t *testing.T) {
 	spec, err := parseLayoutSpec([]byte(`schema_version: "1"
 name: custom
@@ -113,6 +141,23 @@ metadata:
 	}
 	if spec.Example != "" || len(spec.Variants) != 0 {
 		t.Fatalf("unexpected witness metadata: example=%q variants=%v", spec.Example, spec.Variants)
+	}
+}
+
+func TestCustomVariantWithoutWitnessMetadataRemainsCompatible(t *testing.T) {
+	spec, err := parseLayoutSpec([]byte(baseLayoutYAML + `fields:
+  optional:
+    - name: variant
+    - name: title
+variants:
+  - name: compact
+    required: [title]
+`))
+	if err != nil {
+		t.Fatalf("custom variant without witness metadata failed to load: %v", err)
+	}
+	if len(spec.Variants) != 1 || spec.Variants[0].Example != "" || spec.Variants[0].UseWhen != "" {
+		t.Fatalf("unexpected custom variant: %+v", spec.Variants)
 	}
 }
 
@@ -150,6 +195,24 @@ func TestParseLayoutSpecValidatesWitnessAssertions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := parseLayoutSpec([]byte(baseLayoutYAML + tt.extra))
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("parseLayoutSpec() error = %v, want category %q", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseLayoutSpecValidatesVariantRules(t *testing.T) {
+	tests := []struct {
+		name, variant, want string
+	}{
+		{name: "undeclared required", variant: "  - name: compact\n    use_when: 需要紧凑结构\n    required: [missing]\n    example: |\n      :::demo\n      variant: compact\n      title: Value\n      :::\n", want: "not declared"},
+		{name: "empty required any", variant: "  - name: compact\n    use_when: 需要紧凑结构\n    required_any: [[]]\n    example: |\n      :::demo\n      variant: compact\n      title: Value\n      :::\n", want: "must not be empty"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			yaml := baseLayoutYAML + "fields:\n  optional:\n    - name: title\n    - name: variant\nvariants:\n" + tt.variant
+			_, err := parseLayoutSpec([]byte(yaml))
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("parseLayoutSpec() error = %v, want category %q", err, tt.want)
 			}

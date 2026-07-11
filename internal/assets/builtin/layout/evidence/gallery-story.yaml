@@ -1,5 +1,6 @@
 schema_version: "1"
 name: gallery-story
+lifecycle: recommended
 body_format: markdown_images
 version: "1.0.0"
 since: "1.5.0"

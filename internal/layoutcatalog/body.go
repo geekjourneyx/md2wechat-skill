@@ -309,9 +309,57 @@ func validateBodyFacts(spec *LayoutSpec, format string, facts bodyFacts) []bodyV
 		}
 	}
 	if formatSupportsDeclaredFields(format) {
-		issues = append(issues, validateFields(spec.Fields, facts.fieldValues)...)
+		issues = append(issues, validateFields(spec.Fields, spec.Variants, facts.fieldValues)...)
+		issues = append(issues, validateVariantFields(spec.Variants, facts.fieldValues)...)
 	}
 	return issues
+}
+
+func validateVariantFields(variants []VariantSpec, values map[string][]string) []bodyValidationIssue {
+	selector := firstNonEmptyValue(values["type"])
+	if selector == "" {
+		selector = firstNonEmptyValue(values["variant"])
+	}
+	if selector == "" {
+		return nil
+	}
+	for _, variant := range variants {
+		if selector != variant.Name && !containsString(variant.Aliases, selector) {
+			continue
+		}
+		var issues []bodyValidationIssue
+		for _, name := range variant.Required {
+			if !hasNonEmptyValue(values[name]) {
+				issues = append(issues, bodyValidationIssue{field: name, message: fmt.Sprintf("variant %s requires field %s", variant.Name, name), cause: ErrMissingRequiredField})
+			}
+		}
+		for _, group := range variant.RequiredAny {
+			found := false
+			for _, name := range group {
+				if hasNonEmptyValue(values[name]) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				issues = append(issues, bodyValidationIssue{message: fmt.Sprintf("variant %s requires at least one of %v", variant.Name, group), cause: ErrMissingRequiredField})
+			}
+		}
+		return issues
+	}
+	if len(variants) > 0 {
+		return []bodyValidationIssue{{field: "variant", message: fmt.Sprintf("unknown variant or type %q", selector), cause: ErrInvalidFieldValue}}
+	}
+	return nil
+}
+
+func firstNonEmptyValue(values []string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 func formatSupportsDeclaredFields(format string) bool {
@@ -367,7 +415,7 @@ func validateFieldGroups(group *FieldGroupSpec, fields []bodyField) []bodyValida
 	return nil
 }
 
-func validateFields(fields *FieldsSpec, values map[string][]string) []bodyValidationIssue {
+func validateFields(fields *FieldsSpec, variants []VariantSpec, values map[string][]string) []bodyValidationIssue {
 	if fields == nil {
 		return nil
 	}
@@ -379,7 +427,7 @@ func validateFields(fields *FieldsSpec, values map[string][]string) []bodyValida
 		}
 		for _, value := range values[field.Name] {
 			if value != "" {
-				if err := checkEnum(field, value); err != nil {
+				if err := checkFieldEnum(field, variants, value); err != nil {
 					issues = append(issues, bodyValidationIssue{field: field.Name, message: err.Error()})
 				}
 			}
@@ -388,7 +436,7 @@ func validateFields(fields *FieldsSpec, values map[string][]string) []bodyValida
 	for _, field := range fields.Optional {
 		for _, value := range values[field.Name] {
 			if value != "" {
-				if err := checkEnum(field, value); err != nil {
+				if err := checkFieldEnum(field, variants, value); err != nil {
 					issues = append(issues, bodyValidationIssue{field: field.Name, message: err.Error()})
 				}
 			}
@@ -407,6 +455,22 @@ func validateFields(fields *FieldsSpec, values map[string][]string) []bodyValida
 		}
 	}
 	return issues
+}
+
+func checkFieldEnum(field FieldSpec, variants []VariantSpec, value string) error {
+	if (field.Name == "variant" || field.Name == "type") && isVariantIdentity(variants, value) {
+		return nil
+	}
+	return checkEnum(field, value)
+}
+
+func isVariantIdentity(variants []VariantSpec, value string) bool {
+	for _, variant := range variants {
+		if value == variant.Name || containsString(variant.Aliases, value) {
+			return true
+		}
+	}
+	return false
 }
 
 func countMarkdownImages(body []string) int {

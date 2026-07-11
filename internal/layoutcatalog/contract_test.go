@@ -427,3 +427,69 @@ func TestBuiltinRecommendedModuleSetMatchesUpstream(t *testing.T) {
 		t.Fatalf("got %#v, want %#v", got, want)
 	}
 }
+
+func TestKnownDriftContractsAreCalibrated(t *testing.T) {
+	calibratedFields := map[string]struct {
+		required []string
+		any      [][]string
+	}{
+		"hero":           {required: []string{"title"}},
+		"audience-fit":   {any: [][]string{{"fit", "avoid"}}},
+		"verdict":        {any: [][]string{{"title", "body"}}},
+		"bridge":         {any: [][]string{{"title", "body", "next"}}},
+		"manifesto":      {any: [][]string{{"title", "believe", "against"}}},
+		"quote":          {any: [][]string{{"quote", "text"}}},
+		"image-text":     {required: []string{"image"}, any: [][]string{{"title", "body"}}},
+		"image-annotate": {required: []string{"image", "point"}},
+		"author-card":    {required: []string{"name", "bio"}},
+		"series":         {required: []string{"name", "title"}},
+		"subscribe":      {required: []string{"title"}},
+		"cta":            {required: []string{"title"}},
+		"tweet":          {required: []string{"name", "text"}},
+		"resource-list":  {required: []string{"name"}},
+	}
+	calibratedFormats := map[string]string{
+		"callout": BodyFormatLines, "image-steps": BodyFormatMarkdownFields, "question": BodyFormatDialogue,
+	}
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range calibratedFields {
+		t.Run(name, func(t *testing.T) {
+			spec, ok := c.Get(name)
+			if !ok {
+				t.Fatalf("missing %s", name)
+			}
+			if got := fieldNames(spec.Fields.Required); !slices.Equal(got, want.required) {
+				t.Errorf("required = %v, want %v", got, want.required)
+			}
+			if got := spec.Fields.RequiredAny; !reflect.DeepEqual(got, want.any) {
+				t.Errorf("required_any = %v, want %v", got, want.any)
+			}
+		})
+	}
+	for name, want := range calibratedFormats {
+		spec, _ := c.Get(name)
+		if spec.BodyFormat != want {
+			t.Errorf("%s body_format = %q, want %q", name, spec.BodyFormat, want)
+		}
+	}
+	question, _ := c.Get("question")
+	if !slices.Equal(question.CompatibleBodyFormats, []string{BodyFormatJSONArray}) {
+		t.Errorf("question compatible formats = %v", question.CompatibleBodyFormats)
+	}
+	callout, _ := c.Get("callout")
+	wantOpener := &OpenerSpec{ParamStyle: ParamStyleToken, Params: []ParamSpec{{Name: "variant", Enum: []string{"info", "warning", "success", "danger"}}}}
+	if !reflect.DeepEqual(callout.Opener, wantOpener) {
+		t.Errorf("callout opener = %#v, want %#v", callout.Opener, wantOpener)
+	}
+}
+
+func fieldNames(fields []FieldSpec) []string {
+	names := make([]string, 0, len(fields))
+	for _, field := range fields {
+		names = append(names, field.Name)
+	}
+	return names
+}

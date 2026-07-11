@@ -1,5 +1,6 @@
 schema_version: "1"
 name: tweet
+lifecycle: recommended
 body_format: json_object
 version: "1.0.0"
 since: "1.5.0"
@@ -24,28 +25,25 @@ anti_pattern: |
   内容写成第三人称描述而非直接引用。
 fields:
   required:
+    - name: name
+      description: 发推者姓名（JSON key：name，不是 author）
+      example: "内容创作者"
     - name: text
       description: 推文内容（JSON key：text，不是 content）
       example: "这套模块系统真的让我的内容制作效率提升了不止一倍。"
   optional:
-    - name: name
-      description: 发推者姓名（JSON key：name，不是 author）
-      example: "内容创作者"
     - name: handle
       description: 账号（JSON key：handle，@xxx 格式）
       example: "@creator"
     - name: timestamp
       description: 时间戳文字（JSON key：timestamp，不是 date）
       example: "2026-01-01"
-    - name: likes
-      description: 点赞数（JSON key：likes，显示在右下角）
-      example: "1.2K"
     - name: avatar
       description: 头像 URL（JSON key：avatar，无则显示姓名首字母）
       example: "https://example.com/avatar.png"
 example: |
   :::tweet
-  {"name":"内容创作者","handle":"@creator","text":"这套模块系统真的让内容制作效率提升了不止一倍。","timestamp":"2026-01-01"}
+  {"name":"企业内容负责人","handle":"@content-lead","text":"真正节省时间的地方，是 Agent 已经帮我把结构排好了。","timestamp":"2026-05-21"}
   :::
 metadata:
   author: md2wechat

@@ -203,13 +203,13 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if spec.Metadata.Author == "" || spec.Metadata.Provenance == "" {
 		return nil, fmt.Errorf("metadata.author and metadata.provenance are required")
 	}
-	if err := validateWitnessSpecs(&spec); err != nil {
+	if err := validateWitnessSpecs(&spec, declaredFields); err != nil {
 		return nil, err
 	}
 	return &spec, nil
 }
 
-func validateWitnessSpecs(spec *LayoutSpec) error {
+func validateWitnessSpecs(spec *LayoutSpec, declaredFields map[string]bool) error {
 	if spec.ExampleAssertContains != "" && !strings.Contains(spec.Example, spec.ExampleAssertContains) {
 		return fmt.Errorf("example_assert_contains %q is absent from example", spec.ExampleAssertContains)
 	}
@@ -235,8 +235,25 @@ func validateWitnessSpecs(spec *LayoutSpec) error {
 			}
 			identities[normalized] = name
 		}
+	}
+	for _, variant := range spec.Variants {
 		if variant.AssertContains != "" && !strings.Contains(variant.Example, variant.AssertContains) {
 			return fmt.Errorf("variant %q assert_contains %q is absent from its example", variant.Name, variant.AssertContains)
+		}
+		for _, field := range variant.Required {
+			if !declaredFields[field] {
+				return fmt.Errorf("variant %q required field %q is not declared", variant.Name, field)
+			}
+		}
+		for _, group := range variant.RequiredAny {
+			if len(group) == 0 {
+				return fmt.Errorf("variant %q required_any group must not be empty", variant.Name)
+			}
+			for _, field := range group {
+				if !declaredFields[field] {
+					return fmt.Errorf("variant %q required_any field %q is not declared", variant.Name, field)
+				}
+			}
 		}
 	}
 	return nil

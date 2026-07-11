@@ -1,5 +1,6 @@
 schema_version: "1"
 name: flow
+lifecycle: recommended
 body_format: lines
 version: "1.0.0"
 since: "1.5.0"

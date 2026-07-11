@@ -195,3 +195,49 @@ func TestValidateJSONArrayRejectsEmptyObject(t *testing.T) {
 		t.Fatal("expected missing q/a errors")
 	}
 }
+
+func TestCalibratedVariantAndBodyMatrix(t *testing.T) {
+	tests := []struct {
+		name, markdown string
+		accepted       bool
+	}{
+		{name: "hero title", markdown: ":::hero\ntitle: 标题\n:::\n", accepted: true},
+		{name: "hero missing title", markdown: ":::hero\nsubtitle: 副标题\n:::\n"},
+		{name: "quote proof source", markdown: ":::quote\nvariant: proof\nquote: 证据\nsource: 研究报告\n:::\n", accepted: true},
+		{name: "quote proof missing source", markdown: ":::quote\nvariant: proof\nquote: 证据\n:::\n"},
+		{name: "quote proof alias", markdown: ":::quote\nvariant: evidence\nquote: 证据\nsource: 研究报告\n:::\n", accepted: true},
+		{name: "quote unknown variant", markdown: ":::quote\nvariant: loud\nquote: 证据\n:::\n"},
+		{name: "summary legacy", markdown: ":::summary\nhighlight: 一句话\n:::\n", accepted: true},
+		{name: "summary legacy missing highlight", markdown: ":::summary\nvariant: legacy\ntitle: 标题\n:::\n"},
+		{name: "summary three", markdown: ":::summary\nvariant: three\nitems: 一 | 二 | 三\n:::\n", accepted: true},
+		{name: "summary three alias", markdown: ":::summary\nvariant: points\nitems: 一 | 二 | 三\n:::\n", accepted: true},
+		{name: "summary three missing items", markdown: ":::summary\nvariant: three\ntitle: 三点\n:::\n"},
+		{name: "summary save", markdown: ":::summary\nvariant: save\nitems: 一 | 二\n:::\n", accepted: true},
+		{name: "summary decision fit", markdown: ":::summary\nvariant: decision\nfit: A\n:::\n", accepted: true},
+		{name: "summary decision recommendation", markdown: ":::summary\nvariant: decision\nrecommendation: 选择 A\n:::\n", accepted: true},
+		{name: "summary decision empty", markdown: ":::summary\nvariant: decision\ntitle: 决策\n:::\n"},
+		{name: "question dialogue", markdown: ":::question\nQ: 支持吗？\nA: 支持。\n:::\n", accepted: true},
+		{name: "question legacy JSON", markdown: ":::question\n[{\"q\":\"支持吗？\",\"a\":\"支持。\"}]\n:::\n", accepted: true},
+		{name: "callout warning", markdown: ":::callout warning\n注意备份。\n:::\n", accepted: true},
+		{name: "callout invalid variant", markdown: ":::callout tip\n提示。\n:::\n"},
+		{name: "callout empty", markdown: ":::callout info\n:::\n"},
+		{name: "image steps complete", markdown: ":::image-steps{columns=2}\nstep: 打开编辑器\ndesc: 选择主题\n![界面](https://example.com/a.png)\n:::\n", accepted: true},
+		{name: "image steps without image", markdown: ":::image-steps\nstep: 打开编辑器\ndesc: 选择主题\n:::\n", accepted: true},
+		{name: "image steps incomplete", markdown: ":::image-steps\nstep: 打开编辑器\n:::\n"},
+		{name: "tweet complete", markdown: ":::tweet\n{\"name\":\"作者\",\"text\":\"观点\"}\n:::\n", accepted: true},
+		{name: "tweet missing name", markdown: ":::tweet\n{\"text\":\"观点\"}\n:::\n"},
+		{name: "resource without URL", markdown: ":::resource-list\n[{\"name\":\"指南\"}]\n:::\n", accepted: true},
+	}
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			report := c.Validate(tt.markdown)
+			if got := len(report.Errors) == 0; got != tt.accepted {
+				t.Fatalf("accepted = %v, want %v; errors=%+v", got, tt.accepted, report.Errors)
+			}
+		})
+	}
+}

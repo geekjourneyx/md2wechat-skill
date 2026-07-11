@@ -1,5 +1,6 @@
 schema_version: "1"
 name: infographic
+lifecycle: recommended
 body_format: fields
 version: "1.0.0"
 since: "1.5.0"
@@ -30,9 +31,9 @@ fields:
       example: "让|重点|先被看到"
   optional:
     - name: type
-      description: "信息图类型（别名：metric/number/stat→data；path/logic/chain→flow；compare/comparison/vs→contrast）"
-      enum: [statement, quote, data, flow, contrast]
-      example: "statement"
+      description: 信息卡结构类型
+      enum: [thesis, formula, pullquote, contrast, diagnosis, number, path, anatomy, tradeoff, evidence-chain, mini-case]
+      example: thesis
     - name: eyebrow
       description: 标签词，定位信息图的角色
       example: "视觉摘要"
@@ -48,9 +49,6 @@ fields:
     - name: label
       description: 数值标签，配合 value 使用
       example: "制作负担"
-    - name: flow
-      description: 流程步骤，用 | 分隔（少于 2 项时回退 statement）
-      example: "判断重点 | 组织模块 | 统一输出"
     - name: left
       description: 对比左侧，用于 contrast 类型（缺失时回退 statement）
       example: "手工堆样式"
@@ -72,14 +70,130 @@ fields:
     - name: items
       description: 列表项，用 | 分隔
       example: "第一点 | 第二点 | 第三点"
+    - name: formula
+      description: 公式项，用 + 分隔
+      example: "判断 + 证据 + 行动"
+    - name: tradeoffs
+      description: 取舍项，格式为 标签:值 并用 | 分隔
+      example: "选择更多:更像自己 | 结构更稳:更少返工"
+variants:
+  - name: thesis
+    aliases: [statement, judgment, claim]
+    use_when: 需要突出单一主判断
+    required: [title]
+    example: |
+      :::infographic
+      type: thesis
+      title: 高级排版不是装饰，是阅读决策系统
+      :::
+  - name: formula
+    aliases: [equation]
+    use_when: 需要表达可记忆公式
+    required: [title, formula]
+    example: |
+      :::infographic
+      type: formula
+      title: 让读者愿意读完，需要三个动作
+      formula: 判断 + 证据 + 行动
+      :::
+  - name: pullquote
+    aliases: [quote, saying, golden, golden-quote]
+    use_when: 需要突出一句金句
+    required: [title]
+    example: |
+      :::infographic
+      type: pullquote
+      title: 好排版让判断被记住
+      quote: 主题负责气质，模块负责说服力。
+      :::
+  - name: contrast
+    aliases: [compare, comparison, vs]
+    use_when: 需要并列关键差异
+    required: [title, left, right]
+    example: |
+      :::infographic
+      type: contrast
+      title: 真正的升级，是从排样式变成补表达
+      left: 手工堆样式
+      right: Agent 补结构
+      :::
+  - name: diagnosis
+    aliases: [diagnose, problem]
+    use_when: 需要列出待解决问题
+    required: [title, items]
+    example: |
+      :::infographic
+      type: diagnosis
+      title: 如果文章有这三个问题，就需要高级化
+      items: 开头没有判断 | 中段没有记忆点 | 结尾没有行动
+      :::
+  - name: number
+    aliases: [data, metric, stat]
+    use_when: 需要突出单个关键数字
+    required: [title, value]
+    example: |
+      :::infographic
+      type: number
+      title: 先让客户看到一版能发布的高级稿
+      value: 30min
+      label: 首版可见
+      :::
+  - name: path
+    aliases: [flow, logic, chain]
+    use_when: 需要压缩关键路径
+    required: [title, items]
+    example: |
+      :::infographic
+      type: path
+      title: 从草稿到可发布，不再靠手工堆样式
+      items: 识别内容任务 | 补齐高级模块 | 输出微信 HTML
+      :::
+  - name: anatomy
+    aliases: [breakdown, deconstruct]
+    use_when: 需要拆解结果组成
+    required: [title, items]
+    example: |
+      :::infographic
+      type: anatomy
+      title: 一篇能发布的高级稿，至少要有三层骨架
+      items: 第一屏判断 | 中段证据 | 结尾行动
+      :::
+  - name: tradeoff
+    aliases: [trade-off, tradeoffs]
+    use_when: 需要说明方案取舍
+    required: [title, tradeoffs]
+    example: |
+      :::infographic
+      type: tradeoff
+      title: 高级排版要控制选择
+      tradeoffs: 选择更多:更像自己 | 结构更稳:更少返工
+      :::
+  - name: evidence-chain
+    aliases: [evidence, proof-chain]
+    use_when: 需要排列证据顺序
+    required: [title, items]
+    example: |
+      :::infographic
+      type: evidence-chain
+      title: 读者相信的是顺畅证据
+      items: 先给结论 | 再给数据 | 最后给案例
+      :::
+  - name: mini-case
+    aliases: [micro-case, case]
+    use_when: 需要压缩一个微案例
+    required: [title, items]
+    example: |
+      :::infographic
+      type: mini-case
+      title: 一篇草稿如何变成可发布稿
+      items: 原稿没有结构 | 补齐判断与证据 | 完成发布检查
+      :::
 example: |
   :::infographic
-  type: statement
-  eyebrow: 视觉摘要
-  title: 让|重点|先被看到
-  subtitle: 信息图不放图片，不堆编号，只把读者应该记住的话排得更清楚
-  quote: 好的信息图只讲一个判断
-  note: 适合教程、方案和发布稿
+  type: thesis
+  eyebrow: 核心判断
+  title: 高级排版不是装饰，是阅读决策系统
+  subtitle: 它先帮读者判断值不值得看，再帮作者建立记忆点
   :::
 metadata:
   author: md2wechat

@@ -1,5 +1,6 @@
 schema_version: "1"
 name: cta
+lifecycle: recommended
 body_format: fields
 version: "1.0.0"
 since: "1.5.0"
@@ -27,25 +28,62 @@ fields:
       description: 行动引导主文案，说明为什么读者应该采取行动
       example: "如果你想把公众号内容做成稳定可复用的结构，可以直接从这套高级模块开始。"
   optional:
+    - name: variant
+      description: 行动区结构变体
+      enum: [save-follow, consult, trial]
+      example: save-follow
     - name: note
       description: 底部说明（如品牌语或签名）
       example: "BUILD WITH STRUCTURE"
     - name: subtitle
       description: 副标题
       example: "三分钟上手，立刻开始"
-    - name: link
-      description: 跳转链接
-      example: "https://md2wechat.com"
-    - name: qrcode
-      description: 二维码图片 URL
-      example: "https://example.com/qrcode.png"
-    - name: action
-      description: 主行动文案（title 的别名，title 或 action 至少填一个）
-      example: "立即开始"
+    - name: primary
+      description: 主要行动文案
+      example: "保存灵感"
+    - name: secondary
+      description: 次要行动文案
+      example: "直接套用"
+    - name: tertiary
+      description: 第三行动文案
+      example: "继续体验"
+variants:
+  - name: save-follow
+    use_when: 结尾引导收藏或关注
+    required: [title]
+    example: |
+      :::cta
+      variant: save-follow
+      title: 收藏这套结构，下一篇直接复用
+      primary: 收藏
+      secondary: 关注
+      :::
+  - name: consult
+    use_when: 结尾引导咨询
+    required: [title]
+    example: |
+      :::cta
+      variant: consult
+      title: 需要校准现有内容系统，可以发起咨询
+      primary: 咨询方案
+      :::
+  - name: trial
+    use_when: 结尾引导试用或购买
+    required: [title]
+    example: |
+      :::cta
+      variant: trial
+      title: 先用一篇真实文章验证效果
+      primary: 开始试用
+      :::
 example: |
   :::cta
-  title: 如果你想把公众号内容做成稳定可复用的结构，可以直接从这套高级模块开始。
-  note: BUILD WITH STRUCTURE
+  variant: save-follow
+  title: 如果这篇对你有帮助，可以先收藏，再试着改一篇自己的文章。
+  primary: 收藏这篇
+  secondary: 关注更新
+  tertiary: 转给同事
+  note: 适合知识型文章
   :::
 metadata:
   author: md2wechat

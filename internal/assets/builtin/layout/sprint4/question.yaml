@@ -1,6 +1,8 @@
 schema_version: "1"
 name: question
-body_format: json_array
+lifecycle: recommended
+body_format: dialogue
+compatible_body_formats: [json_array]
 version: "1.0.0"
 since: "1.5.0"
 category: sprint4
@@ -18,7 +20,7 @@ when_not_to_use: |
 pairs_well_with: [faq, callout, summary]
 avoid_combining_with: []
 anti_pattern: |
-  内容必须写成 JSON 数组格式：[{"q":"...","a":"..."}]，不支持 pipe 分隔行；
+  新内容使用 Q:/A: 成对书写；
   q（问题）和 a（回答）是 JSON key 的实际名称，不是 question 和 answer；
   问题写成陈述句而非疑问句；
   回答写太长应该拆成正文段落。
@@ -31,9 +33,18 @@ fields:
       description: 回答内容（JSON key：a，简洁直接）
       example: "是的，所有主题都会渲染这些模块。"
   optional: []
+body:
+  min_items: 2
+  allowed_prefixes: ["Q:", "A:"]
+  required_pairs:
+    - [Q, A]
 example: |
   :::question
-  [{"q":"模块是否支持所有主题？","a":"是的，所有主题都会渲染这些模块。"}]
+  Q: md2wechat 是排版工具吗？
+  A: 更准确地说，它是 Agent 公众号发布引擎，负责把草稿变成可发布、像你、能转化的文章。
+
+  Q: 第一次应该怎么试？
+  A: 给一篇草稿或一个选题，先让 Agent 30 分钟内出一版高级稿。
   :::
 metadata:
   author: md2wechat

@@ -1,5 +1,6 @@
 schema_version: "1"
 name: manifesto
+lifecycle: recommended
 body_format: fields
 version: "1.0.0"
 since: "1.5.0"
@@ -23,6 +24,8 @@ anti_pattern: |
   写成宣传稿而非真实的个人立场。
 fields:
   required: []
+  required_any:
+    - [title, believe, against]
   optional:
     - name: title
       description: 核心主张标题（title、believe、against 至少填一个）

@@ -1,5 +1,6 @@
 schema_version: "1"
 name: summary
+lifecycle: recommended
 body_format: fields
 version: "1.0.0"
 since: "1.5.0"
@@ -22,26 +23,80 @@ anti_pattern: |
   highlight 写成描述性语句而非判断；
   body 写太长变成第二个正文段落。
 fields:
-  required:
-    - name: highlight
-      description: 核心判断，一句话总结最重要的结论
-      example: "先把结构搭稳，再让主题接管气质"
+  required: []
   optional:
+    - name: variant
+      description: 总结结构变体
+      enum: [legacy, three, decision, save]
+      example: legacy
     - name: eyebrow
-      description: 标签词（如"一句话总结"）
+      description: 标签词
       example: "一句话总结"
-    - name: body
-      description: 展开说明，补充 highlight 的背景
-      example: "这样同一篇内容切到不同主题时，重点和节奏仍然清楚。"
-    - name: title
-      description: 摘要标题（highlight 的别名，highlight 优先）
+    - name: highlight
+      description: 一句话总结
       example: "先把结构搭稳，再让主题接管气质"
-    - name: content
-      description: 摘要内容（body 的别名）
-      example: "同一篇内容切到不同主题时，重点和节奏仍然清楚。"
-    - name: points
-      description: 多条要点，用 | 分隔（content 的补充）
+    - name: title
+      description: 摘要标题
+      example: "发布前带走三点"
+    - name: body
+      description: 展开说明
+      example: "同一篇内容切换主题时，重点仍然清楚。"
+    - name: items
+      description: 总结项，用 | 分隔
       example: "结构先于风格 | 模块服务阅读 | 主题定义气质"
+    - name: fit
+      description: 适合项，用 | 分隔
+      example: "需要稳定发布的人 | 需要复用结构的人"
+    - name: not_fit
+      description: 不适合项，用 | 分隔
+      example: "只写短讯的人"
+    - name: recommendation
+      description: 决策建议
+      example: "先校准契约，再扩展模块。"
+    - name: note
+      description: 补充说明
+      example: "收藏后按清单执行"
+variants:
+  - name: legacy
+    use_when: 只需一句话总结
+    required: [highlight]
+    example: |
+      :::summary
+      variant: legacy
+      highlight: 先把结构搭稳，再让主题接管气质
+      :::
+  - name: three
+    aliases: [points]
+    use_when: 需要列出三点总结
+    required: [items]
+    example: |
+      :::summary
+      variant: three
+      title: 发布前带走三点
+      items: 结构先于风格 | 模块服务阅读 | 主题定义气质
+      :::
+  - name: decision
+    aliases: [recommend]
+    use_when: 需要给出适用判断或建议
+    required_any:
+      - [fit, recommendation]
+    example: |
+      :::summary
+      variant: decision
+      title: 是否适合现在采用
+      fit: 需要稳定发布的人 | 需要复用结构的人
+      recommendation: 先校准契约，再扩展模块。
+      :::
+  - name: save
+    aliases: [checklist, action]
+    use_when: 需要生成收藏清单
+    required: [items]
+    example: |
+      :::summary
+      variant: save
+      title: 收藏后按这三步执行
+      items: 校验输入 | 预览输出 | 发布检查
+      :::
 example: |
   :::summary
   eyebrow: 一句话总结

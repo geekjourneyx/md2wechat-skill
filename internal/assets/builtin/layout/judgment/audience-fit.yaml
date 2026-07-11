@@ -1,5 +1,6 @@
 schema_version: "1"
 name: audience-fit
+lifecycle: recommended
 body_format: fields
 version: "1.0.0"
 since: "1.5.0"
@@ -23,6 +24,8 @@ anti_pattern: |
   把 fit 和 avoid 都写成同一类人。
 fields:
   required: []
+  required_any:
+    - [fit, avoid]
   optional:
     - name: fit
       description: 适合阅读的人群，用 | 分隔多个对象（fit 或 avoid 至少填一个）

@@ -1,5 +1,6 @@
 schema_version: "1"
 name: bridge
+lifecycle: recommended
 body_format: fields
 version: "1.0.0"
 since: "1.5.0"
@@ -23,6 +24,8 @@ anti_pattern: |
   每个段落之间都加 bridge 导致节奏臃肿。
 fields:
   required: []
+  required_any:
+    - [title, body, next]
   optional:
     - name: title
       description: 过渡标题，说明下一段的重点（title、body、next 至少填一个）

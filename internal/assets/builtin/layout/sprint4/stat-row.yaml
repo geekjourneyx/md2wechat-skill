@@ -1,5 +1,6 @@
 schema_version: "1"
 name: stat-row
+lifecycle: recommended
 body_format: json_array
 version: "1.0.0"
 since: "1.5.0"

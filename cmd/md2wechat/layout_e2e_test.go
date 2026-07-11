@@ -186,13 +186,13 @@ func TestCollectE2EWitnessesIncludesCanonicalAndVariants(t *testing.T) {
 	spec := *builtin
 	spec.Example = ":::hero\neyebrow: Test\ntitle: Canonical probe\n:::\n"
 	spec.Variants = []layoutcatalog.VariantSpec{{
-		Name: "compact", Example: ":::hero\nvariant: compact\neyebrow: Test\ntitle: Variant probe\n:::\n",
+		Name: "editorial", Example: ":::hero\nvariant: editorial\neyebrow: Test\ntitle: Variant probe\n:::\n",
 	}}
 	witnesses, err := witnessesForSpec(c, &spec)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(witnesses) != 2 || witnesses[0].Variant != "" || witnesses[1].Variant != "compact" {
+	if len(witnesses) != 2 || witnesses[0].Variant != "" || witnesses[1].Variant != "editorial" {
 		t.Fatalf("witnesses = %+v", witnesses)
 	}
 }
@@ -231,9 +231,9 @@ func TestCollectE2EWitnessesBindsModuleAndVariant(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "wrong canonical opener", example: ":::part\neyebrow: Test\ntitle: Probe\n:::\n", wantErr: true},
-		{name: "variant missing selector", example: ":::hero\neyebrow: Test\ntitle: Probe\n:::\n", variant: layoutcatalog.VariantSpec{Name: "compact"}, wantErr: true},
-		{name: "variant canonical selector", example: ":::hero\nvariant: compact\neyebrow: Test\ntitle: Probe\n:::\n", variant: layoutcatalog.VariantSpec{Name: "compact"}},
-		{name: "variant alias selector", example: ":::hero\nvariant: dense\neyebrow: Test\ntitle: Probe\n:::\n", variant: layoutcatalog.VariantSpec{Name: "compact", Aliases: []string{"dense"}}},
+		{name: "variant missing selector", example: ":::hero\neyebrow: Test\ntitle: Probe\n:::\n", variant: layoutcatalog.VariantSpec{Name: "editorial"}, wantErr: true},
+		{name: "variant canonical selector", example: ":::hero\nvariant: editorial\neyebrow: Test\ntitle: Probe\n:::\n", variant: layoutcatalog.VariantSpec{Name: "editorial"}},
+		{name: "variant alias selector", example: ":::hero\nvariant: story\neyebrow: Test\ntitle: Probe\n:::\n", variant: layoutcatalog.VariantSpec{Name: "editorial", Aliases: []string{"story"}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -248,6 +248,29 @@ func TestCollectE2EWitnessesBindsModuleAndVariant(t *testing.T) {
 			_, err := witnessesForSpec(c, &spec)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("witnessesForSpec() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestBuiltinExecutableWitnessProbesAreComplete(t *testing.T) {
+	c := layoutcatalog.NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, spec := range c.ListFiltered(layoutcatalog.ListFilter{}) {
+		t.Run(spec.Name, func(t *testing.T) {
+			witnesses, err := witnessesForSpec(c, spec)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(witnesses) != 1+len(spec.Variants) {
+				t.Fatalf("witness count = %d, want %d", len(witnesses), 1+len(spec.Variants))
+			}
+			for _, witness := range witnesses {
+				if strings.TrimSpace(witness.Probe) == "" {
+					t.Fatalf("%s/%s has an empty probe", witness.Module, witness.Variant)
+				}
 			}
 		})
 	}

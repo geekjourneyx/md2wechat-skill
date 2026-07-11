@@ -1,5 +1,6 @@
 schema_version: "1"
 name: changelog
+lifecycle: recommended
 body_format: json_object
 version: "1.0.0"
 since: "1.5.0"

@@ -1,5 +1,6 @@
 schema_version: "1"
 name: series
+lifecycle: recommended
 body_format: fields
 version: "1.0.0"
 since: "1.5.0"

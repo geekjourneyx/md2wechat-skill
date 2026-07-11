@@ -1,5 +1,6 @@
 schema_version: "1"
 name: verdict
+lifecycle: recommended
 body_format: fields
 version: "1.0.0"
 since: "1.5.0"
@@ -23,6 +24,8 @@ anti_pattern: |
   缺少 eyebrow 时不会显示标签（默认显示"最终判断"）。
 fields:
   required: []
+  required_any:
+    - [title, body]
   optional:
     - name: title
       description: 判断主标题，写一句鲜明的立场（title 或 body 至少填一个）

@@ -1,5 +1,6 @@
 schema_version: "1"
 name: resource-list
+lifecycle: recommended
 body_format: json_array
 version: "1.0.0"
 since: "1.5.0"
@@ -27,9 +28,6 @@ fields:
     - name: name
       description: 资源名称（JSON key：name）
       example: "md2wechat 官网"
-    - name: url
-      description: 链接地址（JSON key：url，需以 http:// 或 https:// 开头）
-      example: "https://md2wechat.com"
   optional:
     - name: desc
       description: 资源简介（JSON key：desc，不是 description，可省略）
@@ -37,9 +35,12 @@ fields:
     - name: icon
       description: 图标 emoji（JSON key：icon，可省略，无则显示首字母）
       example: "🛠"
+    - name: url
+      description: 链接地址（渲染器当前不生成外部链接）
+      example: "https://md2wechat.com"
 example: |
   :::resource-list
-  [{"name":"md2wechat 官网","url":"https://md2wechat.com","desc":"在线 Markdown 转公众号工具","icon":"🛠"},{"name":"模块指南","url":"https://github.com/geekjourneyx/md2wechat-skill","desc":"高级排版模块完整文档","icon":"📖"}]
+  [{"name":"md2wechat","desc":"公众号 Markdown 转换与发布引擎","icon":"M"},{"name":"md2wechat skill","desc":"给 CLI 和 Agent 使用的能力库","icon":"CLI"}]
   :::
 metadata:
   author: md2wechat

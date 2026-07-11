@@ -1,5 +1,6 @@
 schema_version: "1"
 name: hero
+lifecycle: recommended
 body_format: fields
 version: "1.0.0"
 since: "1.5.0"
@@ -23,25 +24,77 @@ anti_pattern: |
   缺少 cta_text 错失开篇钩子。
 fields:
   required:
-    - name: eyebrow
-      description: 标签词，定位文章类别（如"深度观察"、"行业警告"）
-      example: "深度观察"
     - name: title
       description: 主标题，必须是一句判断或承诺
       example: "公众号排版的真问题不是好不好看"
   optional:
+    - name: variant
+      description: 结构变体
+      enum: [editorial, briefing, story]
+      example: editorial
+    - name: eyebrow
+      description: 标签词，定位文章类别
+      example: "深度观察"
+    - name: meta
+      description: 阅读时长等元信息
+      example: "8 min read"
+    - name: kicker
+      description: 标题前的引导判断
+      example: "先把判断讲清楚"
     - name: subtitle
       description: 副标题，对主标题补一刀
       example: "是读者愿不愿意读完"
-    - name: cta_text
-      description: 开篇钩子动作文案
-      example: "↓ 3 分钟读完，给你一个判断"
+    - name: points
+      description: 简报或故事要点，用 | 分隔
+      example: "契约校准 | 真实渲染 | 发布门禁"
+    - name: image
+      description: 辅助图片 URL
+      example: "https://example.com/hero.png"
+    - name: brand
+      description: 品牌名称
+      example: md2wechat
+    - name: tags
+      description: 标签，用 | 分隔
+      example: "开场 | 判断"
+variants:
+  - name: editorial
+    use_when: 观点文开场先给出判断
+    required: [title]
+    example: |
+      :::hero
+      variant: editorial
+      eyebrow: 深度观察
+      title: 高级排版服务阅读决策
+      subtitle: 主题决定气质，模块决定读者能不能看懂
+      :::
+  - name: briefing
+    use_when: 报告开场需要列出导读
+    required: [title]
+    example: |
+      :::hero
+      variant: briefing
+      title: 本周产品简报
+      points: 契约校准 | 真实渲染 | 发布门禁
+      :::
+  - name: story
+    use_when: 案例开场需要先建立场景
+    required: [title]
+    example: |
+      :::hero
+      variant: story
+      kicker: 一篇草稿如何变成可发布高级稿
+      title: 好文章让读者更快看见重点
+      :::
 example: |
   :::hero
+  variant: editorial
   eyebrow: 深度观察
-  title: 公众号排版的真问题不是好不好看
-  subtitle: 是读者愿不愿意读完
-  cta_text: ↓ 3 分钟读完，给你一个判断
+  meta: 8 min read
+  kicker: 先把判断讲清楚
+  title: 高级排版服务阅读决策
+  subtitle: 主题决定气质，模块决定读者能不能看懂、记住和行动
+  brand: md2wechat
+  tags: 开场 | 判断
   :::
 metadata:
   author: md2wechat
