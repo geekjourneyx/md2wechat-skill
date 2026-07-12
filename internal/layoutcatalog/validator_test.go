@@ -1,6 +1,9 @@
 package layoutcatalog
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestValidateValidHero(t *testing.T) {
 	c := NewCatalog()
@@ -181,6 +184,33 @@ func TestValidateJSONFieldsRejectsMissingRequired(t *testing.T) {
 	}
 	if r.Errors[0].Module != "definition" || r.Errors[0].Field != "def" {
 		t.Fatalf("unexpected error: %+v", r.Errors[0])
+	}
+}
+
+func TestValidateJSONRejectsUnknownFields(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name, markdown string
+	}{
+		{
+			name:     "object",
+			markdown: ":::definition\n{\"term\":\"OKR\",\"def\":\"Meaning\",\"typo\":\"lost\"}\n:::\n",
+		},
+		{
+			name:     "array item",
+			markdown: ":::question\n[{\"q\":\"支持吗？\",\"a\":\"支持。\",\"typo\":\"lost\"}]\n:::\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			report := c.Validate(tt.markdown)
+			if len(report.Errors) == 0 || report.Errors[0].Field != "typo" || !strings.Contains(report.Errors[0].Message, "unknown field") {
+				t.Fatalf("Validate() errors = %+v, want unknown typo field", report.Errors)
+			}
+		})
 	}
 }
 

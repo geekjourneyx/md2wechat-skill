@@ -3,6 +3,7 @@ package layoutcatalog
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -376,6 +377,7 @@ func validateBodyFacts(spec *LayoutSpec, format string, facts bodyFacts) []bodyV
 
 func validateStructuredFields(spec *LayoutSpec, values, types map[string][]string) []bodyValidationIssue {
 	var issues []bodyValidationIssue
+	issues = append(issues, validateUnknownStructuredFields(spec.Fields, types)...)
 	active, selectorPresent, selectorIssues := resolveVariant(spec.Variants, values)
 	issues = append(issues, selectorIssues...)
 	fieldIssues := validateFields(spec.Fields, spec.Variants, values, types, !selectorPresent)
@@ -395,6 +397,41 @@ func validateStructuredFields(spec *LayoutSpec, values, types map[string][]strin
 		issues = append(issues, validateVariantFields(*active, values)...)
 	}
 	return issues
+}
+
+func validateUnknownStructuredFields(fields *FieldsSpec, types map[string][]string) []bodyValidationIssue {
+	declared := map[string]bool{}
+	if fields != nil {
+		for _, field := range append(append([]FieldSpec{}, fields.Required...), fields.Optional...) {
+			declared[field.Name] = true
+		}
+	}
+	unknown := make([]string, 0)
+	for name := range types {
+		if declared[name] || isDeclaredFieldContainer(declared, name) {
+			continue
+		}
+		unknown = append(unknown, name)
+	}
+	if len(unknown) == 0 {
+		return nil
+	}
+	sort.Strings(unknown)
+	return []bodyValidationIssue{{
+		field:   unknown[0],
+		message: fmt.Sprintf("unknown field %q", unknown[0]),
+		cause:   ErrInvalidFieldValue,
+	}}
+}
+
+func isDeclaredFieldContainer(declared map[string]bool, name string) bool {
+	prefix := name + "."
+	for field := range declared {
+		if strings.HasPrefix(field, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func validateVariantFields(variant VariantSpec, values map[string][]string) []bodyValidationIssue {

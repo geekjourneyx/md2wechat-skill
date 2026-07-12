@@ -122,9 +122,7 @@ subtitle: 不是好不好看，是读者读不读得完
 
 68 与 53 不能互换：一个语法名可以承载多个场景或结构变体。场景映射只用于维护测试，不会通过 CLI discovery 输出。
 
-本批新增的 10 个推荐语法名分属三个新/扩展类别：`figure-caption`、`gallery-grid`、`gallery-story`、`image-phone-shot`、`svg-reveal`、`svg-swipe-gallery`、`split`、`flow`、`matrix`、`dialogue-pair`。具体 opener、body、schema、canonical witness 和结构 variant 以 `layout show <name> --json` 为准。
-
-2026-07-11 针对 `https://md2wechat.app` 的真实语义 conformance 复验覆盖 80 个 canonical、variant 与 compatibility witness，结果 80 pass / 0 fail。远端身份是 target + UTC timestamp 的 `non_commit_evidence`，不是可追溯到远端 commit 的 build identity。
+具体 opener、body、schema、canonical witness 和结构 variant 以 `layout show <name> --json` 为准。生产渲染状态以发布时保存的目标 API conformance 证据为准，不在常青教程中固化单次运行结果。
 
 ---
 
@@ -263,16 +261,16 @@ md2wechat layout validate --file article.md --json
 | eyebrow | ✅ | 标签词，如"深度观察"、"行业警告" |
 | title | ✅ | 主标题，必须是一句判断或承诺 |
 | subtitle | 可选 | 副标题，对主标题补一刀 |
-| cta_text | 可选 | 开篇钩子文案，如"↓ 3 分钟读完，给你一个判断" |
+| kicker | 可选 | 标题前的引导判断 |
 
 **示例**：
 
 ```
 :::hero
+variant: editorial
 eyebrow: 深度观察
-title: 公众号排版的真问题
-subtitle: 不是好不好看，是读者读不读得完
-cta_text: ↓ 3 分钟，一个判断
+title: 高级排版服务阅读决策
+subtitle: 主题决定气质，模块决定读者能不能看懂
 :::
 ```
 
@@ -324,9 +322,9 @@ PART 04 | 行动 | 今天就能上手的 3 步方法 | default
 
 ```
 :::part
-eyebrow: PART 02
-title: 模块选择逻辑
-body: 不是每篇文章都需要用遍推荐模块。核心是：每件事做一个，做好一个。
+index: 02
+title: 旧能力也要接进同一套系统
+subtitle: 系统模块 · 列表 / 代码 / 表格
 :::
 ```
 
@@ -425,14 +423,14 @@ title: 公众号创作者正在经历什么
 
 ```
 :::infographic
-type: data
-value: 79%
-label: 完读率
-note: 使用高级排版模块后的平均表现
+type: thesis
+eyebrow: 核心判断
+title: 高级排版不是装饰，是阅读决策系统
+subtitle: 它先帮读者判断值不值得看，再帮作者建立记忆点
 :::
 ```
 
-`type` 可选值：`data`（数字）、`quote`（引语）、`fact`（事实）
+`type` 的合法值以 `layout show infographic --json` 返回的 enum 为准；常用值包括 `thesis`、`number`、`contrast`、`formula`。
 
 ---
 
@@ -463,13 +461,14 @@ note: 适合观点文、复盘、方案结论
 
 **什么时候用**：文章开头明确适合谁读、不适合谁读，帮读者快速判断。
 
-**格式**：`类型 | 描述`（类型：`fit` 或 `not-fit`）
+**字段**：`title` 为必填；`fit` 和 `avoid` 使用 `|` 分隔多项内容。
 
 ```
 :::audience-fit
-fit | 想用 AI 工具提升公众号制作效率的创作者
-fit | 有固定更新节奏、需要稳定输出的自媒体人
-not-fit | 刚开始写公众号、还没有固定内容方向的新手
+title: 这篇适合谁
+subtitle: 先帮读者判断要不要继续往下读
+fit: 正在写长文的人 | 想建立个人品牌的人 | 需要稳定交付内容的人
+avoid: 只发短讯的人 | 不需要结构化表达的人
 :::
 ```
 
@@ -500,8 +499,11 @@ fact | 只用最少的模块，每件事做好一个
 
 ```
 :::manifesto
-eyebrow: 我们相信
-title: 内容的价值不在于看起来多专业，而在于读者读完后想做点什么
+label: 我的长期判断
+title: 我相信普通人也应该拥有自己的内容系统
+body: 排版系统的价值，是让不懂设计的人也能稳定输出有识别度的文章。
+believe: 结构先于风格 | 文字永远是主角 | 主题负责气质
+against: 大字报式排版 | 随机堆模板 | 为装饰牺牲阅读
 :::
 ```
 
@@ -515,8 +517,10 @@ title: 内容的价值不在于看起来多专业，而在于读者读完后想�
 
 ```
 :::bridge
-from: 我们看完了问题是什么
-to: 现在来看怎么解决
+label: 下一段为什么重要
+title: 看完判断后，必须看到证据
+body: 没有证据的观点只是态度，下一段用数据和案例把它撑住。
+next: 继续看证据模块
 :::
 ```
 
@@ -532,12 +536,14 @@ to: 现在来看怎么解决
 
 **什么时候用**：引用他人观点、用户反馈、书中金句时，给出来源。
 
-**格式**：`引用内容` + 可选 `来源 | 作者`
+**字段**：`quote` 是必填引用内容，`source` 是来源；需要 renderer 分支时使用合法 `variant`。
 
 ```
 :::quote
-一句话能让读者决定读不读，一段话能让读者决定收不收藏。
-| 极客旅程 | 内容设计原则
+variant: light
+eyebrow: 核心观点
+quote: 模块帮助读者更快找到判断、证据和下一步。
+source: 内容设计原则
 :::
 ```
 
@@ -551,11 +557,12 @@ to: 现在来看怎么解决
 
 ```
 :::image-annotate
-src: https://example.com/screenshot.png
-title: 公众号后台截图解读
-point: 01 | 12 | 15 | 标题区域 | 读者扫到的第一眼
-point: 02 | 45 | 60 | 封面图 | 决定打开率的关键元素
-note: 标注坐标为百分比（0-100），可添加多个 point
+eyebrow: 拆解说明
+title: 图片标注卡适合直接告诉读者重点该看哪里
+image: https://example.com/annotate.png
+alt: 图片标注卡示例
+point: 01 | 24 | 24 | 主信息区 | 一进入页面先看到的核心判断和主标题
+point: 02 | 74 | 36 | 指标区 | 适合讲关键数字、结果和变化
 :::
 ```
 
@@ -571,10 +578,12 @@ note: 标注坐标为百分比（0-100），可添加多个 point
 
 ```
 :::image-compare
-before: https://example.com/before.png
-after: https://example.com/after.png
-label_before: 旧版排版
-label_after: 新版模块化排版
+eyebrow: 前后对比
+title: 左右并排时，变化会比大段解释更直接
+left_title: 改版前
+left_image: https://example.com/before.png
+right_title: 改版后
+right_image: https://example.com/after.png
 :::
 ```
 
@@ -608,9 +617,12 @@ desc: 检查预览后复制。
 
 ```
 :::image-text
-src: https://example.com/photo.png
-title: 模块化排版的效果
-body: 用固定结构替代手工堆砌，每篇文章都有一致的品牌气质。
+layout: right
+eyebrow: 功能截图
+title: 图和说明绑在一起，读者更容易跟上重点
+body: 左边先讲结论，右边再放真实界面，减少来回对照的成本。
+image: https://example.com/split.png
+alt: 图文双栏示例图片
 :::
 ```
 
@@ -657,13 +669,13 @@ API 模式和 AI 模式有什么区别？ | API 模式直接转换输出 HTML，
 
 **什么时候用**：有操作性清单、检查事项时，比普通列表更有视觉重量。
 
-**格式**：`描述 | 状态`（状态：`done`、`todo`、`na`）
+**格式**：`状态 | 描述 | 说明`（状态：`done`、`pending`、`warn`、`todo`）
 
 ```
 :::checklist[发布前检查]
-md2wechat layout validate 通过 | done
-封面图已准备好（比例 3:4，≥ 300px） | todo
-摘要已填写（不超过 128 字） | todo
+done | 结构先搭好 | 先把目录、重点和结论摆出来
+pending | 数据再补齐 | 关键数字和案例放进对应模块
+warn | 链接和说明单独检查 | 避免手机里出现跳读和看不清
 :::
 ```
 
@@ -705,12 +717,13 @@ note: 适合章节末尾和观点文复盘
 
 **什么时候用**：有重要通知、政策变更、限时活动时。
 
-**字段**：
+**格式**：`项目 | 条件 | 说明`，可在方括号中提供标题。
 
 ```
-:::notice
-title: 重要提醒
-body: 高级排版模块需要 API Key 才能使用。如需开通，请联系作者。
+:::notice[适用说明]
+适合 | 干货长文、教程拆解、白皮书、活动总结 | 适合需要结构感和复用性的内容
+前提 | 先把信息分层 | 不要把所有信息都塞进一个模块
+风险 | 模块堆太多会抢正文 | 一篇文章保留 3 到 6 个重点模块更稳
 :::
 ```
 
@@ -746,8 +759,11 @@ avatar: https://example.com/avatar.jpg
 
 ```
 :::subscribe
-title: 关注极客旅程
-body: 每周一篇，分享 AI 工具和内容创作方法论。
+label: 持续更新
+title: 如果这篇对你有帮助，可以把这个系列收藏起来
+subtitle: 我会持续更新公众号排版、AI 内容工作流和产品化复盘。
+primary: 关注公众号
+secondary: 转发给正在写长文的人
 :::
 ```
 
@@ -776,9 +792,11 @@ body: 每周一篇，分享 AI 工具和内容创作方法论。
 
 ```
 :::series
-name: 公众号排版进阶系列
-episode: 第 3 篇，共 5 篇
-topic: 高级排版模块实战指南
+name: 内容产品手记
+issue: 07
+title: 让每篇文章都像同一个品牌写出来
+desc: 这个系列记录从排版、结构到自动化发布的完整打磨过程。
+tags: 公众号 | 品牌排版 | 内容系统
 :::
 ```
 
@@ -808,7 +826,7 @@ topic: 高级排版模块实战指南
 :::
 
 :::callout success
-✅ 成功：layout validate 返回 0 errors，可以转换了。
+成功：layout validate 返回 0 errors，说明本地 catalog/schema 接受该语法。
 :::
 
 :::callout danger
@@ -854,7 +872,7 @@ topic: 高级排版模块实战指南
 
 ```
 :::tweet
-{"name":"内容创作者","handle":"@creator","text":"这套排版模块真的让我的制作效率提升了不止一倍。","timestamp":"2026-01-01","likes":"1.2K"}
+{"name":"企业内容负责人","handle":"@content-lead","text":"真正节省时间的地方，是 Agent 已经帮我把结构排好了。","timestamp":"2026-05-21"}
 :::
 ```
 
@@ -1007,9 +1025,10 @@ kicker: 先给读者一个判断
 ## 01 问题：读者没有理由读你的文章
 
 :::audience-fit
-fit | 每周更新公众号、希望提升完读率的创作者
-fit | 正在用 AI 写作、想要稳定排版输出的自媒体人
-not-fit | 刚开始写公众号、还没有固定内容方向的新手
+title: 这篇适合谁
+subtitle: 先判断是否值得继续读
+fit: 每周更新公众号的创作者 | 正在用 AI 写作的自媒体人
+avoid: 尚未形成固定内容方向的新手
 :::
 
 在手机上，读者决定读还是划走只需要 **3 秒钟**。
@@ -1066,10 +1085,10 @@ body: 让读者每次打开你的文章都知道"哦，这是 XX 的风格"，�
 ## 04 行动：今天就能上手
 
 :::checklist[上手清单]
-安装 md2wechat CLI | done
-配置 API Key | todo
-运行 layout list 发现模块 | todo
-写一篇文章，用 hero + verdict + cta | todo
+done | 安装 md2wechat CLI | 确认 version 输出
+pending | 配置 API Key | 先运行 config validate
+todo | 运行 layout list 发现模块 | 只选择能正确填充的模块
+todo | 写一篇文章 | 先 validate 再 convert
 :::
 
 :::summary
@@ -1089,8 +1108,11 @@ bio: 研究 AI 工作流和内容创作工具，专注公众号效率提升。
 :::
 
 :::subscribe
-title: 关注极客旅程
-body: 每周一篇，分享 AI 工具和内容创作方法论。
+label: 持续更新
+title: 如果这篇对你有帮助，可以把这个系列收藏起来
+subtitle: 每周分享 AI 工具和内容创作方法论。
+primary: 关注公众号
+secondary: 转发给正在写长文的人
 :::
 ```
 

@@ -7,8 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-07-12
+
+### Added
+- Added a deterministic advanced-layout catalog with 53 recommended syntax names, 3 migration-only compatibility modules, 9 body formats, structured opener contracts, and canonical executable examples for every recommended module.
+- Added `layout render --body-file`, strict opener/body validation, reserved `block` protection, and 80-witness target API conformance covering canonical, structurally distinct variant, and compatibility rendering paths.
+- Added executable documentation snippet checks so concrete `:::name` examples cannot drift from the embedded catalog unnoticed.
+
 ### Changed
 - Made the embedded advanced-layout catalog the single source of truth. The CLI no longer loads layout modules from the user config directory, project `layout/` directory, or `MD2WECHAT_LAYOUT_DIR`, and layout discovery no longer exposes override-specific fields or counts.
+- Made structured rendering and JSON layout validation fail closed on unknown fields instead of silently discarding misspelled input.
+- Clarified that `layout validate` proves local catalog/schema acceptance only; production renderer support requires a real conversion or conformance run against the target API.
+
+### Breaking Changes
+- Removed user-global, project-local, and environment-provided layout module YAML overrides. Remove those files and select only modules returned by `md2wechat layout list --json`.
+- Removed `source`, `remote_renderer_available`, `effective_recommended_syntax_count`, `effective_compatibility_module_count`, and `local_override_module_count` from layout discovery JSON. Agents should treat the embedded catalog counts as the only supported contract.
+- Unknown `--var` keys and unknown JSON fields now return validation errors. Correct misspelled fields by consulting `md2wechat layout show <name> --json`.
 
 ## [2.10.1] - 2026-07-08
 

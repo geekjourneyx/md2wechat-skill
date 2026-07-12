@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -38,6 +39,9 @@ func (c *Catalog) renderBlock(name string, input RenderInput, order openerParamO
 	spec, ok := c.Get(name)
 	if !ok {
 		return "", fmt.Errorf("%w: %s", ErrUnknownModule, name)
+	}
+	if err := validateRenderInputFields(spec, input.Fields); err != nil {
+		return "", err
 	}
 	openerVars, err := renderOpenerVars(spec, input)
 	if err != nil {
@@ -98,6 +102,45 @@ func (c *Catalog) renderBlock(name string, input RenderInput, order openerParamO
 		}
 	}
 	return "", fmt.Errorf("%w: no accepted body format supports structured rendering", ErrInvalidFieldValue)
+}
+
+func validateRenderInputFields(spec *LayoutSpec, fields map[string]any) error {
+	allowed := map[string]bool{}
+	if spec.Fields != nil {
+		for _, field := range append(append([]FieldSpec{}, spec.Fields.Required...), spec.Fields.Optional...) {
+			allowed[field.Name] = true
+		}
+	}
+	if spec.Opener != nil {
+		for _, param := range spec.Opener.Params {
+			allowed[param.Name] = true
+		}
+		if spec.Opener.Caption {
+			allowed["caption"] = true
+		}
+	} else {
+		// Preserve the legacy generic bracket-caption path used by Render.
+		allowed["caption"] = true
+	}
+	if spec.Body != nil {
+		allowed["body"] = true
+	}
+	for _, format := range append([]string{spec.BodyFormat}, spec.CompatibleBodyFormats...) {
+		if format == BodyFormatRows {
+			allowed["rows"] = true
+		}
+	}
+	unknown := make([]string, 0)
+	for name := range fields {
+		if !allowed[name] {
+			unknown = append(unknown, name)
+		}
+	}
+	if len(unknown) == 0 {
+		return nil
+	}
+	sort.Strings(unknown)
+	return fmt.Errorf("%w: %s has unknown field %q", ErrInvalidFieldValue, spec.Name, unknown[0])
 }
 
 func renderOpenerVars(spec *LayoutSpec, input RenderInput) (map[string]any, error) {

@@ -11,6 +11,8 @@ import (
 )
 
 var layoutCountAnchorRE = regexp.MustCompile(`<!-- layout-count-contract: recommended_scenarios=(\d+) recommended_syntaxes=(\d+) compatibility_modules=(\d+) base_enhancements=(\d+) render_syntaxes=(\d+) -->`)
+var markdownCodeFenceRE = regexp.MustCompile("(?ms)^```[^\\n]*\\n(.*?)^```[ \\t]*$")
+var concreteLayoutOpenerRE = regexp.MustCompile(`(?m)^:::[a-z]`)
 
 func TestLayoutDocumentationCountContract(t *testing.T) {
 	files := []string{
@@ -118,9 +120,14 @@ func TestLayoutDocumentationBodyFormatTroubleshootingContract(t *testing.T) {
 
 func TestLayoutDocumentationDeclaresBuiltinOnlyCatalog(t *testing.T) {
 	files := []string{
+		"../../README.md",
+		"../../docs/README.md",
 		"../../docs/LAYOUT.md",
 		"../../docs/DISCOVERY.md",
 		"../../docs/FAQ.md",
+		"../../docs/AGENT-GUIDE.md",
+		"../../AGENTS.md",
+		"../../.github/copilot-instructions.md",
 		"../../skills/md2wechat/SKILL.md",
 		"../../platforms/openclaw/md2wechat/SKILL.md",
 	}
@@ -133,6 +140,9 @@ func TestLayoutDocumentationDeclaresBuiltinOnlyCatalog(t *testing.T) {
 			"effective_compatibility_module_count",
 			"local_override_module_count",
 			"remote_renderer_available",
+			"Module Override",
+			"自定义模块",
+			"custom layout module",
 		} {
 			if strings.Contains(text, obsolete) {
 				t.Errorf("%s still documents removed layout override contract %q", path, obsolete)
@@ -149,6 +159,23 @@ func TestLayoutDocumentationDeclaresBuiltinOnlyCatalog(t *testing.T) {
 	}
 }
 
+func TestLayoutDocumentationSeparatesLocalValidationFromRemoteConformance(t *testing.T) {
+	agentGuide := readDocumentationFile(t, "../../docs/AGENT-GUIDE.md")
+	if strings.Contains(agentGuide, `LAYOUT_VALIDATED" | 排版语法正确 | 可以转换`) ||
+		strings.Contains(agentGuide, `LAYOUT_VALIDATED`+"` → 语法正确，可以转换") {
+		t.Error("docs/AGENT-GUIDE.md must not treat local validation as remote rendering proof")
+	}
+	if !strings.Contains(agentGuide, "本地 catalog/schema") {
+		t.Error("docs/AGENT-GUIDE.md must state the local validation boundary")
+	}
+	dateStampedResult := regexp.MustCompile(`20\d\d-\d\d-\d\d[^\n]*80 pass`)
+	for _, path := range []string{"../../docs/LAYOUT.md", "../../docs/SMOKE.md"} {
+		if dateStampedResult.MatchString(readDocumentationFile(t, path)) {
+			t.Errorf("%s must not embed a dated one-off conformance result", path)
+		}
+	}
+}
+
 func TestLayoutDocumentationE2EFixtureMatchesCurrentCatalog(t *testing.T) {
 	markdown := readDocumentationFile(t, "../../examples/layout-e2e-test.md")
 	catalog := layoutcatalog.NewCatalog()
@@ -159,6 +186,29 @@ func TestLayoutDocumentationE2EFixtureMatchesCurrentCatalog(t *testing.T) {
 	report := catalog.Validate(markdown)
 	if len(report.Errors) != 0 || len(report.Warnings) != 0 {
 		t.Fatalf("layout E2E fixture drifted: errors=%+v warnings=%+v", report.Errors, report.Warnings)
+	}
+}
+
+func TestLayoutDocumentationConcreteExamplesMatchCatalog(t *testing.T) {
+	text := readDocumentationFile(t, "../../docs/LAYOUT.md")
+	catalog := layoutcatalog.NewCatalog()
+	if err := catalog.Load(); err != nil {
+		t.Fatal(err)
+	}
+	checked := 0
+	for _, match := range markdownCodeFenceRE.FindAllStringSubmatch(text, -1) {
+		snippet := match[1]
+		if !concreteLayoutOpenerRE.MatchString(snippet) {
+			continue
+		}
+		checked++
+		report := catalog.Validate(snippet)
+		if len(report.Errors) != 0 || len(report.Warnings) != 0 {
+			t.Errorf("concrete layout snippet %d drifted: errors=%+v warnings=%+v\n%s", checked, report.Errors, report.Warnings, snippet)
+		}
+	}
+	if checked < 20 {
+		t.Fatalf("checked %d concrete layout snippets, want at least 20", checked)
 	}
 }
 

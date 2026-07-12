@@ -422,7 +422,7 @@ md2wechat layout validate --file article.md --json
 ```
 
 响应解读：
-- `code: "LAYOUT_VALIDATED"` → 语法正确，可以转换
+- `code: "LAYOUT_VALIDATED"` → 本地 catalog/schema 接受该语法；继续检查 warnings，远端渲染能力仍以真实 convert/conformance 为准
 - `code: "LAYOUT_VALIDATE_HAS_ERRORS"` → 有错误，查看 `data.errors` 了解详情
 - `data.errors` — 包含错误位置和修复建议
 
@@ -743,7 +743,7 @@ JSON envelope 格式（v1）：
 | `INSPECT_COMPLETED` | 检查完成 | 查看 `data.readiness.targets/blockers` |
 | `PREVIEW_READY` | 预览可用 | 打开或检查 `data.output` |
 | `DOCTOR_COMPLETED` | 本地体检完成 | 查看 `data.overall` 和本地配置 `data.readiness.*` |
-| `LAYOUT_VALIDATED` | 排版语法正确 | 可以转换 |
+| `LAYOUT_VALIDATED` | 本地 catalog/schema 接受 | 检查 warnings；生产渲染仍需真实 convert/conformance 证明 |
 | `LAYOUT_VALIDATE_HAS_ERRORS` | 排版有错误 | 查看 `data.errors` 修复 |
 | `BRAND_NOT_FOUND` | Brand Profile 不存在 | 可选初始化 |
 | `BRAND_SHOWN` | Brand Profile 已读取 | 使用其中配置 |
@@ -751,4 +751,4 @@ JSON envelope 格式（v1）：
 
 ---
 
-*最后更新：与 md2wechat v2.10.1 同步*
+*最后更新：与 md2wechat v3.0.0 同步*

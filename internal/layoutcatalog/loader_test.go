@@ -71,7 +71,7 @@ category: opening
 serves: [attention]
 metadata:
   author: test
-  provenance: custom
+  provenance: external-fixture
 example: |
   :::user-only
   :::
@@ -112,22 +112,18 @@ metadata:
 }
 
 func TestParseLayoutSpecRejectsReservedModuleName(t *testing.T) {
-	for _, provenance := range []string{"builtin", "custom"} {
-		t.Run(provenance, func(t *testing.T) {
-			yaml := []byte(`schema_version: "1"
+	yaml := []byte(`schema_version: "1"
 name: block
 version: "1.0.0"
 category: opening
 serves: [attention]
 metadata:
   author: test
-  provenance: ` + provenance + `
+  provenance: test-fixture
 `)
-			_, err := parseLayoutSpec(yaml)
-			if err == nil || !strings.Contains(err.Error(), "reserved") {
-				t.Fatalf("parseLayoutSpec() error = %v, want reserved-name rejection", err)
-			}
-		})
+	_, err := parseLayoutSpec(yaml)
+	if err == nil || !strings.Contains(err.Error(), "reserved") {
+		t.Fatalf("parseLayoutSpec() error = %v, want reserved-name rejection", err)
 	}
 }
 
@@ -145,9 +141,9 @@ fields:
     - name: title
 metadata:
   author: test
-  provenance: custom
+  provenance: test-fixture
 example: |
-  :::custom-current
+  :::fixture-current
   :::
 `)
 			if _, err := parseLayoutSpec(yaml); err == nil || !strings.Contains(err.Error(), "invalid layout module name") {
@@ -197,7 +193,7 @@ category: opening
 serves: [attention]
 metadata:
   author: test
-  provenance: custom
+  provenance: test-fixture
 `)
 	if _, err := parseLayoutSpec(yaml); err == nil || !strings.Contains(err.Error(), "body_fomat") {
 		t.Fatalf("parseLayoutSpec() error = %v, want unknown field rejection", err)
@@ -215,7 +211,7 @@ fields:
     - name: title
 metadata:
   author: x
-  provenance: custom
+  provenance: test-fixture
 `)
 	spec, err := parseLayoutSpec(yaml)
 	if err != nil {

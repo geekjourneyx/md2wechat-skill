@@ -127,7 +127,7 @@ func TestValidateOpenerRejectsSpecViolations(t *testing.T) {
 }
 
 func TestValidateOpenerPreservesLegacyCaptionCompatibility(t *testing.T) {
-	parsed, err := parseBlockOpener(":::custom-module[标题]")
+	parsed, err := parseBlockOpener(":::fixture-module[标题]")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,14 +285,14 @@ func equalStringMaps(a, b map[string]string) bool {
 
 func TestParseLayoutSpecValidatesOpenerSchema(t *testing.T) {
 	base := `schema_version: "1"
-name: custom
+name: fixture
 version: "1.0.0"
 category: body
 serves: [readability]
 %s
 metadata:
   author: test
-  provenance: custom
+  provenance: test-fixture
 `
 	for _, tc := range []struct {
 		name   string

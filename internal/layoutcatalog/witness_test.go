@@ -534,7 +534,7 @@ category: opening
 serves: [attention]
 metadata:
   author: test
-  provenance: custom
+  provenance: test-fixture
 `
 
 func baseVariantYAML(variants string) string {

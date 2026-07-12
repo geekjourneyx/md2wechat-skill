@@ -36,7 +36,7 @@ make e2e-layout
 
 可选设置 `MD2WECHAT_API_BUILD_ID` 锁定预期部署版本；设置后每个响应都必须携带 recognized build identity header 且精确匹配。未设置时仍要求本次 80-witness run 内所有响应 identity 一致；若均无 header，只记录 target 与 UTC 观测时间，并明确标记为非 commit 证据。失败类别区分 authentication、API drift 与 network failure。
 
-2026-07-11 对 `https://md2wechat.app` 的复验覆盖 80 个 canonical、结构变体及 compatibility witness，结果 80 pass / 0 fail。远端未提供 commit build identity，因此证据身份记录为固定 target + UTC timestamp，并明确标记 `non_commit_evidence=true`；该结论不把本地 `layout validate` 当作远端部署证明。
+发布时保留 JSONL 报告和测试日志作为目标 API 证据；不要把本地 `layout validate` 或常青文档中的历史运行结果当作远端部署证明。
 
 执行过的基础自检：
 

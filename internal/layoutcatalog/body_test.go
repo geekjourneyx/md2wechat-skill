@@ -292,7 +292,7 @@ func TestQuestionPairAndJSONArrayItemBoundaries(t *testing.T) {
 func TestParseLayoutSpecBodySchemaMatrix(t *testing.T) {
 	base := `
 schema_version: "1"
-name: custom
+name: fixture
 body_format: %s
 %s
 version: "1.0.0"

@@ -345,6 +345,20 @@ func TestRenderMissingRequiredFieldFails(t *testing.T) {
 	}
 }
 
+func TestRenderRejectsUnknownStructuredField(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	_, err := c.Render("hero", map[string]any{
+		"title":    "T",
+		"subtitel": "typo",
+	})
+	if !errors.Is(err, ErrInvalidFieldValue) || !strings.Contains(err.Error(), "subtitel") {
+		t.Fatalf("Render() error = %v, want unknown-field ErrInvalidFieldValue", err)
+	}
+}
+
 func TestRenderUnknownModuleFails(t *testing.T) {
 	c := NewCatalog()
 	if err := c.Load(); err != nil {
