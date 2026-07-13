@@ -60,4 +60,5 @@ coverage.html
 /skills/md2wechat/scripts/md2wechat
 
 .cache/
+.worktrees/
 docs/superpowers/
