@@ -206,7 +206,7 @@ Prompt catalog 是一组内置并可覆盖的 YAML 资产，当前主要用于�
 - `humanizer`
 - `write` 的润色流程
 - `title suggest` 的公众号标题候选生成请求
-- 后续扩展的图片 archetype
+- `generate_image`、`generate_cover`、`generate_infographic` 的图片 preset 渲染
 
 ### 列出 Prompt
 
@@ -257,7 +257,13 @@ md2wechat prompts render cover-default \
 ```bash
 md2wechat generate_image --preset cover-hero --article article.md
 md2wechat generate_cover --article article.md
+md2wechat generate_cover --article article.md --preset cover-claude-warm
+md2wechat generate_cover --article article.md --preset cover-semantic-concept
+md2wechat generate_cover --article article.md --preset cover-editorial-collage
+md2wechat generate_cover --article article.md --preset cover-suspense-black-gold
 md2wechat generate_infographic --article article.md --preset infographic-comparison
+md2wechat generate_infographic --article article.md --preset infographic-claude-warm
+md2wechat generate_infographic --article article.md --preset infographic-ticket-process
 md2wechat generate_infographic --article article.md --preset infographic-dark-ticket-cn --aspect 21:9
 md2wechat generate_infographic --article article.md --preset infographic-handdrawn-sketchnote
 md2wechat generate_infographic --article article.md --preset infographic-apple-keynote-premium
@@ -339,27 +345,25 @@ JSON envelope 会返回 `TITLE_SUGGEST_REQUEST_READY` 和 `status: action_requir
 - `cover`
 - `infographic`
 
-当前内置图片模板示例：
+完整的内置与覆盖后图片 preset 清单不在文档中重复维护，请直接运行：
 
-- `cover-default`
-- `cover-hero`
-- `cover-minimal`
-- `cover-metaphor`
-- `cover-editorial`
-- `cover-illustrated`
-- `cover-data-visual`
-- `infographic-default`
-- `infographic-comparison`
-- `infographic-timeline`
-- `infographic-dashboard`
-- `infographic-hierarchy`
-- `infographic-bento`
-- `infographic-process`
-- `infographic-flat-vector-panorama`
-- `infographic-dark-ticket-cn`
-- `infographic-handdrawn-sketchnote`
-- `infographic-apple-keynote-premium`
-- `infographic-victorian-engraving-banner`
+```bash
+md2wechat prompts list --kind image --json
+md2wechat prompts list --kind image --archetype cover --json
+md2wechat prompts list --kind image --archetype infographic --json
+```
+
+需要按视觉方向筛选时使用 tag，例如：
+
+```bash
+md2wechat prompts list --kind image --tag warm-editorial --json
+md2wechat prompts list --kind image --tag semantic --json
+md2wechat prompts list --kind image --tag collage --json
+md2wechat prompts list --kind image --tag suspense --json
+md2wechat prompts list --kind image --tag ticket-process --json
+```
+
+`prompts show <name> --kind image --json` 返回该 preset 的用途、推荐画幅、默认画幅、变量、来源和完整模板。
 
 ## Prompt 资产覆盖顺序
 
@@ -379,13 +383,16 @@ Prompt catalog 的加载优先级为：
 - `humanize`
 - `write` 的润色流程
 - `title suggest`
+- `generate_image --preset`
+- `generate_cover`
+- `generate_infographic`
 
 当前仍然主要依赖代码或其他资产的部分：
 
 - `convert` 的 API/AI 调用逻辑
-- 更复杂的图片生成流程编排
+- 图片数量、插入位置、多候选选择等更高层视觉资产编排
 
-后续扩展更多封面、信息图、配图 archetype 时，应优先新增 `prompts/image/*.yaml`，而不是直接把大段提示词写进 Go 代码。
+扩展封面或信息图时，应优先新增 `internal/assets/builtin/prompts/image/*.yaml`，不要把长提示词写进 Go 代码。运行时完整清单始终以 `md2wechat prompts list --kind image --json` 为准。
 
 ## Layout Module Discovery (:::module Syntax)
 

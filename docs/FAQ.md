@@ -483,13 +483,22 @@ md2wechat prompts show cover-default --kind image --json
 如果你不想自己写图片 prompt，可以直接用内置 preset：
 
 ```bash
-md2wechat generate_cover --article article.md
+md2wechat prompts list --kind image --json
+
+# 封面：暖色编辑、语义概念、剪贴画、黑金悬念
+md2wechat generate_cover --article article.md --preset cover-claude-warm
+md2wechat generate_cover --article article.md --preset cover-semantic-concept
+md2wechat generate_cover --article article.md --preset cover-editorial-collage
+md2wechat generate_cover --article article.md --preset cover-suspense-black-gold
+
+# 信息图：暖色总结、票券流程，以及已有结构型 preset
+md2wechat generate_infographic --article article.md --preset infographic-claude-warm
+md2wechat generate_infographic --article article.md --preset infographic-ticket-process
 md2wechat generate_infographic --article article.md --preset infographic-comparison
-md2wechat generate_infographic --article article.md --preset infographic-dark-ticket-cn --aspect 21:9
-md2wechat generate_infographic --article article.md --preset infographic-handdrawn-sketchnote
-md2wechat generate_infographic --article article.md --preset infographic-apple-keynote-premium
 md2wechat generate_infographic --article article.md --preset infographic-victorian-engraving-banner --aspect 21:9
 ```
+
+这里列的是代表性选择，不是完整清单。使用 `prompts list --kind image --json` 获取当前二进制在用户覆盖解析后的真实结果。
 
 如需只在本次调用切换模型，可直接加 `--model`：
 

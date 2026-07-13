@@ -139,12 +139,18 @@ Brand Profile 支持把长期风格偏好写入 `~/.config/md2wechat/brand.md`�
 
 md2wechat 支持两条图片路径。
 
-直接调用图片 provider：
+先从当前二进制发现可用 preset，再调用图片 provider：
 
 ```bash
+md2wechat prompts list --kind image --archetype cover --json
+md2wechat prompts list --kind image --archetype infographic --json
+
 md2wechat generate_cover --article article.md
-md2wechat generate_infographic --article article.md --preset infographic-comparison
+md2wechat generate_cover --article article.md --preset cover-semantic-concept
+md2wechat generate_infographic --article article.md --preset infographic-claude-warm
 ```
+
+完整 preset 清单、用途和默认画幅以 `prompts list/show --json` 为准，文档只保留代表性示例。
 
 支持 Volcengine、ModelScope、OpenRouter、OpenAI、Gemini 等服务。配置见 [docs/IMAGE_PROVISIONERS.md](docs/IMAGE_PROVISIONERS.md)。
 
