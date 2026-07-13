@@ -1,0 +1,57 @@
+name: cover-suspense-black-gold
+kind: image
+description: 纯黑留白、暖金线条与中心悬念隐喻构成的公众号封面
+version: "1.0"
+archetype: cover
+primary_use_case: cover
+recommended_aspect_ratios:
+  - 2.35:1
+  - 21:9
+default_aspect_ratio: 2.35:1
+metadata:
+  author: geekjourneyx
+  provenance: adapted
+  inspired_by: plan-visual-assets
+tags:
+  - cover
+  - suspense
+  - black-gold
+  - cinematic
+  - teaser
+examples:
+  - 悬念型观点文章封面
+  - 系列预告与重要发布文章封面
+variables:
+  - ARTICLE_TITLE
+  - ARTICLE_SUMMARY
+  - KEYWORDS
+  - VISUAL_STYLE
+  - ASPECT_RATIO
+template: |
+  为下面的公众号文章生成一张黑金悬念封面，画幅为 {{ASPECT_RATIO}}。
+
+  内容输入：
+  - 标题：{{ARTICLE_TITLE}}
+  - 摘要：{{ARTICLE_SUMMARY}}
+  - 关键词：{{KEYWORDS}}
+  - 风格补充：{{VISUAL_STYLE}}
+
+  先在内部完成以下提炼，不要输出分析过程：
+  1. 保留文章标题的准确含义，并选择其中最有悬念的短词作为唯一金色高亮词。
+  2. 从摘要中选择一个单一核心视觉隐喻，例如半透明问号轮廓、微微开启的门、被光照亮的信封或更贴合文章的具体物体。
+  3. 若标题本身不适合悬念表达，保持克制，不添加虚假倒计时、时间或夸张承诺。
+
+  视觉与构图：
+  1. 使用纯黑背景 #050505，整体平均亮度控制在 15% 左右，仅让暖金线条和白色标题成为亮点。
+  2. 采用中心聚焦、四周消散的向心式构图；边缘保持纯粹黑暗和强烈黑色留白。
+  3. 核心视觉位于画面中心，高度约占 50%，只保留暖金色 #D4A84B 断续轮廓线，内部透明或保持黑色。
+  4. 轮廓周围加入极少暖金微粒与透明度极低的光雾，像视觉正在从虚无中凝聚。
+  5. 从中心向边缘施加强径向暗角和极淡放射细线，营造即将揭晓的电影预告感。
+
+  标题系统：
+  1. 标题使用清晰白字，关键词使用暖金色并放大，但不得牺牲可读性。
+  2. 默认不显示时间、日期、倒计时、系列名、提示语或随机数字，因为当前输入没有这些显式字段。
+  3. 所有重要内容必须位于公众号封面安全区域，不能贴边。
+
+  负向约束：
+  不要明亮背景、蓝紫科技渐变、霓虹赛博风、电商促销海报、廉价倒计时、多主体、写实人脸特写、卡通、彩色烟花粒子、满屏文字、二维码、logo、水印、错别字、随机英文、随机日期、随机时间、随机数字或低分辨率。

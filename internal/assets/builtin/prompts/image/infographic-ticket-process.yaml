@@ -1,0 +1,57 @@
+name: infographic-ticket-process
+kind: image
+description: 将 3 至 5 个步骤压缩成可收藏票券版式的横向流程信息图
+version: "1.0"
+archetype: infographic
+primary_use_case: infographic
+recommended_aspect_ratios:
+  - 21:9
+default_aspect_ratio: 21:9
+metadata:
+  author: geekjourneyx
+  provenance: adapted
+  inspired_by: plan-visual-assets
+tags:
+  - infographic
+  - ticket
+  - ticket-process
+  - process
+  - workflow
+examples:
+  - 三到五步操作流程
+  - 方法论执行路径
+  - 文章章节路线图
+variables:
+  - ARTICLE_TITLE
+  - ARTICLE_SUMMARY
+  - KEY_POINTS
+  - VISUAL_STYLE
+  - ASPECT_RATIO
+template: |
+  根据下面的文章内容生成一张中文票券风流程信息图，画幅为 {{ASPECT_RATIO}}。
+
+  内容输入：
+  - 标题：{{ARTICLE_TITLE}}
+  - 摘要：{{ARTICLE_SUMMARY}}
+  - 核心步骤或要点：{{KEY_POINTS}}
+  - 风格补充：{{VISUAL_STYLE}}
+
+  信息提炼：
+  1. 从摘要和核心要点中识别 3 至 5 个真正有先后关系的步骤。
+  2. 每个步骤只保留一个短标题和一句动作说明；动作必须具体、可执行。
+  3. 如果内容不是流程，不要伪造步骤；改用从左到右的“起点—判断—结果”路径表达。
+
+  票券设计：
+  1. 票券本身就是整张图片，不要放在桌面、手中或额外背景上。
+  2. 使用清晰外框、分割线、步骤编号、方向箭头和轻微票根切口建立流程。
+  3. 采用精确网格和大量有效留白，让阅读顺序从左到右一眼可见。
+  4. 画面像一张可收藏的流程票据、登机牌或编辑手册索引卡，但不能伪造二维码、条形码、日期、票价或无意义编号。
+  5. 颜色根据 {{VISUAL_STYLE}} 克制选择；默认使用米白纸张、近黑文字和一种低饱和强调色。
+
+  文字规则：
+  1. 只使用与文章直接相关的中文内容。
+  2. 标题、步骤编号和说明形成明确字号层级。
+  3. 不生成长段落，不让装饰抢夺流程信息。
+
+  负向约束：
+  不要外部投影、桌面场景、复杂装饰、二维码、条形码、随机英文、随机日期、随机编号、照片拼贴、3D 拟物、流程断裂或低分辨率。

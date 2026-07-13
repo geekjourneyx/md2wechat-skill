@@ -9,7 +9,52 @@ import (
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 	"github.com/geekjourneyx/md2wechat-skill/internal/image"
+	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
 )
+
+func TestResolveGenerateImagePromptRendersPlanVisualAssetPresets(t *testing.T) {
+	promptcatalog.ResetDefaultCatalogForTests()
+	t.Cleanup(promptcatalog.ResetDefaultCatalogForTests)
+	t.Chdir(t.TempDir())
+
+	tests := []struct {
+		name       string
+		useCase    string
+		wantAspect string
+	}{
+		{name: "cover-claude-warm", useCase: "cover", wantAspect: "21:9"},
+		{name: "cover-semantic-concept", useCase: "cover", wantAspect: "21:9"},
+		{name: "cover-editorial-collage", useCase: "cover", wantAspect: "21:9"},
+		{name: "cover-suspense-black-gold", useCase: "cover", wantAspect: "2.35:1"},
+		{name: "infographic-claude-warm", useCase: "infographic", wantAspect: "21:9"},
+		{name: "infographic-ticket-process", useCase: "infographic", wantAspect: "21:9"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			prompt, err := resolveGenerateImagePrompt(generateImageInput{
+				Preset:            tt.name,
+				Title:             "AI 时代的内容生产系统",
+				Summary:           "从选题、写作到发布，建立可重复执行的内容工作流。",
+				Keywords:          "AI,内容生产,工作流",
+				Style:             "高级、克制、编辑感",
+				RequiredArchetype: tt.useCase,
+			})
+			if err != nil {
+				t.Fatalf("resolveGenerateImagePrompt() error = %v", err)
+			}
+			if !strings.Contains(prompt, "AI 时代的内容生产系统") {
+				t.Fatalf("prompt missing article title: %q", prompt)
+			}
+			if !strings.Contains(prompt, tt.wantAspect) {
+				t.Fatalf("prompt missing default aspect %q: %q", tt.wantAspect, prompt)
+			}
+			if strings.Contains(prompt, "{{") || strings.Contains(prompt, "}}") {
+				t.Fatalf("prompt contains unresolved placeholder: %q", prompt)
+			}
+		})
+	}
+}
 
 func TestResolveGenerateImagePromptWithPresetAndArticle(t *testing.T) {
 	oldPreset, oldArticle := generateImageCmdPreset, generateImageCmdArticle

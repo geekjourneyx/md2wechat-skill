@@ -3,6 +3,7 @@ package promptcatalog
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -377,6 +378,103 @@ func TestBuiltinImagePromptsHaveConsistentUseCaseAndAspectMetadata(t *testing.T)
 		}
 		if !SupportsUseCase(&spec, spec.PrimaryUseCase) {
 			t.Fatalf("%s primary_use_case %q not supported by SupportsUseCase", spec.Name, spec.PrimaryUseCase)
+		}
+	}
+}
+
+func TestBuiltinPlanVisualAssetPromptsAreDiscoverable(t *testing.T) {
+	ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
+	cat, err := DefaultCatalog()
+	if err != nil {
+		t.Fatalf("DefaultCatalog() error = %v", err)
+	}
+
+	tests := []struct {
+		name          string
+		archetype     string
+		defaultAspect string
+		tag           string
+		marker        string
+	}{
+		{name: "cover-claude-warm", archetype: "cover", defaultAspect: "21:9", tag: "warm-editorial", marker: "羊皮纸"},
+		{name: "cover-semantic-concept", archetype: "cover", defaultAspect: "21:9", tag: "semantic", marker: "文字嵌入构图"},
+		{name: "cover-editorial-collage", archetype: "cover", defaultAspect: "21:9", tag: "collage", marker: "手撕拼贴"},
+		{name: "cover-suspense-black-gold", archetype: "cover", defaultAspect: "2.35:1", tag: "suspense", marker: "#D4A84B"},
+		{name: "infographic-claude-warm", archetype: "infographic", defaultAspect: "21:9", tag: "warm-editorial", marker: "最多 3 个"},
+		{name: "infographic-ticket-process", archetype: "infographic", defaultAspect: "21:9", tag: "ticket-process", marker: "票券本身就是整张图片"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec, err := cat.Get("image", tt.name)
+			if err != nil {
+				t.Fatalf("Get(image, %s) error = %v", tt.name, err)
+			}
+			if spec.Archetype != tt.archetype || spec.PrimaryUseCase != tt.archetype {
+				t.Fatalf("archetype/use case = %q/%q, want %q", spec.Archetype, spec.PrimaryUseCase, tt.archetype)
+			}
+			if spec.DefaultAspectRatio != tt.defaultAspect {
+				t.Fatalf("DefaultAspectRatio = %q, want %q", spec.DefaultAspectRatio, tt.defaultAspect)
+			}
+			if !containsAspectRatio(spec.RecommendedAspectRatios, tt.defaultAspect) {
+				t.Fatalf("recommended ratios %#v missing default %q", spec.RecommendedAspectRatios, tt.defaultAspect)
+			}
+			if !containsTag(spec.Tags, tt.tag) {
+				t.Fatalf("Tags = %#v, want %q", spec.Tags, tt.tag)
+			}
+			if spec.Metadata["author"] != "geekjourneyx" || spec.Metadata["provenance"] != "adapted" || spec.Metadata["inspired_by"] != "plan-visual-assets" {
+				t.Fatalf("Metadata = %#v", spec.Metadata)
+			}
+			if !strings.Contains(spec.Template, tt.marker) {
+				t.Fatalf("Template missing marker %q", tt.marker)
+			}
+		})
+	}
+}
+
+func TestBuiltinImagePromptVariablesCloseOverGenerationContract(t *testing.T) {
+	ResetDefaultCatalogForTests()
+	t.Chdir(t.TempDir())
+
+	cat, err := DefaultCatalog()
+	if err != nil {
+		t.Fatalf("DefaultCatalog() error = %v", err)
+	}
+
+	renderVars := map[string]string{
+		"ARTICLE_TITLE":   "测试标题",
+		"ARTICLE_SUMMARY": "测试摘要",
+		"KEYWORDS":        "测试,提示词",
+		"KEY_POINTS":      "第一点；第二点；第三点",
+		"VISUAL_STYLE":    "克制、清晰",
+		"ASPECT_RATIO":    "21:9",
+	}
+	placeholderPattern := regexp.MustCompile(`\{\{([A-Z][A-Z0-9_]*)\}\}`)
+
+	for _, spec := range cat.List("image") {
+		declared := make(map[string]bool, len(spec.Variables))
+		for _, variable := range spec.Variables {
+			declared[variable] = true
+			if _, ok := renderVars[variable]; !ok {
+				t.Errorf("%s declares unsupported generate_image variable %q", spec.Name, variable)
+			}
+		}
+
+		for _, match := range placeholderPattern.FindAllStringSubmatch(spec.Template, -1) {
+			if !declared[match[1]] {
+				t.Errorf("%s uses undeclared template variable %q", spec.Name, match[1])
+			}
+		}
+
+		rendered, _, err := cat.Render("image", spec.Name, renderVars)
+		if err != nil {
+			t.Errorf("Render(image, %s) error = %v", spec.Name, err)
+			continue
+		}
+		if unresolved := placeholderPattern.FindString(rendered); unresolved != "" {
+			t.Errorf("Render(image, %s) left unresolved placeholder %q", spec.Name, unresolved)
 		}
 	}
 }

@@ -1,0 +1,54 @@
+name: infographic-claude-warm
+kind: image
+description: 羊皮纸底色、陶土强调色与三块以内信息结构的暖色信息图
+version: "1.0"
+archetype: infographic
+primary_use_case: infographic
+recommended_aspect_ratios:
+  - 21:9
+  - 16:9
+  - 1:1
+default_aspect_ratio: 21:9
+metadata:
+  author: geekjourneyx
+  provenance: adapted
+  inspired_by: plan-visual-assets
+tags:
+  - infographic
+  - claude-warm
+  - warm-editorial
+  - summary
+  - framework
+examples:
+  - 方法论三点总结
+  - 段落核心观点信息图
+  - 知识星球方形分享卡
+variables:
+  - ARTICLE_TITLE
+  - ARTICLE_SUMMARY
+  - KEY_POINTS
+  - VISUAL_STYLE
+  - ASPECT_RATIO
+template: |
+  根据下面的文章内容生成一张暖色、克制、适合公众号阅读的中文信息图，画幅为 {{ASPECT_RATIO}}。
+
+  内容输入：
+  - 标题：{{ARTICLE_TITLE}}
+  - 摘要：{{ARTICLE_SUMMARY}}
+  - 核心要点：{{KEY_POINTS}}
+  - 风格补充：{{VISUAL_STYLE}}
+
+  信息压缩规则：
+  1. 只表达一个核心观点，不得把整篇文章塞入一张图。
+  2. 从摘要和核心要点中选择最多 3 个相互并列或递进的信息块。
+  3. 每个信息块只包含一个短标题和一句短解释；删除重复结论和背景铺垫。
+  4. 主标题必须准确、简短，关键词可以强调，但不要制造文章没有的判断。
+
+  视觉系统：
+  1. 背景使用羊皮纸色 #F5F4ED，主标题使用近黑色 #141413，关键词使用陶土色 #C96442。
+  2. 可加入低饱和金色、细线、圆点、手工纸张颗粒和轻微编辑标记，但颜色总数保持克制。
+  3. 使用清晰网格、充足留白和明确阅读顺序；信息块之间的关系一眼可见。
+  4. 风格像高级编辑信息图和纸质知识卡，不像 PPT、营销长图或软件仪表盘。
+
+  负向约束：
+  不要信息过载、超过三列、长段落、英文主标题、随机日期、二维码、条形码、复杂背景、廉价渐变、无关图标或低分辨率。

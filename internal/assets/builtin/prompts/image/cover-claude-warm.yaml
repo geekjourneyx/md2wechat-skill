@@ -1,0 +1,54 @@
+name: cover-claude-warm
+kind: image
+description: 羊皮纸、陶土色与克制编辑感的暖色公众号封面
+version: "1.0"
+archetype: cover
+primary_use_case: cover
+recommended_aspect_ratios:
+  - 21:9
+  - 16:9
+default_aspect_ratio: 21:9
+metadata:
+  author: geekjourneyx
+  provenance: adapted
+  inspired_by: plan-visual-assets
+tags:
+  - cover
+  - claude-warm
+  - warm-editorial
+  - parchment
+  - metaphor
+examples:
+  - AI 工作流与知识生产文章封面
+  - 个人经验与复杂判断类长文封面
+variables:
+  - ARTICLE_TITLE
+  - ARTICLE_SUMMARY
+  - KEYWORDS
+  - VISUAL_STYLE
+  - ASPECT_RATIO
+template: |
+  为下面的公众号文章生成一张暖色、克制、具有高级编辑感的横向封面图。
+
+  内容输入：
+  - 标题：{{ARTICLE_TITLE}}
+  - 摘要：{{ARTICLE_SUMMARY}}
+  - 关键词：{{KEYWORDS}}
+  - 风格补充：{{VISUAL_STYLE}}
+  - 画幅：{{ASPECT_RATIO}}
+
+  生成前先在内部完成以下提炼，不要输出分析过程：
+  1. 用一句话提炼文章的核心判断。
+  2. 选择一个具体、可画的视觉锚点，例如工作台、纸张、档案、工具、路径、桥梁或系统结构。
+  3. 用一个清晰隐喻把视觉锚点与核心判断连接起来。
+  4. 判断画面情绪，并选择标题安全区位于左侧或右侧。
+
+  视觉语言：
+  1. 使用羊皮纸或象牙白背景，陶土色与低饱和金色作为小面积强调色。
+  2. 加入细腻纸张颗粒、轻微印刷质感和手工编辑气质。
+  3. 画面只保留一个清晰视觉隐喻，主体明确，构图安静、聪明、克制。
+  4. 使用充足负空间作为可能的后期标题区，但图片内部不要生成任何文字。
+  5. 适合微信公众号长文封面，在信息流缩略图中仍能识别主体。
+
+  负向约束：
+  不要文字、logo、二维码、复杂 UI 截图、拥挤拼贴、蓝紫科技渐变、廉价商业海报、写实人脸特写、过多主体或低分辨率。
