@@ -639,12 +639,24 @@ func validateFieldValue(field FieldSpec, variants []VariantSpec, value, actualTy
 func validateFieldShapes(shapes []FieldShapeSpec, values map[string][]string) []bodyValidationIssue {
 	var issues []bodyValidationIssue
 	for _, shape := range shapes {
+		if shape.MaxOccurrences > 0 {
+			occurrences := 0
+			for _, value := range values[shape.Field] {
+				if strings.TrimSpace(value) != "" {
+					occurrences++
+				}
+			}
+			if occurrences > shape.MaxOccurrences {
+				issues = append(issues, bodyValidationIssue{field: shape.Field, message: fmt.Sprintf("field %s allows at most %d occurrences", shape.Field, shape.MaxOccurrences), cause: ErrInvalidFieldValue})
+			}
+		}
 		for _, value := range values[shape.Field] {
 			if strings.TrimSpace(value) == "" {
 				continue
 			}
+			rawParts := strings.Split(value, shape.Separator)
 			var parts []string
-			for _, part := range strings.Split(value, shape.Separator) {
+			for _, part := range rawParts {
 				if strings.TrimSpace(part) != "" {
 					parts = append(parts, strings.TrimSpace(part))
 				}
@@ -652,6 +664,21 @@ func validateFieldShapes(shapes []FieldShapeSpec, values map[string][]string) []
 			if len(parts) < shape.MinParts {
 				issues = append(issues, bodyValidationIssue{field: shape.Field, message: fmt.Sprintf("field %s requires at least %d parts separated by %q", shape.Field, shape.MinParts, shape.Separator), cause: ErrInvalidFieldValue})
 				continue
+			}
+			for _, rule := range shape.PartRules {
+				partCount := len(rawParts)
+				if rule.MinParts > 0 && partCount < rule.MinParts {
+					continue
+				}
+				if rule.MaxParts > 0 && partCount > rule.MaxParts {
+					continue
+				}
+				for _, position := range rule.RequiredPositions {
+					if position > partCount || strings.TrimSpace(rawParts[position-1]) == "" {
+						issues = append(issues, bodyValidationIssue{field: shape.Field, message: fmt.Sprintf("field %s requires non-empty part %d", shape.Field, position), cause: ErrInvalidFieldValue})
+						break
+					}
+				}
 			}
 			if shape.ItemSeparator != "" {
 				for _, part := range parts {

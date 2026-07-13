@@ -212,6 +212,98 @@ func TestLayoutDocumentationConcreteExamplesMatchCatalog(t *testing.T) {
 	}
 }
 
+func TestLayoutDocumentationImageAnnotateContract(t *testing.T) {
+	text := readDocumentationFile(t, "../../docs/LAYOUT.md")
+	if strings.Contains(text, "<!-- image-annotate-contract:") {
+		t.Fatal("docs/LAYOUT.md must derive the image-annotate contract from structured catalog data, not a duplicated HTML anchor")
+	}
+	start := strings.Index(text, "#### image-annotate")
+	if start < 0 {
+		t.Fatal("docs/LAYOUT.md must document image-annotate")
+	}
+	section := text[start:]
+	if end := strings.Index(section, "\n---"); end >= 0 {
+		section = section[:end]
+	}
+
+	catalog := layoutcatalog.NewCatalog()
+	if err := catalog.Load(); err != nil {
+		t.Fatal(err)
+	}
+	spec, ok := catalog.Get("image-annotate")
+	if !ok {
+		t.Fatal("catalog must contain image-annotate")
+	}
+	if spec.Fields == nil || len(spec.Fields.Shapes) != 1 {
+		t.Fatalf("image-annotate must define exactly one field shape: fields=%+v", spec.Fields)
+	}
+	shape := spec.Fields.Shapes[0]
+	if shape.Field != "point" || shape.MinParts != 2 || shape.MaxOccurrences != 3 {
+		t.Fatalf("image-annotate point constraints drifted: shape=%+v", shape)
+	}
+	hasPartRule := func(minParts, maxParts int, positions []int) bool {
+		for _, rule := range shape.PartRules {
+			if rule.MinParts == minParts && rule.MaxParts == maxParts && equalInts(rule.RequiredPositions, positions) {
+				return true
+			}
+		}
+		return false
+	}
+	if !hasPartRule(0, 3, []int{1, 2}) {
+		t.Fatalf("image-annotate recommended point positions drifted: rules=%+v", shape.PartRules)
+	}
+	for _, phrase := range []string{
+		"`编号 | 标题 | 描述`",
+		"最多读取 " + strconv.Itoa(shape.MaxOccurrences) + " 条",
+		"不会叠加到图片上",
+	} {
+		if !strings.Contains(section, phrase) {
+			t.Errorf("image-annotate documentation must define %q", phrase)
+		}
+	}
+	var pointExample string
+	var pointDescription string
+	for _, field := range spec.Fields.Required {
+		if field.Name == "point" {
+			pointExample = field.Example
+			pointDescription = field.Description
+			break
+		}
+	}
+	if pointExample == "" {
+		t.Fatal("image-annotate must expose a point example")
+	}
+	pointParts := strings.Split(pointExample, "|")
+	if got := len(pointParts); got != 3 {
+		t.Fatalf("recommended point example has %d parts, want 3: %q", got, pointExample)
+	}
+	for i, part := range pointParts {
+		if strings.TrimSpace(part) == "" {
+			t.Fatalf("recommended point example part %d must not be empty: %q", i+1, pointExample)
+		}
+	}
+	if !strings.Contains(section, "point: "+pointExample) {
+		t.Errorf("docs/LAYOUT.md must use the catalog point example %q", pointExample)
+	}
+	publicContract := strings.Join([]string{section, spec.WhenToUse, spec.WhenNotToUse, spec.AntiPattern, pointDescription, spec.Example}, "\n")
+	for _, stale := range []string{
+		"编号 | X | Y | 标题 | 描述",
+		"X坐标(0-100)",
+		"Y坐标(0-100)",
+		"X百分比(0-100)",
+		"Y百分比(0-100)",
+		"坐标会被忽略",
+		"继续写坐标参数",
+	} {
+		if strings.Contains(publicContract, stale) {
+			t.Errorf("image-annotate public documentation or discovery still exposes legacy coordinate syntax %q", stale)
+		}
+	}
+	if !strings.Contains(spec.WhenToUse, "1-"+strconv.Itoa(shape.MaxOccurrences)) || !strings.Contains(spec.AntiPattern, "超过 "+strconv.Itoa(shape.MaxOccurrences)+" 条") {
+		t.Fatalf("image-annotate max-point guidance drifted: when_to_use=%q anti_pattern=%q", spec.WhenToUse, spec.AntiPattern)
+	}
+}
+
 func readDocumentationFile(t *testing.T, path string) string {
 	t.Helper()
 	data, err := os.ReadFile(path)

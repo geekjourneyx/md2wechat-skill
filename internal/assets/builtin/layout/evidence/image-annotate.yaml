@@ -11,50 +11,56 @@ industry: [general]
 tags: [evidence, image, annotation, callout, highlight]
 position: body
 when_to_use: |
-  图片重点标注，适合后台截图、页面结构、海报拆解。
-  当需要引导读者注意图片特定区域时使用。
+  图片编号解读，适合后台截图、页面结构、海报拆解。
+  当需要用 1-3 条编号说明拆解图片时使用。
 when_not_to_use: |
-  没有需要标注的重点时直接用 image-text；
+  没有需要编号解读的重点时直接用 image-text；
   步骤图示用 image-steps。
 pairs_well_with: [image-text, steps, image-steps]
 avoid_combining_with: []
 anti_pattern: |
   缺少 image 或没有任何有效 point 导致渲染失败；
-  point 坐标超过 100 或写成百分号格式（应写纯数字）；
-  标注点太多（超过 5 个）导致图片拥挤。
+  point 缺少编号或标题，导致该条说明无法渲染；
+  写入超过 3 条 point，导致第 4 条及以后被 renderer 忽略。
 fields:
   required:
     - name: image
       description: 图片 URL（必填）
       example: "https://example.com/annotate.png"
     - name: point
-      description: 标注点（可多次重复添加），格式：序号 | X百分比(0-100) | Y百分比(0-100) | 标签 | 说明
-      example: "01 | 24 | 24 | 主信息区 | 一进入页面先看到的核心判断和主标题"
+      description: 编号解读（可多次重复，最多渲染 3 条），格式：编号 | 标题 | 描述；描述可省略
+      example: "01 | 主信息区 | 一进入页面先看到的核心判断和主标题"
   optional:
     - name: eyebrow
       description: 标签词
-      example: "拆解说明"
+      example: "图片解读"
     - name: title
-      description: 标注图标题
-      example: "图片标注卡适合直接告诉读者重点该看哪里"
+      description: 图片解读标题
+      example: "一张图配三条编号说明，关系更清楚"
     - name: note
       description: 底部说明
-      example: "适合后台截图、海报拆解、页面结构分析"
+      example: "适合后台截图、海报拆解、页面结构说明"
     - name: alt
       description: 图片替代文字
-      example: "图片标注卡示例"
+      example: "图片解读卡示例"
   shapes:
-    - {field: point, separator: "|", min_parts: 4}
+    - field: point
+      separator: "|"
+      min_parts: 2
+      max_occurrences: 3
+      part_rules:
+        - {max_parts: 3, required_positions: [1, 2]}
+        - {min_parts: 4, required_positions: [1, 4]}
 example: |
   :::image-annotate
-  eyebrow: 拆解说明
-  title: 图片标注卡适合直接告诉读者重点该看哪里
-  note: 适合后台截图、海报拆解、页面结构分析
+  eyebrow: 图片解读
+  title: 一张图配三条编号说明，关系更清楚
+  note: 适合后台截图、海报拆解、页面结构说明
   image: https://example.com/annotate.png
-  alt: 图片标注卡示例
-  point: 01 | 24 | 24 | 主信息区 | 一进入页面先看到的核心判断和主标题
-  point: 02 | 74 | 36 | 指标区 | 适合讲关键数字、结果和变化
-  point: 03 | 56 | 76 | 行动区 | 适合解释按钮、入口和下一步动作
+  alt: 图片解读卡示例
+  point: 01 | 主信息区 | 一进入页面先看到的核心判断和主标题
+  point: 02 | 指标区 | 适合讲关键数字、结果和变化
+  point: 03 | 行动区 | 适合解释按钮、入口和下一步动作
   :::
 metadata:
   author: md2wechat

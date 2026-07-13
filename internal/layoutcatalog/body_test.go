@@ -395,11 +395,20 @@ func TestParseLayoutSpecFieldShapeAndOutputOrderSchema(t *testing.T) {
 		name, fields, want string
 	}{
 		{name: "valid", fields: "  output_order: [title, items]\n  shapes:\n    - {field: items, separator: '|', min_parts: 2}\n"},
+		{name: "valid max occurrences and part rules", fields: "  shapes:\n    - field: items\n      separator: '|'\n      min_parts: 2\n      max_occurrences: 3\n      part_rules:\n        - {max_parts: 3, required_positions: [1, 2]}\n        - {min_parts: 4, required_positions: [1, 4]}\n"},
 		{name: "unknown output field", fields: "  output_order: [missing]\n", want: "output_order field"},
 		{name: "duplicate output field", fields: "  output_order: [title, title]\n", want: "duplicate output_order"},
 		{name: "unknown shape field", fields: "  shapes:\n    - {field: missing, separator: '|', min_parts: 2}\n", want: "shape field"},
 		{name: "empty separator", fields: "  shapes:\n    - {field: items, separator: '', min_parts: 2}\n", want: "separator"},
 		{name: "small minimum", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 1}\n", want: "greater than 1"},
+		{name: "negative max occurrences", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 2, max_occurrences: -1}\n", want: "max_occurrences"},
+		{name: "part rule missing bounds", fields: "  shapes:\n    - field: items\n      separator: '|'\n      min_parts: 2\n      part_rules:\n        - {required_positions: [1]}\n", want: "requires min_parts or max_parts"},
+		{name: "part rule negative bound", fields: "  shapes:\n    - field: items\n      separator: '|'\n      min_parts: 2\n      part_rules:\n        - {min_parts: -1, required_positions: [1]}\n", want: "bounds must be nonnegative"},
+		{name: "part rule inverted bounds", fields: "  shapes:\n    - field: items\n      separator: '|'\n      min_parts: 2\n      part_rules:\n        - {min_parts: 4, max_parts: 3, required_positions: [1]}\n", want: "must not exceed"},
+		{name: "part rule missing positions", fields: "  shapes:\n    - field: items\n      separator: '|'\n      min_parts: 2\n      part_rules:\n        - {max_parts: 3}\n", want: "requires required_positions"},
+		{name: "part rule nonpositive position", fields: "  shapes:\n    - field: items\n      separator: '|'\n      min_parts: 2\n      part_rules:\n        - {max_parts: 3, required_positions: [0]}\n", want: "positions must be positive"},
+		{name: "part rule position exceeds maximum", fields: "  shapes:\n    - field: items\n      separator: '|'\n      min_parts: 2\n      part_rules:\n        - {max_parts: 3, required_positions: [4]}\n", want: "exceeds max_parts"},
+		{name: "part rule duplicate position", fields: "  shapes:\n    - field: items\n      separator: '|'\n      min_parts: 2\n      part_rules:\n        - {max_parts: 3, required_positions: [1, 1]}\n", want: "is duplicated"},
 		{name: "item shape missing separator", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 2, item_min_parts: 2}\n", want: "item_separator"},
 		{name: "item shape small minimum", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 2, item_separator: ':', item_min_parts: 1}\n", want: "item_min_parts"},
 	}

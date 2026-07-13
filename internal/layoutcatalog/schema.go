@@ -76,11 +76,21 @@ type FieldsSpec struct {
 }
 
 type FieldShapeSpec struct {
-	Field         string `yaml:"field"`
-	Separator     string `yaml:"separator"`
-	MinParts      int    `yaml:"min_parts"`
-	ItemSeparator string `yaml:"item_separator,omitempty"`
-	ItemMinParts  int    `yaml:"item_min_parts,omitempty"`
+	Field          string              `yaml:"field"`
+	Separator      string              `yaml:"separator"`
+	MinParts       int                 `yaml:"min_parts"`
+	MaxOccurrences int                 `yaml:"max_occurrences,omitempty" json:"MaxOccurrences,omitempty"`
+	PartRules      []FieldPartRuleSpec `yaml:"part_rules,omitempty" json:"-"`
+	ItemSeparator  string              `yaml:"item_separator,omitempty"`
+	ItemMinParts   int                 `yaml:"item_min_parts,omitempty"`
+}
+
+// FieldPartRuleSpec requires specific 1-based positions to be non-empty for
+// values whose raw separator-delimited part count matches the configured range.
+type FieldPartRuleSpec struct {
+	MinParts          int   `yaml:"min_parts,omitempty" json:"MinParts,omitempty"`
+	MaxParts          int   `yaml:"max_parts,omitempty" json:"MaxParts,omitempty"`
+	RequiredPositions []int `yaml:"required_positions" json:"RequiredPositions"`
 }
 
 type FieldGroupSpec struct {

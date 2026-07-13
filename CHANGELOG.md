@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-07-13
+
+### Added
+- Added six bundled image prompt presets for Claude-warm covers and infographics, editorial collage, semantic concept, suspense black-gold, and ticket-style process diagrams, with discoverable use cases, aspect ratios, provenance, and executable templates.
+- Added fail-closed prompt catalog coverage for required image-preset metadata, supported aspect ratios, attribution, examples, and rendered prompt variables.
+
+### Changed
+- Made `编号 | 标题 | 描述` the only public `image-annotate` syntax in layout documentation and Agent discovery, with one to three numbered explanations rendered below the image.
+- Added structured layout field constraints for maximum occurrences and required part positions while keeping internal compatibility rules out of discovery JSON.
+- Expanded prompt discovery documentation so Agents select image presets through `prompts list`, `prompts show`, and `prompts render` instead of guessing from bundled asset files.
+
+### Fixed
+- Rejected `image-annotate` points with empty required positions and rejected a fourth point before conversion, preventing local validation from approving content the target renderer would discard or truncate.
+- Added executable catalog-to-documentation checks so the canonical point example, maximum count, and public syntax cannot drift independently.
+
 ## [3.0.0] - 2026-07-12
 
 ### Added

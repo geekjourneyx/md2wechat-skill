@@ -1,6 +1,10 @@
 package layoutcatalog
 
-import "testing"
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+)
 
 func TestValidServesContainsFourValues(t *testing.T) {
 	want := []string{"attention", "readability", "memorability", "conversion"}
@@ -39,5 +43,32 @@ func TestValidBodyFormats(t *testing.T) {
 	}
 	if len(ValidBodyFormats) != len(want) {
 		t.Errorf("ValidBodyFormats should contain exactly %d values, got %d", len(want), len(ValidBodyFormats))
+	}
+}
+
+func TestFieldShapeSpecJSONOmitsUnsetExtensionConstraints(t *testing.T) {
+	encoded, err := json.Marshal(FieldShapeSpec{Field: "items", Separator: "|", MinParts: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"MaxOccurrences", "PartRules"} {
+		if strings.Contains(string(encoded), field) {
+			t.Fatalf("unset extension constraint %s leaked into JSON: %s", field, encoded)
+		}
+	}
+}
+
+func TestFieldShapeSpecJSONKeepsPartRulesInternal(t *testing.T) {
+	encoded, err := json.Marshal(FieldShapeSpec{
+		Field:     "point",
+		Separator: "|",
+		MinParts:  2,
+		PartRules: []FieldPartRuleSpec{{MinParts: 4, RequiredPositions: []int{1, 4}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), "PartRules") || strings.Contains(string(encoded), "RequiredPositions") {
+		t.Fatalf("internal compatibility rules leaked into discovery JSON: %s", encoded)
 	}
 }

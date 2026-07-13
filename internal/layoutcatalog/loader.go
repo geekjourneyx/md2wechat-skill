@@ -369,6 +369,36 @@ func validateFieldShapeSpecs(shapes []FieldShapeSpec, declared map[string]bool, 
 		if shape.MinParts <= 1 {
 			return fmt.Errorf("%s shape min_parts must be greater than 1", owner)
 		}
+		if shape.MaxOccurrences < 0 {
+			return fmt.Errorf("%s shape max_occurrences must be nonnegative", owner)
+		}
+		for _, rule := range shape.PartRules {
+			if rule.MinParts < 0 || rule.MaxParts < 0 {
+				return fmt.Errorf("%s shape part rule bounds must be nonnegative", owner)
+			}
+			if rule.MinParts == 0 && rule.MaxParts == 0 {
+				return fmt.Errorf("%s shape part rule requires min_parts or max_parts", owner)
+			}
+			if rule.MinParts > 0 && rule.MaxParts > 0 && rule.MinParts > rule.MaxParts {
+				return fmt.Errorf("%s shape part rule min_parts must not exceed max_parts", owner)
+			}
+			if len(rule.RequiredPositions) == 0 {
+				return fmt.Errorf("%s shape part rule requires required_positions", owner)
+			}
+			seenPositions := map[int]bool{}
+			for _, position := range rule.RequiredPositions {
+				if position <= 0 {
+					return fmt.Errorf("%s shape part rule positions must be positive", owner)
+				}
+				if rule.MaxParts > 0 && position > rule.MaxParts {
+					return fmt.Errorf("%s shape part rule position %d exceeds max_parts", owner, position)
+				}
+				if seenPositions[position] {
+					return fmt.Errorf("%s shape part rule position %d is duplicated", owner, position)
+				}
+				seenPositions[position] = true
+			}
+		}
 		if shape.ItemSeparator == "" && shape.ItemMinParts != 0 {
 			return fmt.Errorf("%s shape item_separator is required with item_min_parts", owner)
 		}
