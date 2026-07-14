@@ -646,11 +646,11 @@ md2wechat preview article.md
 - `inspect`：解释系统最终会怎么理解你的文章，包括标题/作者/摘要来源、H1 风险；`--json` 会在 `data.readiness.targets/blockers` 输出机器可读的 `convert/upload/draft` 目标状态和 blocker 映射，是发布前能否继续的真相源。
 - `preview`：转换成功时把 converter 返回的 HTML 原样写入本地；inspect 诊断只留在 JSON 响应中，不会包进 HTML。
 
-`preview` 不是可编辑工作台，也不会触发上传、草稿或写回 Markdown。API 失败或 converter 返回空结果时命令返回 `PREVIEW_FAILED`，不会生成错误页或 Markdown fallback。
+`preview` 不是可编辑工作台，也不会触发上传、草稿或写回 Markdown。API 失败或 converter 返回空结果时命令返回 `PREVIEW_FAILED`，本次调用不会新建或覆盖错误页或 Markdown fallback；显式输出路径中的既有文件仍可能保留，但属于陈旧内容。
 
 ### Q14.6：为什么 `preview --mode ai` 不给最终视觉稿？
 
-因为当前 AI 模式返回的是 prompt / request，不是最终 HTML。为了避免误导，`preview --mode ai --json` 返回 `PREVIEW_ACTION_REQUIRED`、`status: action_required` 和 prompt；`output_file` 为空，也不会生成确认页或其他 HTML。
+因为当前 AI 模式返回的是 prompt / request，不是最终 HTML。为了避免误导，`preview --mode ai --json` 返回 `PREVIEW_ACTION_REQUIRED`、`status: action_required`、`data.inspect` 和 prompt；`output_file` 为空，本次调用不会新建或覆盖确认页或其他预览 HTML。显式输出路径中的既有文件仍可能保留，但不能视为本次结果。
 
 ### Q14.7：为什么我传了 `--title` / `--author` / `--digest`，但正文显示看起来没变？
 

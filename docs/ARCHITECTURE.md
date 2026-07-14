@@ -88,7 +88,7 @@ md2wechat-skill 的核心目标不是“把 Markdown 变好看”，而是把文
 1. `inspect` 读取 Markdown 与配置
 2. 解析 metadata、正文结构、资产和上下文
 3. 输出 resolved metadata、source、readiness（含 targets/blockers）、checks
-4. `preview` 复用 inspect 结果并调用 converter；成功时原样写入 HTML，AI handoff、失败或空结果不创建文件
+4. `preview` 复用 inspect 结果并调用 converter；成功时原样写入 HTML，AI handoff、失败或空结果在本次调用中不新建或覆盖文件，既有显式输出仍可能作为陈旧内容保留
 
 这里最重要的约束是：
 

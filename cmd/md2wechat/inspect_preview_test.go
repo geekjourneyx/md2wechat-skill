@@ -162,6 +162,9 @@ func TestRunPreviewAIRequestWritesNoFile(t *testing.T) {
 	if data["prompt"] != "render this exact article" || data["output_file"] != "" {
 		t.Fatalf("data = %#v", data)
 	}
+	if _, ok := data["inspect"].(map[string]any); !ok {
+		t.Fatalf("inspect diagnostics missing: %#v", data)
+	}
 	if _, err := os.Stat(outputFile); !os.IsNotExist(err) {
 		t.Fatalf("preview file must not exist, stat error = %v", err)
 	}

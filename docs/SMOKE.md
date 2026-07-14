@@ -63,7 +63,7 @@ md2wechat preview article.md --json
 
 - `inspect` 能返回最终 title / author / digest 来源、`data.readiness`、`data.checks`；`data.readiness.targets/blockers` 能表达目标是否 blocked 以及对应原因
 - 真实验证到 `TITLE_BODY_MISMATCH`、`DIGEST_METADATA_ONLY`、`IMAGE_REPLACEMENT_REQUIRES_UPLOAD_OR_DRAFT`
-- `preview` 在转换成功时写入字节一致的 converter HTML；AI handoff、API 失败和空结果均不创建 HTML
+- `preview` 在转换成功时写入字节一致的 converter HTML；AI handoff、API 失败和空结果在本次调用中均不新建或覆盖 HTML，既有显式输出不得冒充本次结果
 
 结论：
 

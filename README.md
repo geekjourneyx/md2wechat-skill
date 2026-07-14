@@ -207,7 +207,7 @@ md2wechat layout validate --file article.md --json
 |---|---|
 | `inspect` | 检查文章元数据和发布 readiness |
 | `advise` | 为已有文章推荐可选的最小增强动作 |
-| `preview` | 将成功转换的 HTML 原样写入本地；失败或 AI handoff 不创建文件 |
+| `preview` | 成功时原样写入 HTML；失败或 AI handoff 不新建或覆盖，既有输出视为陈旧内容 |
 | `convert` | Markdown 转微信 HTML，可选创建草稿 |
 | `write` | 从想法生成文章 |
 | `humanize` | 重写 AI 文章，支持 `authentic` 强度 |

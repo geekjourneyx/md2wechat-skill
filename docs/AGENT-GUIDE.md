@@ -362,7 +362,7 @@ md2wechat preview article.md --output /path/to/preview.html
 
 在浏览器中打开预览，Agent 等待用户确认后才执行后续操作。
 
-只有 `PREVIEW_READY` 才有可打开的 `output_file`，其内容与 converter HTML 字节一致。`PREVIEW_ACTION_REQUIRED` 会返回 prompt 但不创建 HTML；`PREVIEW_FAILED` 也不会生成 fallback 或错误页。
+只有 `PREVIEW_READY` 才有本次调用可打开的 `output_file`，其内容与 converter HTML 字节一致。`PREVIEW_ACTION_REQUIRED` 的 `--json` 响应会返回 `data.inspect` 和 prompt；它与 `PREVIEW_FAILED` 都不会在本次调用中新建或覆盖预览 HTML。显式输出路径中的既有文件仍可能保留，但必须视为陈旧内容。
 
 ---
 
@@ -744,8 +744,8 @@ JSON envelope 格式（v1）：
 | `CONVERT_COMPLETED` | 转换成功 | 继续发布流程 |
 | `INSPECT_COMPLETED` | 检查完成 | 查看 `data.readiness.targets/blockers` |
 | `PREVIEW_READY` | 预览可用 | 打开或检查 `data.output_file`；文件是原样 converter HTML |
-| `PREVIEW_ACTION_REQUIRED` | 需要宿主 Agent 生成最终 HTML | 使用 `data.prompt`；`data.output_file` 为空且没有预览文件 |
-| `PREVIEW_FAILED` | 预览转换失败 | 报告错误；不要查找或声称生成了 fallback HTML |
+| `PREVIEW_ACTION_REQUIRED` | 需要宿主 Agent 生成最终 HTML | 使用 `data.prompt` 和 `data.inspect`；`data.output_file` 为空，本次调用不新建或覆盖预览 HTML |
+| `PREVIEW_FAILED` | 预览转换失败 | 报告错误；不要把显式输出路径中可能保留的陈旧文件当成本次结果 |
 | `DOCTOR_COMPLETED` | 本地体检完成 | 查看 `data.overall` 和本地配置 `data.readiness.*` |
 | `LAYOUT_VALIDATED` | 本地 catalog/schema 接受 | 检查 warnings；生产渲染仍需真实 convert/conformance 证明 |
 | `LAYOUT_VALIDATE_HAS_ERRORS` | 排版有错误 | 查看 `data.errors` 修复 |
