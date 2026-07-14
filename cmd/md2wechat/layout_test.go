@@ -124,8 +124,10 @@ func TestLayoutListSelectsRecommendedLifecycleExplicitly(t *testing.T) {
 	if !strings.Contains(output, `"hero"`) {
 		t.Fatalf("recommended list did not include hero:\n%s", stdout)
 	}
-	if strings.Contains(output, `"name": "dialogue"`) {
-		t.Fatalf("recommended list unexpectedly included compatibility module:\n%s", stdout)
+	for _, module := range decodeLayoutListModules(t, stdout) {
+		if module.Name == "dialogue" {
+			t.Fatalf("recommended list unexpectedly included compatibility module: %#v", module)
+		}
 	}
 }
 
