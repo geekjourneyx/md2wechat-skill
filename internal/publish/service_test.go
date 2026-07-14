@@ -16,9 +16,11 @@ import (
 type fakeMarkdownConverter struct {
 	result *converter.ConvertResult
 	reqs   []*converter.ConvertRequest
+	calls  int
 }
 
 func (f *fakeMarkdownConverter) Convert(req *converter.ConvertRequest) *converter.ConvertResult {
+	f.calls++
 	f.reqs = append(f.reqs, req)
 	return f.result
 }
@@ -61,13 +63,19 @@ func (f *fakeAssetProcessor) GenerateAndUpload(prompt string) (*image.GenerateAn
 	return f.generateResults[prompt], nil
 }
 
+func (f *fakeAssetProcessor) totalCalls() int {
+	return len(f.localCalls) + len(f.onlineCalls) + len(f.generateCalls)
+}
+
 type fakeDraftCreator struct {
 	artifacts []Artifact
 	result    *DraftResult
 	err       error
+	calls     int
 }
 
 func (f *fakeDraftCreator) CreateDraft(artifact Artifact) (*DraftResult, error) {
+	f.calls++
 	f.artifacts = append(f.artifacts, artifact)
 	if f.err != nil {
 		return nil, f.err
@@ -78,7 +86,98 @@ func (f *fakeDraftCreator) CreateDraft(artifact Artifact) (*DraftResult, error) 
 	return &DraftResult{MediaID: "draft-id"}, nil
 }
 
+type fakeCoverUploader struct {
+	calls int
+}
+
+func (f *fakeCoverUploader) upload(string) (string, error) {
+	f.calls++
+	return "cover-id", nil
+}
+
+func TestServiceConvertRejectsDraftBlockersBeforeEffects(t *testing.T) {
+	dir := t.TempDir()
+	validCover := filepath.Join(dir, "cover.jpg")
+	if err := os.WriteFile(validCover, []byte("cover"), 0600); err != nil {
+		t.Fatalf("write valid cover: %v", err)
+	}
+	unsupportedCover := filepath.Join(dir, "cover.txt")
+	if err := os.WriteFile(unsupportedCover, []byte("cover"), 0600); err != nil {
+		t.Fatalf("write unsupported cover: %v", err)
+	}
+	coverDir := filepath.Join(dir, "cover-dir.jpg")
+	if err := os.Mkdir(coverDir, 0700); err != nil {
+		t.Fatalf("create cover directory: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		cover   string
+		coverID string
+	}{
+		{name: "missing both cover inputs"},
+		{name: "conflicting local cover and media ID", cover: validCover, coverID: "media-id"},
+		{name: "URL passed as media ID", coverID: "https://example.com/cover.jpg"},
+		{name: "missing local cover file", cover: filepath.Join(dir, "missing.jpg")},
+		{name: "local cover is a directory", cover: coverDir},
+		{name: "unsupported local cover extension", cover: unsupportedCover},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			converterFake := &fakeMarkdownConverter{result: &converter.ConvertResult{Success: true}}
+			processor := &fakeAssetProcessor{}
+			cover := &fakeCoverUploader{}
+			drafts := &fakeDraftCreator{}
+			svc := NewService(zap.NewNop(), converterFake, processor, drafts, cover.upload)
+
+			_, err := svc.Convert(&ConvertInput{
+				Intent:         PublishIntent{CreateDraft: true},
+				ConvertRequest: &converter.ConvertRequest{},
+				CoverImagePath: tt.cover,
+				CoverMediaID:   tt.coverID,
+			})
+			if err == nil {
+				t.Fatal("Convert() error = nil, want draft intent rejection")
+			}
+			var draftErr *DraftError
+			if !errors.As(err, &draftErr) {
+				t.Fatalf("Convert() error type = %T, want *DraftError", err)
+			}
+			if converterFake.calls != 0 || processor.totalCalls() != 0 || cover.calls != 0 || drafts.calls != 0 {
+				t.Fatalf("known blocker caused effects: converter=%d assets=%d cover=%d draft=%d", converterFake.calls, processor.totalCalls(), cover.calls, drafts.calls)
+			}
+		})
+	}
+}
+
+func TestServiceConvertRejectsCoverWithoutDraftBeforeEffects(t *testing.T) {
+	converterFake := &fakeMarkdownConverter{result: &converter.ConvertResult{Success: true}}
+	processor := &fakeAssetProcessor{}
+	cover := &fakeCoverUploader{}
+	drafts := &fakeDraftCreator{}
+	svc := NewService(zap.NewNop(), converterFake, processor, drafts, cover.upload)
+
+	_, err := svc.Convert(&ConvertInput{
+		ConvertRequest: &converter.ConvertRequest{},
+		CoverMediaID:   "media-id",
+	})
+	var draftErr *DraftError
+	if !errors.As(err, &draftErr) {
+		t.Fatalf("Convert() error = %T (%v), want *DraftError", err, err)
+	}
+	if converterFake.calls != 0 || processor.totalCalls() != 0 || cover.calls != 0 || drafts.calls != 0 {
+		t.Fatalf("known blocker caused effects: converter=%d assets=%d cover=%d draft=%d", converterFake.calls, processor.totalCalls(), cover.calls, drafts.calls)
+	}
+}
+
 func TestServiceConvertReturnsAIRequestWithoutRunningSideEffects(t *testing.T) {
+	dir := t.TempDir()
+	coverPath := filepath.Join(dir, "cover.jpg")
+	if err := os.WriteFile(coverPath, []byte("cover"), 0600); err != nil {
+		t.Fatalf("write cover: %v", err)
+	}
+
 	svc := NewService(
 		zap.NewNop(),
 		&fakeMarkdownConverter{
@@ -115,7 +214,7 @@ func TestServiceConvertReturnsAIRequestWithoutRunningSideEffects(t *testing.T) {
 			Theme:    "autumn-warm",
 		},
 		MarkdownDir:    "/tmp/work",
-		CoverImagePath: "/tmp/cover.jpg",
+		CoverImagePath: coverPath,
 	})
 	if err != nil {
 		t.Fatalf("Convert() error = %v", err)
@@ -145,6 +244,9 @@ func TestServiceConvertProcessesAssetsAndCreatesDraft(t *testing.T) {
 	}
 	if err := os.WriteFile(localPath, []byte("x"), 0644); err != nil {
 		t.Fatalf("write local image: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "cover.jpg"), []byte("cover"), 0644); err != nil {
+		t.Fatalf("write cover: %v", err)
 	}
 
 	assets := &fakeAssetProcessor{

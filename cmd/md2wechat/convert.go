@@ -298,6 +298,13 @@ func validateConvertConfig() error {
 		return newCLIError(codeConvertInvalid, fmt.Sprintf("invalid convert mode: %s", convertMode))
 	}
 
+	if convertPreview && (convertUpload || convertDraft) {
+		return newCLIError(codeConfigInvalid, "--preview cannot be combined with --upload or --draft")
+	}
+	if !convertDraft && (strings.TrimSpace(convertCoverImage) != "" || strings.TrimSpace(convertCoverMediaID) != "") {
+		return newCLIError(codeConfigInvalid, "--cover and --cover-media-id require --draft")
+	}
+
 	if convertMode == "api" {
 		if convertAPIKey == "" && cfg.MD2WechatAPIKey == "" {
 			return newCLIError(codeConvertInvalid, "MD2WECHAT_API_KEY is required for API mode")
@@ -309,7 +316,7 @@ func validateConvertConfig() error {
 	}
 
 	if strings.TrimSpace(convertCoverImage) != "" && strings.TrimSpace(convertCoverMediaID) != "" {
-		return newCLIError(codeConvertInvalid, "--cover and --cover-media-id are mutually exclusive")
+		return newCLIError(codeConvertInvalid, "--cover and --cover-media-id are mutually exclusive and cannot be used together")
 	}
 	if strings.TrimSpace(convertCoverMediaID) != "" && looksLikeURL(convertCoverMediaID) {
 		return newCLIError(codeConvertInvalid, "--cover-media-id expects a WeChat media_id, not a URL")

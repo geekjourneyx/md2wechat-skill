@@ -85,6 +85,9 @@ func (s *Service) Convert(input *ConvertInput) (*ConvertOutput, error) {
 	if s.converter == nil {
 		return nil, fmt.Errorf("markdown converter is required")
 	}
+	if err := validateConvertInput(input); err != nil {
+		return nil, err
+	}
 
 	result := s.converter.Convert(input.ConvertRequest)
 	if result == nil {
@@ -137,19 +140,6 @@ func (s *Service) Convert(input *ConvertInput) (*ConvertOutput, error) {
 			return nil, fmt.Errorf("draft creator is required")
 		}
 		coverMediaID := input.CoverMediaID
-		if strings.TrimSpace(input.CoverImagePath) != "" && strings.TrimSpace(coverMediaID) != "" {
-			return nil, &DraftError{
-				Message: "创建草稿时 --cover 和 --cover-media-id 不能同时使用",
-				Hint:    "请二选一：提供本地封面图片路径，或提供已存在的微信永久素材 media_id",
-			}
-		}
-		if strings.TrimSpace(input.CoverImagePath) == "" && strings.TrimSpace(coverMediaID) == "" {
-			return nil, &DraftError{
-				Message: "创建草稿需要封面图片",
-				Hint: "请使用 --cover 参数指定本地封面图片路径，例如: --cover /path/to/cover.jpg\n" +
-					"或者使用 --cover-media-id 提供已存在的微信永久素材 media_id",
-			}
-		}
 		if strings.TrimSpace(coverMediaID) == "" {
 			if s.uploadCover == nil {
 				return nil, fmt.Errorf("cover uploader is required")
@@ -173,6 +163,68 @@ func (s *Service) Convert(input *ConvertInput) (*ConvertOutput, error) {
 	}
 
 	return output, nil
+}
+
+func validateConvertInput(input *ConvertInput) error {
+	coverPath := input.CoverImagePath
+	coverMediaID := strings.TrimSpace(input.CoverMediaID)
+	hasCoverPath := strings.TrimSpace(coverPath) != ""
+	hasCoverMediaID := coverMediaID != ""
+
+	if !input.Intent.CreateDraft {
+		if hasCoverPath || hasCoverMediaID {
+			return &DraftError{
+				Message: "--cover 和 --cover-media-id 仅可用于创建草稿",
+				Hint:    "请移除封面参数，或使用 --draft 创建微信草稿",
+			}
+		}
+		return nil
+	}
+
+	if hasCoverPath && hasCoverMediaID {
+		return &DraftError{
+			Message: "创建草稿时 --cover 和 --cover-media-id 不能同时使用",
+			Hint:    "请二选一：提供本地封面图片路径，或提供已存在的微信永久素材 media_id",
+		}
+	}
+	if !hasCoverPath && !hasCoverMediaID {
+		return &DraftError{
+			Message: "创建草稿需要封面图片",
+			Hint: "请使用 --cover 参数指定本地封面图片路径，例如: --cover /path/to/cover.jpg\n" +
+				"或者使用 --cover-media-id 提供已存在的微信永久素材 media_id",
+		}
+	}
+	if hasCoverMediaID {
+		lowerMediaID := strings.ToLower(coverMediaID)
+		if strings.HasPrefix(lowerMediaID, "http://") || strings.HasPrefix(lowerMediaID, "https://") {
+			return &DraftError{
+				Message: "--cover-media-id 需要微信永久素材 media_id，不能使用 URL",
+				Hint:    "远程图片请先下载到本地并通过 --cover 指定，或提供已有的 media_id",
+			}
+		}
+		return nil
+	}
+
+	info, err := os.Stat(coverPath)
+	if err != nil {
+		return &DraftError{
+			Message: fmt.Sprintf("封面图片不可用: %s", coverPath),
+			Hint:    "请确认 --cover 指向存在且可读取的本地图片文件",
+		}
+	}
+	if info.IsDir() {
+		return &DraftError{
+			Message: fmt.Sprintf("封面图片路径不能是目录: %s", coverPath),
+			Hint:    "请使用 --cover 指定本地图片文件",
+		}
+	}
+	if !image.IsValidImageFormat(coverPath) {
+		return &DraftError{
+			Message: fmt.Sprintf("不支持的封面图片格式: %s", filepath.Ext(coverPath)),
+			Hint:    "支持的格式: .jpg、.jpeg、.png、.gif、.bmp、.webp",
+		}
+	}
+	return nil
 }
 
 func (s *Service) saveDraft(artifact Artifact, filePath string) error {

@@ -35,6 +35,57 @@ func TestConvertHelpUsesRuntimeThemeDiscovery(t *testing.T) {
 	}
 }
 
+func TestValidateConvertConfigRejectsInvalidEffectIntent(t *testing.T) {
+	oldCfg := cfg
+	oldMode, oldTheme, oldAPIKey := convertMode, convertTheme, convertAPIKey
+	oldCustomPrompt := convertCustomPrompt
+	oldPreview, oldUpload, oldDraft := convertPreview, convertUpload, convertDraft
+	oldCover, oldCoverMediaID := convertCoverImage, convertCoverMediaID
+	t.Cleanup(func() {
+		cfg = oldCfg
+		convertMode, convertTheme, convertAPIKey = oldMode, oldTheme, oldAPIKey
+		convertCustomPrompt = oldCustomPrompt
+		convertPreview, convertUpload, convertDraft = oldPreview, oldUpload, oldDraft
+		convertCoverImage, convertCoverMediaID = oldCover, oldCoverMediaID
+	})
+
+	tests := []struct {
+		name    string
+		preview bool
+		upload  bool
+		draft   bool
+		cover   string
+		coverID string
+		wantErr string
+	}{
+		{name: "preview plus upload", preview: true, upload: true, wantErr: "--preview cannot be combined with --upload or --draft"},
+		{name: "preview plus draft", preview: true, draft: true, wantErr: "--preview cannot be combined with --upload or --draft"},
+		{name: "cover without draft", cover: "cover.jpg", wantErr: "--cover and --cover-media-id require --draft"},
+		{name: "cover id without draft", coverID: "media-id", wantErr: "--cover and --cover-media-id require --draft"},
+		{name: "conflicting draft cover", draft: true, cover: "cover.jpg", coverID: "media-id", wantErr: "cannot be used together"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg = &config.Config{}
+			convertMode = "ai"
+			convertTheme = "default"
+			convertAPIKey = ""
+			convertCustomPrompt = "test prompt"
+			convertPreview = tt.preview
+			convertUpload = tt.upload
+			convertDraft = tt.draft
+			convertCoverImage = tt.cover
+			convertCoverMediaID = tt.coverID
+
+			err := validateConvertConfig()
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("validateConvertConfig() error = %v, want substring %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func (f *fakeConverter) Convert(req *converter.ConvertRequest) *converter.ConvertResult {
 	f.reqs = append(f.reqs, req)
 	return f.result
@@ -151,7 +202,6 @@ func TestRunConvertDraftPipelineReplacesMixedImagesAndUsesMarkdownTitle(t *testi
 	convertUpload = false
 	convertDraft = true
 	convertSaveDraft = ""
-	convertCoverImage = "/tmp/cover.jpg"
 	convertAPIKey = ""
 	convertFontSize = "medium"
 	convertBackgroundType = "default"
@@ -162,6 +212,10 @@ func TestRunConvertDraftPipelineReplacesMixedImagesAndUsesMarkdownTitle(t *testi
 	convertDigest = ""
 
 	dir := t.TempDir()
+	convertCoverImage = filepath.Join(dir, "cover.jpg")
+	if err := os.WriteFile(convertCoverImage, []byte("cover"), 0600); err != nil {
+		t.Fatalf("write cover: %v", err)
+	}
 	markdownPath := filepath.Join(dir, "article.md")
 	localRelative := filepath.Join("images", "local.png")
 	markdown := strings.Join([]string{
@@ -736,7 +790,6 @@ func TestRunConvertImageFailureBlocksDraftCreation(t *testing.T) {
 	convertUpload = false
 	convertDraft = true
 	convertSaveDraft = ""
-	convertCoverImage = "/tmp/cover.jpg"
 	convertAPIKey = ""
 	convertFontSize = "medium"
 	convertBackgroundType = "default"
@@ -744,6 +797,10 @@ func TestRunConvertImageFailureBlocksDraftCreation(t *testing.T) {
 	convertOutput = ""
 
 	dir := t.TempDir()
+	convertCoverImage = filepath.Join(dir, "cover.jpg")
+	if err := os.WriteFile(convertCoverImage, []byte("cover"), 0600); err != nil {
+		t.Fatalf("write cover: %v", err)
+	}
 	markdownPath := filepath.Join(dir, "article.md")
 	if err := os.WriteFile(markdownPath, []byte("# Title\n\n![local](images/local.png)\n"), 0600); err != nil {
 		t.Fatalf("write markdown: %v", err)
