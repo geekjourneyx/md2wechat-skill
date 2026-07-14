@@ -408,6 +408,10 @@ func buildCapabilitiesData() (map[string]any, error) {
 	}
 	allPrompts := cat.List("")
 	currentCfg := loadDiscoveryConfig()
+	currentProvider := strings.TrimSpace(currentCfg.ImageProvider)
+	if currentProvider == "" {
+		currentProvider = "openai"
+	}
 	return map[string]any{
 		"commands": topLevelCommandNames(),
 		"convert": map[string]any{
@@ -417,15 +421,24 @@ func buildCapabilitiesData() (map[string]any, error) {
 			"background_types": []string{"default", "grid", "none"},
 			"default_theme":    currentCfg.DefaultTheme,
 		},
-		"providers":         providers,
-		"image_generation":  buildImageGenerationCapabilityData(),
-		"title_generation":  buildTitleGenerationCapabilityData(),
-		"article_advice":    buildArticleAdviceCapabilityData(),
-		"themes":            themes,
-		"layout":            buildLayoutCapabilityData(),
-		"prompts":           allPrompts,
-		"prompt_kinds":      sortedPromptKinds(allPrompts),
-		"prompt_archetypes": sortedPromptArchetypes(allPrompts),
+		"providers": map[string]any{
+			"count":              len(providers),
+			"current":            currentProvider,
+			"current_configured": strings.TrimSpace(currentCfg.ImageAPIKey) != "",
+		},
+		"image_generation": buildImageGenerationCapabilityData(),
+		"title_generation": buildTitleGenerationCapabilityData(),
+		"article_advice":   buildArticleAdviceCapabilityData(),
+		"themes": map[string]any{
+			"count":   len(themes),
+			"default": currentCfg.DefaultTheme,
+		},
+		"layout": buildLayoutCapabilityData(),
+		"prompts": map[string]any{
+			"count":      len(allPrompts),
+			"kinds":      sortedPromptKinds(allPrompts),
+			"archetypes": sortedPromptArchetypes(allPrompts),
+		},
 	}, nil
 }
 

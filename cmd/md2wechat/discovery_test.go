@@ -462,27 +462,63 @@ func TestListThemeViewsMarksAPICollectionNotSelectable(t *testing.T) {
 	}
 }
 
-func TestBuildCapabilitiesDataIncludesPromptCatalog(t *testing.T) {
+func TestCapabilitiesUsesCompactCatalogSummaries(t *testing.T) {
 	oldCfg := cfg
 	t.Cleanup(func() {
 		cfg = oldCfg
 		promptcatalog.ResetDefaultCatalogForTests()
 	})
 
-	cfg = nil
+	cfg = &config.Config{
+		DefaultTheme: "default",
+		ImageAPIKey:  "  ",
+	}
 	promptcatalog.ResetDefaultCatalogForTests()
 
 	data, err := buildCapabilitiesData()
 	if err != nil {
-		t.Fatalf("buildCapabilitiesData() error = %v", err)
+		t.Fatal(err)
 	}
-	prompts, ok := data["prompts"].([]promptcatalog.PromptSpec)
-	if !ok || len(prompts) == 0 {
-		t.Fatalf("expected prompt catalog in capabilities: %#v", data["prompts"])
+
+	providers := data["providers"].(map[string]any)
+	themes := data["themes"].(map[string]any)
+	prompts := data["prompts"].(map[string]any)
+	for name, summary := range map[string]map[string]any{
+		"providers": providers,
+		"themes":    themes,
+		"prompts":   prompts,
+	} {
+		if _, ok := summary["count"]; !ok {
+			t.Fatalf("%s summary missing count: %#v", name, summary)
+		}
 	}
-	archetypes, ok := data["prompt_archetypes"].([]string)
-	if !ok || len(archetypes) == 0 {
-		t.Fatalf("expected prompt archetypes in capabilities: %#v", data["prompt_archetypes"])
+	if providers["current"] != "openai" {
+		t.Fatalf("providers current = %#v, want effective default openai", providers["current"])
+	}
+	if providers["current_configured"] != false {
+		t.Fatalf("providers current_configured = %#v, want false for whitespace key", providers["current_configured"])
+	}
+	if themes["default"] != "default" {
+		t.Fatalf("themes default = %#v, want default", themes["default"])
+	}
+	if _, ok := data["prompt_kinds"]; ok {
+		t.Fatal("capabilities retained duplicate top-level prompt_kinds")
+	}
+	if _, ok := data["prompt_archetypes"]; ok {
+		t.Fatal("capabilities retained duplicate top-level prompt_archetypes")
+	}
+
+	encoded, err := json.Marshal(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, forbidden := range []string{"template", "style", "supported_models", "default_base_url", "source"} {
+		if bytes.Contains(encoded, []byte(`"`+forbidden+`"`)) {
+			t.Fatalf("capabilities leaked heavy field %q", forbidden)
+		}
+	}
+	if len(encoded) > 16*1024 {
+		t.Fatalf("capabilities payload = %d bytes, budget = 16384", len(encoded))
 	}
 }
 
@@ -595,12 +631,16 @@ func TestBuildCapabilitiesDataIncludesTitleGenerationCapability(t *testing.T) {
 		t.Fatalf("commands missing title: %#v", commands)
 	}
 
-	promptKinds, ok := data["prompt_kinds"].([]string)
+	prompts, ok := data["prompts"].(map[string]any)
 	if !ok {
-		t.Fatalf("prompt_kinds type = %T", data["prompt_kinds"])
+		t.Fatalf("prompts type = %T", data["prompts"])
+	}
+	promptKinds, ok := prompts["kinds"].([]string)
+	if !ok {
+		t.Fatalf("prompts kinds type = %T", prompts["kinds"])
 	}
 	if !contains(promptKinds, titlebuilder.PromptKind) {
-		t.Fatalf("prompt_kinds missing %q: %#v", titlebuilder.PromptKind, promptKinds)
+		t.Fatalf("prompts kinds missing %q: %#v", titlebuilder.PromptKind, promptKinds)
 	}
 
 	titleGeneration, ok := data["title_generation"].(map[string]any)

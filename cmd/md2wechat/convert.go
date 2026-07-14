@@ -53,15 +53,11 @@ Supports two conversion modes:
   - api: Use md2wechat API (stable, requires API key)
   - ai:  Use Claude AI to generate HTML (flexible, requires AI)
 
-Supported professional themes (48 total):
-  Basic (6): default, bytedance, apple, sports, chinese, cyber
-  Minimal (8): minimal-gold, minimal-green, minimal-blue, minimal-orange, minimal-red, minimal-navy, minimal-gray, minimal-sky
-  Focus (8): focus-gold, focus-green, focus-blue, focus-orange, focus-red, focus-navy, focus-gray, focus-sky
-  Elegant (8): elegant-gold, elegant-green, elegant-blue, elegant-orange, elegant-red, elegant-navy, elegant-gray, elegant-sky
-  Bold (8): bold-gold, bold-green, bold-blue, bold-orange, bold-red, bold-navy, bold-gray, bold-sky
-  Featured (10): sspai-red, wechat-native, nyt-classic, github-readme, mint-fresh, sunset-amber, ink-minimal, lavender-dream, coffee-house, bauhaus-primary
+Theme availability is resolved at runtime. Discover the current catalog with:
+  md2wechat themes list --json
 
-  AI modes: autumn-warm, spring-fresh, ocean-calm, custom`,
+Inspect one full theme definition with:
+  md2wechat themes show <name> --json`,
 	Args: cobra.ExactArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return initConfig()

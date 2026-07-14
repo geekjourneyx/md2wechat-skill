@@ -20,6 +20,21 @@ type fakeConverter struct {
 	reqs   []*converter.ConvertRequest
 }
 
+func TestConvertHelpUsesRuntimeThemeDiscovery(t *testing.T) {
+	help := convertCmd.Long
+	if !strings.Contains(help, "md2wechat themes list --json") {
+		t.Fatalf("convert help missing runtime theme discovery command: %q", help)
+	}
+	if !strings.Contains(help, "md2wechat themes show <name> --json") {
+		t.Fatalf("convert help missing theme detail command: %q", help)
+	}
+	for _, stale := range []string{"Supported professional themes (48 total)", "minimal-gold", "autumn-warm, spring-fresh"} {
+		if strings.Contains(help, stale) {
+			t.Fatalf("convert help retained hardcoded theme catalog %q: %q", stale, help)
+		}
+	}
+}
+
 func (f *fakeConverter) Convert(req *converter.ConvertRequest) *converter.ConvertResult {
 	f.reqs = append(f.reqs, req)
 	return f.result
