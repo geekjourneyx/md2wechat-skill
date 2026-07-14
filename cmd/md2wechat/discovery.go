@@ -36,6 +36,15 @@ type providerView struct {
 	Configured      bool                      `json:"configured"`
 }
 
+type providerListItem struct {
+	Name         string   `json:"name"`
+	Aliases      []string `json:"aliases,omitempty"`
+	Description  string   `json:"description"`
+	SupportsSize bool     `json:"supports_size"`
+	Current      bool     `json:"current"`
+	Configured   bool     `json:"configured"`
+}
+
 type themeView struct {
 	Name               string               `json:"name"`
 	Type               string               `json:"type"`
@@ -45,6 +54,30 @@ type themeView struct {
 	Selectable         bool                 `json:"selectable"`
 	MetadataIncomplete bool                 `json:"metadata_incomplete"`
 	Style              converter.ThemeStyle `json:"style,omitempty"`
+}
+
+type themeListItem struct {
+	Name               string `json:"name"`
+	Type               string `json:"type"`
+	Description        string `json:"description"`
+	Version            string `json:"version,omitempty"`
+	APITheme           string `json:"api_theme,omitempty"`
+	Selectable         bool   `json:"selectable"`
+	MetadataIncomplete bool   `json:"metadata_incomplete"`
+}
+
+type promptListItem struct {
+	Name                    string   `json:"name"`
+	Kind                    string   `json:"kind"`
+	Description             string   `json:"description"`
+	Version                 string   `json:"version"`
+	Archetype               string   `json:"archetype,omitempty"`
+	PrimaryUseCase          string   `json:"primary_use_case,omitempty"`
+	CompatibleUseCases      []string `json:"compatible_use_cases,omitempty"`
+	RecommendedAspectRatios []string `json:"recommended_aspect_ratios,omitempty"`
+	DefaultAspectRatio      string   `json:"default_aspect_ratio,omitempty"`
+	Tags                    []string `json:"tags,omitempty"`
+	Variables               []string `json:"variables,omitempty"`
 }
 
 var (
@@ -81,7 +114,11 @@ var providersListCmd = &cobra.Command{
 		if err != nil {
 			return wrapCLIError(codeError, err, err.Error())
 		}
-		responseSuccessWith(codeProvidersShown, "Providers shown", map[string]any{"providers": providers})
+		items := make([]providerListItem, 0, len(providers))
+		for _, provider := range providers {
+			items = append(items, providerToListItem(provider))
+		}
+		responseSuccessWith(codeProvidersShown, "Providers shown", map[string]any{"providers": items})
 		return nil
 	},
 }
@@ -118,7 +155,11 @@ var themesListCmd = &cobra.Command{
 		if err != nil {
 			return wrapCLIError(codeError, err, err.Error())
 		}
-		responseSuccessWith(codeThemesShown, "Themes shown", map[string]any{"themes": themes})
+		items := make([]themeListItem, 0, len(themes))
+		for _, theme := range themes {
+			items = append(items, themeToListItem(theme))
+		}
+		responseSuccessWith(codeThemesShown, "Themes shown", map[string]any{"themes": items})
 		return nil
 	},
 }
@@ -159,11 +200,15 @@ var promptsListCmd = &cobra.Command{
 			Archetype: promptArchetype,
 			Tag:       promptTag,
 		})
+		items := make([]promptListItem, 0, len(prompts))
+		for _, prompt := range prompts {
+			items = append(items, promptToListItem(prompt))
+		}
 		responseSuccessWith(codePromptsShown, "Prompts shown", map[string]any{
 			"kind":      promptKind,
 			"archetype": promptArchetype,
 			"tag":       promptTag,
-			"prompts":   prompts,
+			"prompts":   items,
 		})
 		return nil
 	},
@@ -211,7 +256,7 @@ var promptsRenderCmd = &cobra.Command{
 			return newCLIError(codeConfigInvalid, err.Error())
 		}
 		responseSuccessWith(codePromptsShown, "Prompt rendered", map[string]any{
-			"prompt":   spec,
+			"prompt":   promptToListItem(*spec),
 			"vars":     vars,
 			"rendered": rendered,
 		})
@@ -276,6 +321,17 @@ func buildProviderViews() ([]providerView, error) {
 	return result, nil
 }
 
+func providerToListItem(provider providerView) providerListItem {
+	return providerListItem{
+		Name:         provider.Name,
+		Aliases:      provider.Aliases,
+		Description:  provider.Description,
+		SupportsSize: provider.SupportsSize,
+		Current:      provider.Current,
+		Configured:   provider.Configured,
+	}
+}
+
 func listThemes() ([]converter.Theme, error) {
 	tm := converter.NewThemeManager()
 	if err := tm.LoadThemes(); err != nil {
@@ -294,6 +350,34 @@ func themeToView(theme converter.Theme) themeView {
 		Selectable:         theme.Selectable(),
 		MetadataIncomplete: theme.MetadataIncomplete(),
 		Style:              theme.Style,
+	}
+}
+
+func themeToListItem(theme themeView) themeListItem {
+	return themeListItem{
+		Name:               theme.Name,
+		Type:               theme.Type,
+		Description:        theme.Description,
+		Version:            theme.Version,
+		APITheme:           theme.APITheme,
+		Selectable:         theme.Selectable,
+		MetadataIncomplete: theme.MetadataIncomplete,
+	}
+}
+
+func promptToListItem(prompt promptcatalog.PromptSpec) promptListItem {
+	return promptListItem{
+		Name:                    prompt.Name,
+		Kind:                    prompt.Kind,
+		Description:             prompt.Description,
+		Version:                 prompt.Version,
+		Archetype:               prompt.Archetype,
+		PrimaryUseCase:          prompt.PrimaryUseCase,
+		CompatibleUseCases:      prompt.CompatibleUseCases,
+		RecommendedAspectRatios: prompt.RecommendedAspectRatios,
+		DefaultAspectRatio:      prompt.DefaultAspectRatio,
+		Tags:                    prompt.Tags,
+		Variables:               prompt.Variables,
 	}
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -9,11 +10,178 @@ import (
 	"testing"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
+	"github.com/geekjourneyx/md2wechat-skill/internal/converter"
+	"github.com/geekjourneyx/md2wechat-skill/internal/image"
 	"github.com/geekjourneyx/md2wechat-skill/internal/layoutcatalog"
 	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
 	titlebuilder "github.com/geekjourneyx/md2wechat-skill/internal/title"
 	"github.com/spf13/cobra"
 )
+
+const (
+	providerListBudget = 4 * 1024
+	themeListBudget    = 12 * 1024
+	promptListBudget   = 20 * 1024
+)
+
+func TestDiscoveryListItemsExcludeHeavyDetail(t *testing.T) {
+	tests := []struct {
+		name      string
+		value     any
+		forbidden []string
+	}{
+		{
+			name:      "provider",
+			value:     providerToListItem(providerView{Name: "openai", DefaultBaseURL: "https://example.com", SupportedModels: []image.ProviderModelMeta{{Name: "model"}}}),
+			forbidden: []string{"default_base_url", "supported_models", "required_config", "optional_config"},
+		},
+		{
+			name:      "theme",
+			value:     themeToListItem(themeView{Name: "default", Style: converter.ThemeStyle{}}),
+			forbidden: []string{"style"},
+		},
+		{
+			name:      "prompt",
+			value:     promptToListItem(promptcatalog.PromptSpec{Name: "cover", Kind: "image", Template: "large template", Metadata: map[string]string{"author": "x"}}),
+			forbidden: []string{"template", "metadata", "examples", "source"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			encoded, err := json.Marshal(tt.value)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, field := range tt.forbidden {
+				if bytes.Contains(encoded, []byte(`"`+field+`"`)) {
+					t.Fatalf("list item leaked %q: %s", field, encoded)
+				}
+			}
+		})
+	}
+}
+
+func TestDiscoveryShowViewsRetainFullDetail(t *testing.T) {
+	providerJSON, err := json.Marshal(providerView{DefaultBaseURL: "https://example.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(providerJSON, []byte(`"default_base_url"`)) {
+		t.Fatal("provider show view lost full detail")
+	}
+
+	themeJSON, err := json.Marshal(themeView{Style: converter.ThemeStyle{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(themeJSON, []byte(`"style"`)) {
+		t.Fatal("theme show view lost style detail")
+	}
+
+	promptJSON, err := json.Marshal(promptcatalog.PromptSpec{
+		Template: "large template",
+		Metadata: map[string]string{"author": "x"},
+		Examples: []string{"example"},
+		Source:   "builtin",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"template", "metadata", "examples", "source"} {
+		if !bytes.Contains(promptJSON, []byte(`"`+field+`"`)) {
+			t.Fatalf("prompt show view lost full detail field %q: %s", field, promptJSON)
+		}
+	}
+}
+
+func TestDiscoveryListCommandsExcludeHeavyDetailAndStayWithinBudget(t *testing.T) {
+	oldCfg := cfg
+	oldJSON := jsonOutput
+	oldPromptKind := promptKind
+	oldPromptArchetype := promptArchetype
+	oldPromptTag := promptTag
+	t.Cleanup(func() {
+		cfg = oldCfg
+		jsonOutput = oldJSON
+		promptKind = oldPromptKind
+		promptArchetype = oldPromptArchetype
+		promptTag = oldPromptTag
+		promptcatalog.ResetDefaultCatalogForTests()
+	})
+
+	cfg = &config.Config{DefaultTheme: "default", ImageProvider: "openai"}
+	jsonOutput = true
+	promptKind = ""
+	promptArchetype = ""
+	promptTag = ""
+	promptcatalog.ResetDefaultCatalogForTests()
+
+	tests := []struct {
+		name       string
+		command    *cobra.Command
+		payloadKey string
+		budget     int
+		forbidden  []string
+	}{
+		{
+			name:       "providers",
+			command:    providersListCmd,
+			payloadKey: "providers",
+			budget:     providerListBudget,
+			forbidden:  []string{"default_base_url", "supported_models", "required_config", "optional_config"},
+		},
+		{
+			name:       "themes",
+			command:    themesListCmd,
+			payloadKey: "themes",
+			budget:     themeListBudget,
+			forbidden:  []string{"style"},
+		},
+		{
+			name:       "prompts",
+			command:    promptsListCmd,
+			payloadKey: "prompts",
+			budget:     promptListBudget,
+			forbidden:  []string{"template", "metadata", "examples", "source"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stdout := captureStdout(t, func() {
+				if err := tt.command.RunE(tt.command, nil); err != nil {
+					t.Fatalf("RunE() error = %v", err)
+				}
+			})
+
+			var response map[string]any
+			if err := json.Unmarshal(stdout, &response); err != nil {
+				t.Fatalf("unmarshal response: %v\n%s", err, stdout)
+			}
+			data, ok := response["data"].(map[string]any)
+			if !ok {
+				t.Fatalf("data type = %T", response["data"])
+			}
+			items, ok := data[tt.payloadKey].([]any)
+			if !ok || len(items) == 0 {
+				t.Fatalf("%s payload = %#v", tt.payloadKey, data[tt.payloadKey])
+			}
+			encoded, err := json.Marshal(items)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, field := range tt.forbidden {
+				if bytes.Contains(encoded, []byte(`"`+field+`"`)) {
+					t.Fatalf("list payload leaked %q: %s", field, encoded)
+				}
+			}
+			if len(encoded) > tt.budget {
+				t.Fatalf("list payload size = %d bytes, budget = %d", len(encoded), tt.budget)
+			}
+		})
+	}
+}
 
 func TestBuildProviderViewsIncludesBuiltinProviders(t *testing.T) {
 	oldCfg := cfg
@@ -849,6 +1017,15 @@ func TestPromptsRenderCommandUsesStableJSONEnvelope(t *testing.T) {
 	rendered, _ := data["rendered"].(string)
 	if !strings.Contains(rendered, "测试标题") {
 		t.Fatalf("rendered = %q", rendered)
+	}
+	prompt, ok := data["prompt"].(map[string]any)
+	if !ok {
+		t.Fatalf("prompt summary type = %T", data["prompt"])
+	}
+	for _, field := range []string{"template", "metadata", "examples", "source"} {
+		if _, leaked := prompt[field]; leaked {
+			t.Fatalf("render response leaked prompt definition field %q: %#v", field, prompt)
+		}
 	}
 }
 
