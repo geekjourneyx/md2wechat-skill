@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/image"
@@ -97,6 +98,97 @@ func TestImagePostServicePreviewValidatesAndIncludesFileDetails(t *testing.T) {
 	}
 	if !preview.Images[0].Exists || preview.Images[0].Size != int64(5) {
 		t.Fatalf("preview image = %#v", preview.Images[0])
+	}
+}
+
+func TestImagePostServicePreviewRejectsInvalidLocalImages(t *testing.T) {
+	dir := t.TempDir()
+	unsupportedPath := filepath.Join(dir, "image.txt")
+	if err := os.WriteFile(unsupportedPath, []byte("not an image"), 0600); err != nil {
+		t.Fatalf("write unsupported image: %v", err)
+	}
+
+	tests := []struct {
+		name      string
+		imagePath string
+		wantErr   string
+	}{
+		{name: "missing local image", imagePath: filepath.Join(dir, "missing.png"), wantErr: "local image"},
+		{name: "local directory", imagePath: dir, wantErr: "not a supported image file"},
+		{name: "unsupported local extension", imagePath: unsupportedPath, wantErr: "not a supported image file"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := NewImagePostService(nil, nil)
+			_, err := svc.PreviewImagePost(&ImagePostInput{Title: "Title", Images: []string{tt.imagePath}})
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("PreviewImagePost() error = %v, want substring %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestImagePostServicePreviewReportsRemoteAndAIAssetsAsAvailable(t *testing.T) {
+	dir := t.TempDir()
+	markdownPath := filepath.Join(dir, "article.md")
+	markdown := strings.Join([]string{
+		"![remote](https://example.com/remote.png)",
+		"![generated](__generate:draw a fox__)",
+	}, "\n")
+	if err := os.WriteFile(markdownPath, []byte(markdown), 0600); err != nil {
+		t.Fatalf("write markdown: %v", err)
+	}
+
+	preview, err := NewImagePostService(nil, nil).PreviewImagePost(&ImagePostInput{
+		Title:        "Preview",
+		FromMarkdown: markdownPath,
+	})
+	if err != nil {
+		t.Fatalf("PreviewImagePost() error = %v", err)
+	}
+	if len(preview.Images) != 2 {
+		t.Fatalf("preview images = %#v", preview.Images)
+	}
+	for i, detail := range preview.Images {
+		if !detail.Exists {
+			t.Fatalf("preview image %d = %#v, want available source", i, detail)
+		}
+		if detail.Size != 0 {
+			t.Fatalf("preview image %d size = %d, want omitted zero value", i, detail.Size)
+		}
+	}
+}
+
+func TestImagePostServiceRejectsFansOnlyWithoutOpenComment(t *testing.T) {
+	_, err := NewImagePostService(nil, nil).PreviewImagePost(&ImagePostInput{
+		Title:       "Title",
+		Images:      []string{"ignored.jpg"},
+		FansOnly:    true,
+		OpenComment: false,
+	})
+	if err == nil || !strings.Contains(err.Error(), "fans-only comments require open-comment") {
+		t.Fatalf("PreviewImagePost() error = %v", err)
+	}
+}
+
+func TestImagePostServiceCreateRejectsInvalidInputBeforeEffects(t *testing.T) {
+	processor := &fakeAssetProcessor{}
+	creator := &fakeImagePostCreator{}
+	svc := NewImagePostService(processor, creator)
+
+	_, err := svc.CreateImagePost(&ImagePostInput{
+		Title:  "Title",
+		Images: []string{filepath.Join(t.TempDir(), "missing.png")},
+	})
+	if err == nil {
+		t.Fatal("CreateImagePost() error = nil, want invalid local image error")
+	}
+	if calls := processor.totalCalls(); calls != 0 {
+		t.Fatalf("asset processor calls = %d, want 0", calls)
+	}
+	if len(creator.artifacts) != 0 {
+		t.Fatalf("creator artifacts = %#v, want none", creator.artifacts)
 	}
 }
 

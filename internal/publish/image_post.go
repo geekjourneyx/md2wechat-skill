@@ -60,6 +60,11 @@ func (s *ImagePostService) PreviewImagePost(input *ImagePostInput) (*ImagePostPr
 	if err != nil {
 		return nil, err
 	}
+	assets, err := validateAndResolveAssets(&ProcessInput{Assets: source.Assets})
+	if err != nil {
+		return nil, err
+	}
+	source.Assets = assets
 
 	preview := &ImagePostPreview{
 		Title:       source.Title,
@@ -72,12 +77,18 @@ func (s *ImagePostService) PreviewImagePost(input *ImagePostInput) (*ImagePostPr
 
 	for _, asset := range source.Assets {
 		detail := ImagePostPreviewImage{
-			Path:   firstNonEmptyImagePost(asset.ResolvedSource, asset.Source),
-			Exists: false,
+			Path: firstNonEmptyImagePost(asset.ResolvedSource, asset.Source),
 		}
-		if info, err := os.Stat(detail.Path); err == nil {
+		switch asset.Kind {
+		case AssetKindLocal:
+			info, err := os.Stat(detail.Path)
+			if err != nil {
+				return nil, err
+			}
 			detail.Exists = true
 			detail.Size = info.Size()
+		case AssetKindRemote, AssetKindAI:
+			detail.Exists = true
 		}
 		preview.Images = append(preview.Images, detail)
 	}
@@ -121,6 +132,9 @@ func normalizeImagePostInput(input *ImagePostInput) (*ImagePostSource, error) {
 	}
 	if input.Title == "" {
 		return nil, fmt.Errorf("title is required")
+	}
+	if input.FansOnly && !input.OpenComment {
+		return nil, fmt.Errorf("fans-only comments require open-comment")
 	}
 
 	assets := make([]AssetRef, 0, len(input.Images))

@@ -16,6 +16,7 @@ import (
 type fakeImagePostService struct {
 	previewReqs []*publish.ImagePostInput
 	createReqs  []*publish.ImagePostInput
+	events      *[]string
 
 	previewResult *publish.ImagePostPreview
 	createResult  *publish.ImagePostResult
@@ -24,6 +25,9 @@ type fakeImagePostService struct {
 }
 
 func (f *fakeImagePostService) PreviewImagePost(req *publish.ImagePostInput) (*publish.ImagePostPreview, error) {
+	if f.events != nil {
+		*f.events = append(*f.events, "preview")
+	}
 	cloned := cloneImagePostRequest(req)
 	f.previewReqs = append(f.previewReqs, cloned)
 	if f.previewErr != nil {
@@ -33,6 +37,9 @@ func (f *fakeImagePostService) PreviewImagePost(req *publish.ImagePostInput) (*p
 }
 
 func (f *fakeImagePostService) CreateImagePost(req *publish.ImagePostInput) (*publish.ImagePostResult, error) {
+	if f.events != nil {
+		*f.events = append(*f.events, "create")
+	}
 	cloned := cloneImagePostRequest(req)
 	f.createReqs = append(f.createReqs, cloned)
 	if f.createErr != nil {
@@ -305,6 +312,87 @@ func TestRunCreateImagePostCreateUsesServiceAndWritesResult(t *testing.T) {
 	if saved.MediaID != "media-123" {
 		t.Fatalf("saved result = %#v", saved)
 	}
+}
+
+func TestRunCreateImagePostValidatesPreviewBeforeAuthAndCreate(t *testing.T) {
+	oldCfg, oldLog := cfg, log
+	oldTitle, oldContent := imagePostTitle, imagePostContent
+	oldImages, oldFromMD := imagePostImages, imagePostFromMD
+	oldOpenComment, oldFansOnly := imagePostOpenComment, imagePostFansOnly
+	oldDryRun, oldOutput := imagePostDryRun, imagePostOutput
+	oldServiceFactory, oldIsTerminalFn := newImagePostService, isTerminalFn
+	oldValidateAPIKey := validateAPIKeyForWeChatAccount
+	t.Cleanup(func() {
+		cfg, log = oldCfg, oldLog
+		imagePostTitle, imagePostContent = oldTitle, oldContent
+		imagePostImages, imagePostFromMD = oldImages, oldFromMD
+		imagePostOpenComment, imagePostFansOnly = oldOpenComment, oldFansOnly
+		imagePostDryRun, imagePostOutput = oldDryRun, oldOutput
+		newImagePostService, isTerminalFn = oldServiceFactory, oldIsTerminalFn
+		validateAPIKeyForWeChatAccount = oldValidateAPIKey
+	})
+
+	setup := func(events *[]string, service *fakeImagePostService) {
+		cfg = &config.Config{
+			WechatAppID:     "appid",
+			WechatSecret:    "secret",
+			WechatProxyURL:  "https://proxy.example",
+			MD2WechatAPIKey: "api-key",
+		}
+		log = zap.NewNop()
+		imagePostTitle = "Title"
+		imagePostContent = ""
+		imagePostImages = "image.jpg"
+		imagePostFromMD = ""
+		imagePostOpenComment = false
+		imagePostFansOnly = false
+		imagePostDryRun = false
+		imagePostOutput = ""
+		isTerminalFn = func() bool { return true }
+		service.events = events
+		newImagePostService = func() imagePostService { return service }
+		validateAPIKeyForWeChatAccount = func(string) error {
+			*events = append(*events, "auth")
+			return nil
+		}
+	}
+
+	t.Run("invalid preview blocks auth and create", func(t *testing.T) {
+		var events []string
+		service := &fakeImagePostService{previewErr: fmt.Errorf("missing local image")}
+		setup(&events, service)
+
+		response, err := runCreateImagePost()
+		if err == nil {
+			t.Fatalf("runCreateImagePost() error = nil, response = %#v", response)
+		}
+		cliErr, ok := extractCLIError(err)
+		if !ok || cliErr.Code != codeImagePostPreviewFailed {
+			t.Fatalf("runCreateImagePost() error = %#v, want code %s", err, codeImagePostPreviewFailed)
+		}
+		if !reflect.DeepEqual(events, []string{"preview"}) {
+			t.Fatalf("call order = %#v, want preview only", events)
+		}
+		if len(service.previewReqs) != 1 || len(service.createReqs) != 0 {
+			t.Fatalf("preview reqs = %d, create reqs = %d", len(service.previewReqs), len(service.createReqs))
+		}
+	})
+
+	t.Run("valid execution previews before auth and create", func(t *testing.T) {
+		var events []string
+		service := &fakeImagePostService{
+			previewResult: &publish.ImagePostPreview{Title: "Title", ImageCount: 1},
+			createResult:  &publish.ImagePostResult{MediaID: "draft-1", ImageCount: 1},
+		}
+		setup(&events, service)
+
+		if _, err := runCreateImagePost(); err != nil {
+			t.Fatalf("runCreateImagePost() error = %v", err)
+		}
+		if !reflect.DeepEqual(events, []string{"preview", "auth", "create"}) {
+			t.Fatalf("call order = %#v, want preview, auth, create", events)
+		}
+	})
 }
 
 func TestRunTestDraftUsesCoverUploadAndDraftCreator(t *testing.T) {

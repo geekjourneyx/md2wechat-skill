@@ -116,13 +116,12 @@ func runCreateImagePost() (any, error) {
 	}
 
 	svc := newImagePostService()
+	preview, err := svc.PreviewImagePost(req)
+	if err != nil {
+		return nil, wrapCLIError(codeImagePostPreviewFailed, err, err.Error())
+	}
 
 	if imagePostDryRun {
-		preview, err := svc.PreviewImagePost(req)
-		if err != nil {
-			return nil, wrapCLIError(codeImagePostPreviewFailed, err, err.Error())
-		}
-
 		if imagePostOutput != "" {
 			data, _ := json.MarshalIndent(preview, "", "  ")
 			if err := os.WriteFile(imagePostOutput, data, 0644); err != nil {
