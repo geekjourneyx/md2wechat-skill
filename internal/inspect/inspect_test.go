@@ -225,6 +225,7 @@ func TestBlockedReadinessTargetsContract(t *testing.T) {
 		{code: "THEME_INVALID", want: []string{"convert", "upload", "draft"}},
 		{code: "LOCAL_IMAGE_MISSING", want: []string{"upload", "draft"}},
 		{code: "MISSING_WECHAT_CONFIG", want: []string{"upload", "draft"}},
+		{code: "MISSING_PUBLISH_API_KEY", want: []string{"upload", "draft"}},
 		{code: "MISSING_COVER", want: []string{"draft"}},
 		{code: "COVER_IMAGE_MISSING", want: []string{"draft"}},
 		{code: "CONFLICTING_COVER_INPUTS", want: []string{"draft"}},
@@ -237,6 +238,73 @@ func TestBlockedReadinessTargetsContract(t *testing.T) {
 		t.Run(tc.code, func(t *testing.T) {
 			if got := blockedReadinessTargets(tc.code); !slices.Equal(got, tc.want) {
 				t.Fatalf("blockedReadinessTargets(%q) = %#v, want %#v", tc.code, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestRunPublishAPIKeyReadinessMatrix(t *testing.T) {
+	tests := []struct {
+		name         string
+		namedAccount bool
+		proxyURL     string
+		apiKey       string
+		wantBlocker  bool
+	}{
+		{name: "direct credentials do not require API key"},
+		{name: "named account without API key", namedAccount: true, wantBlocker: true},
+		{name: "named account with API key", namedAccount: true, apiKey: "key"},
+		{name: "proxy without API key", proxyURL: "https://proxy.example.com", wantBlocker: true},
+		{name: "proxy with API key", proxyURL: "https://proxy.example.com", apiKey: "key"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := Run(&Input{
+				MarkdownFile:    filepath.Join(t.TempDir(), "article.md"),
+				Markdown:        "# 标题\n",
+				Mode:            "ai",
+				Theme:           "autumn-warm",
+				UploadRequested: true,
+				DraftRequested:  true,
+				CoverMediaID:    "existing-cover-id",
+				Config: &config.Config{
+					WechatAppID:        "appid",
+					WechatSecret:       "secret",
+					WechatAccountNamed: tt.namedAccount,
+					WechatProxyURL:     tt.proxyURL,
+					MD2WechatAPIKey:    tt.apiKey,
+				},
+			})
+			if err != nil {
+				t.Fatalf("Run() error = %v", err)
+			}
+
+			if !result.Readiness.ConvertReady || result.Readiness.Targets.Convert != ReadinessTargetReady {
+				t.Fatalf("convert readiness = %#v", result.Readiness)
+			}
+
+			check, checkFound := findCheck(result.Checks, "MISSING_PUBLISH_API_KEY")
+			blocker, blockerFound := findReadinessBlocker(result.Readiness.Blockers, "MISSING_PUBLISH_API_KEY")
+			if checkFound != tt.wantBlocker || blockerFound != tt.wantBlocker {
+				t.Fatalf("check found = %t, blocker found = %t, want blocker = %t; checks = %#v, blockers = %#v", checkFound, blockerFound, tt.wantBlocker, result.Checks, result.Readiness.Blockers)
+			}
+
+			if !tt.wantBlocker {
+				if !result.Readiness.UploadReady || !result.Readiness.DraftReady {
+					t.Fatalf("publish readiness = %#v", result.Readiness)
+				}
+				return
+			}
+
+			if check.SuggestedFix == "" {
+				t.Fatal("MISSING_PUBLISH_API_KEY suggested_fix is empty")
+			}
+			if !slices.Equal(blocker.Blocks, []string{"upload", "draft"}) {
+				t.Fatalf("MISSING_PUBLISH_API_KEY blocks = %#v", blocker.Blocks)
+			}
+			if result.Readiness.UploadReady || result.Readiness.DraftReady {
+				t.Fatalf("publish readiness = %#v", result.Readiness)
 			}
 		})
 	}

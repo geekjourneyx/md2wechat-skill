@@ -451,6 +451,15 @@ func buildChecks(input *Input, result *Result) []Check {
 				SuggestedFix: "set WECHAT_APPID and WECHAT_SECRET or configure them in ~/.config/md2wechat/config.yaml",
 			})
 		}
+		if publishAPIKeyRequired(input.Config) && !apiKeyAvailable(input.Config) {
+			checks = append(checks, Check{
+				Level:        LevelError,
+				Code:         "MISSING_PUBLISH_API_KEY",
+				Message:      "Named-account and proxy publish paths require MD2WECHAT_API_KEY",
+				Field:        "config",
+				SuggestedFix: "set MD2WECHAT_API_KEY before upload or draft, or use direct WeChat credentials without a named account or proxy",
+			})
+		}
 	}
 
 	if input.DraftRequested && strings.TrimSpace(input.CoverImagePath) != "" && strings.TrimSpace(input.CoverMediaID) != "" {
@@ -554,7 +563,7 @@ func blocksUpload(code string) bool {
 		return true
 	}
 	switch code {
-	case "LOCAL_IMAGE_MISSING", "MISSING_WECHAT_CONFIG":
+	case "LOCAL_IMAGE_MISSING", "MISSING_WECHAT_CONFIG", "MISSING_PUBLISH_API_KEY":
 		return true
 	default:
 		return false
@@ -649,6 +658,10 @@ func looksLikeURL(value string) bool {
 
 func apiKeyAvailable(cfg *config.Config) bool {
 	return cfg != nil && strings.TrimSpace(cfg.MD2WechatAPIKey) != ""
+}
+
+func publishAPIKeyRequired(cfg *config.Config) bool {
+	return cfg != nil && (cfg.WechatAccountNamed || strings.TrimSpace(cfg.WechatProxyURL) != "")
 }
 
 func convertReadyFor(mode string, cfg *config.Config) bool {
