@@ -224,10 +224,14 @@ func TestBlockedReadinessTargetsContract(t *testing.T) {
 		{code: "THEME_MODE_MISMATCH", want: []string{"convert", "upload", "draft"}},
 		{code: "THEME_INVALID", want: []string{"convert", "upload", "draft"}},
 		{code: "LOCAL_IMAGE_MISSING", want: []string{"upload", "draft"}},
+		{code: "LOCAL_IMAGE_NOT_FILE", want: []string{"upload", "draft"}},
+		{code: "LOCAL_IMAGE_UNSUPPORTED_FORMAT", want: []string{"upload", "draft"}},
 		{code: "MISSING_WECHAT_CONFIG", want: []string{"upload", "draft"}},
 		{code: "MISSING_PUBLISH_API_KEY", want: []string{"upload", "draft"}},
 		{code: "MISSING_COVER", want: []string{"draft"}},
 		{code: "COVER_IMAGE_MISSING", want: []string{"draft"}},
+		{code: "COVER_IMAGE_NOT_FILE", want: []string{"draft"}},
+		{code: "COVER_IMAGE_UNSUPPORTED_FORMAT", want: []string{"draft"}},
 		{code: "CONFLICTING_COVER_INPUTS", want: []string{"draft"}},
 		{code: "COVER_MEDIA_ID_INVALID", want: []string{"draft"}},
 		{code: "DUPLICATE_H1"},
@@ -249,13 +253,16 @@ func TestRunPublishAPIKeyReadinessMatrix(t *testing.T) {
 		namedAccount bool
 		proxyURL     string
 		apiKey       string
+		upload       bool
+		draft        bool
 		wantBlocker  bool
 	}{
-		{name: "direct credentials do not require API key"},
-		{name: "named account without API key", namedAccount: true, wantBlocker: true},
-		{name: "named account with API key", namedAccount: true, apiKey: "key"},
-		{name: "proxy without API key", proxyURL: "https://proxy.example.com", wantBlocker: true},
-		{name: "proxy with API key", proxyURL: "https://proxy.example.com", apiKey: "key"},
+		{name: "direct credentials do not require API key", upload: true, draft: true},
+		{name: "named account upload only without API key", namedAccount: true, upload: true, wantBlocker: true},
+		{name: "named account draft only without API key", namedAccount: true, draft: true, wantBlocker: true},
+		{name: "named account with API key", namedAccount: true, apiKey: "key", upload: true, draft: true},
+		{name: "proxy without API key", proxyURL: "https://proxy.example.com", upload: true, draft: true, wantBlocker: true},
+		{name: "proxy with API key", proxyURL: "https://proxy.example.com", apiKey: "key", upload: true, draft: true},
 	}
 
 	for _, tt := range tests {
@@ -265,8 +272,8 @@ func TestRunPublishAPIKeyReadinessMatrix(t *testing.T) {
 				Markdown:        "# 标题\n",
 				Mode:            "ai",
 				Theme:           "autumn-warm",
-				UploadRequested: true,
-				DraftRequested:  true,
+				UploadRequested: tt.upload,
+				DraftRequested:  tt.draft,
 				CoverMediaID:    "existing-cover-id",
 				Config: &config.Config{
 					WechatAppID:        "appid",
@@ -291,9 +298,13 @@ func TestRunPublishAPIKeyReadinessMatrix(t *testing.T) {
 			}
 
 			if !tt.wantBlocker {
-				if !result.Readiness.UploadReady || !result.Readiness.DraftReady {
+				if !result.Readiness.UploadReady || (tt.draft && !result.Readiness.DraftReady) {
 					t.Fatalf("publish readiness = %#v", result.Readiness)
 				}
+				if result.Readiness.Targets.Upload != ReadinessTargetReady || result.Readiness.Targets.Draft != ReadinessTargetReady {
+					t.Fatalf("publish targets = %#v", result.Readiness.Targets)
+				}
+				assertReadinessLegacyFieldsMatchTargets(t, result.Readiness)
 				return
 			}
 
@@ -306,6 +317,165 @@ func TestRunPublishAPIKeyReadinessMatrix(t *testing.T) {
 			if result.Readiness.UploadReady || result.Readiness.DraftReady {
 				t.Fatalf("publish readiness = %#v", result.Readiness)
 			}
+			if result.Readiness.Targets.Upload != ReadinessTargetBlocked {
+				t.Fatalf("upload target = %q, want blocked", result.Readiness.Targets.Upload)
+			}
+			wantDraftTarget := ReadinessTargetNotRequested
+			if tt.draft {
+				wantDraftTarget = ReadinessTargetBlocked
+			}
+			if result.Readiness.Targets.Draft != wantDraftTarget {
+				t.Fatalf("draft target = %q, want %q", result.Readiness.Targets.Draft, wantDraftTarget)
+			}
+			assertReadinessLegacyFieldsMatchTargets(t, result.Readiness)
+		})
+	}
+}
+
+func TestRunLocalImageReadinessMatchesPublishExecution(t *testing.T) {
+	fullCfg := &config.Config{
+		MD2WechatAPIKey: "api-key",
+		WechatAppID:     "appid",
+		WechatSecret:    "secret",
+	}
+	tests := []struct {
+		name       string
+		pathName   string
+		setup      func(t *testing.T, path string)
+		code       string
+		upload     bool
+		draft      bool
+		wantUpload string
+		wantDraft  string
+	}{
+		{name: "upload only missing", pathName: "missing.png", code: "LOCAL_IMAGE_MISSING", upload: true, wantUpload: ReadinessTargetBlocked, wantDraft: ReadinessTargetNotRequested},
+		{name: "draft only missing", pathName: "missing.png", code: "LOCAL_IMAGE_MISSING", draft: true, wantUpload: ReadinessTargetBlocked, wantDraft: ReadinessTargetBlocked},
+		{name: "upload only directory", pathName: "image.png", setup: func(t *testing.T, path string) {
+			t.Helper()
+			if err := os.Mkdir(path, 0700); err != nil {
+				t.Fatal(err)
+			}
+		}, code: "LOCAL_IMAGE_NOT_FILE", upload: true, wantUpload: ReadinessTargetBlocked, wantDraft: ReadinessTargetNotRequested},
+		{name: "draft only directory", pathName: "image.png", setup: func(t *testing.T, path string) {
+			t.Helper()
+			if err := os.Mkdir(path, 0700); err != nil {
+				t.Fatal(err)
+			}
+		}, code: "LOCAL_IMAGE_NOT_FILE", draft: true, wantUpload: ReadinessTargetBlocked, wantDraft: ReadinessTargetBlocked},
+		{name: "upload only unsupported format", pathName: "image.txt", setup: func(t *testing.T, path string) {
+			t.Helper()
+			if err := os.WriteFile(path, []byte("image"), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}, code: "LOCAL_IMAGE_UNSUPPORTED_FORMAT", upload: true, wantUpload: ReadinessTargetBlocked, wantDraft: ReadinessTargetNotRequested},
+		{name: "draft only unsupported format", pathName: "image.txt", setup: func(t *testing.T, path string) {
+			t.Helper()
+			if err := os.WriteFile(path, []byte("image"), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}, code: "LOCAL_IMAGE_UNSUPPORTED_FORMAT", draft: true, wantUpload: ReadinessTargetBlocked, wantDraft: ReadinessTargetBlocked},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, tt.pathName)
+			if tt.setup != nil {
+				tt.setup(t, path)
+			}
+			result, err := Run(&Input{
+				MarkdownFile:    filepath.Join(dir, "article.md"),
+				Markdown:        "# 标题\n\n![local](" + tt.pathName + ")\n",
+				Mode:            "api",
+				UploadRequested: tt.upload,
+				DraftRequested:  tt.draft,
+				CoverMediaID:    "existing-cover-id",
+				Config:          fullCfg,
+			})
+			if err != nil {
+				t.Fatalf("Run() error = %v", err)
+			}
+
+			check, ok := findCheck(result.Checks, tt.code)
+			if !ok {
+				t.Fatalf("missing check %s in %#v", tt.code, result.Checks)
+			}
+			if check.Level != LevelError || check.SuggestedFix == "" {
+				t.Fatalf("check = %#v", check)
+			}
+			blocker, ok := findReadinessBlocker(result.Readiness.Blockers, tt.code)
+			if !ok || !slices.Equal(blocker.Blocks, []string{"upload", "draft"}) {
+				t.Fatalf("blocker = %#v", blocker)
+			}
+			if result.Readiness.Targets.Convert != ReadinessTargetReady || result.Readiness.Targets.Upload != tt.wantUpload || result.Readiness.Targets.Draft != tt.wantDraft {
+				t.Fatalf("targets = %#v", result.Readiness.Targets)
+			}
+			assertReadinessLegacyFieldsMatchTargets(t, result.Readiness)
+		})
+	}
+}
+
+func TestRunLocalCoverReadinessMatchesDraftExecution(t *testing.T) {
+	fullCfg := &config.Config{
+		MD2WechatAPIKey: "api-key",
+		WechatAppID:     "appid",
+		WechatSecret:    "secret",
+	}
+	tests := []struct {
+		name     string
+		pathName string
+		setup    func(t *testing.T, path string)
+		code     string
+	}{
+		{name: "missing", pathName: "missing.png", code: "COVER_IMAGE_MISSING"},
+		{name: "directory", pathName: "cover.png", setup: func(t *testing.T, path string) {
+			t.Helper()
+			if err := os.Mkdir(path, 0700); err != nil {
+				t.Fatal(err)
+			}
+		}, code: "COVER_IMAGE_NOT_FILE"},
+		{name: "unsupported format", pathName: "cover.txt", setup: func(t *testing.T, path string) {
+			t.Helper()
+			if err := os.WriteFile(path, []byte("cover"), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}, code: "COVER_IMAGE_UNSUPPORTED_FORMAT"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, tt.pathName)
+			if tt.setup != nil {
+				tt.setup(t, path)
+			}
+			result, err := Run(&Input{
+				MarkdownFile:   filepath.Join(dir, "article.md"),
+				Markdown:       "# 标题\n",
+				Mode:           "api",
+				DraftRequested: true,
+				CoverImagePath: path,
+				Config:         fullCfg,
+			})
+			if err != nil {
+				t.Fatalf("Run() error = %v", err)
+			}
+
+			check, ok := findCheck(result.Checks, tt.code)
+			if !ok {
+				t.Fatalf("missing check %s in %#v", tt.code, result.Checks)
+			}
+			if check.Level != LevelError || check.SuggestedFix == "" {
+				t.Fatalf("check = %#v", check)
+			}
+			blocker, ok := findReadinessBlocker(result.Readiness.Blockers, tt.code)
+			if !ok || !slices.Equal(blocker.Blocks, []string{"draft"}) {
+				t.Fatalf("blocker = %#v", blocker)
+			}
+			if result.Readiness.Targets.Convert != ReadinessTargetReady || result.Readiness.Targets.Upload != ReadinessTargetReady || result.Readiness.Targets.Draft != ReadinessTargetBlocked {
+				t.Fatalf("targets = %#v", result.Readiness.Targets)
+			}
+			assertReadinessLegacyFieldsMatchTargets(t, result.Readiness)
 		})
 	}
 }

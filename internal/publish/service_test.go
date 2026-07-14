@@ -171,6 +171,65 @@ func TestServiceConvertRejectsCoverWithoutDraftBeforeEffects(t *testing.T) {
 	}
 }
 
+func TestServiceConvertRejectsMissingDraftDependenciesBeforeEffects(t *testing.T) {
+	dir := t.TempDir()
+	coverPath := filepath.Join(dir, "cover.jpg")
+	if err := os.WriteFile(coverPath, []byte("cover"), 0600); err != nil {
+		t.Fatalf("write cover: %v", err)
+	}
+
+	tests := []struct {
+		name        string
+		drafts      DraftCreator
+		uploadCover CoverUploader
+		wantError   string
+	}{
+		{
+			name:        "missing draft creator",
+			uploadCover: (&fakeCoverUploader{}).upload,
+			wantError:   "draft creator is required",
+		},
+		{
+			name:      "missing local cover uploader",
+			drafts:    &fakeDraftCreator{},
+			wantError: "cover uploader is required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			converterFake := &fakeMarkdownConverter{result: &converter.ConvertResult{Success: true}}
+			processor := &fakeAssetProcessor{}
+			cover := &fakeCoverUploader{}
+			uploadCover := tt.uploadCover
+			if uploadCover != nil {
+				uploadCover = cover.upload
+			}
+			draftPath := filepath.Join(dir, strings.ReplaceAll(tt.name, " ", "-")+".json")
+			svc := NewService(zap.NewNop(), converterFake, processor, tt.drafts, uploadCover)
+
+			_, err := svc.Convert(&ConvertInput{
+				Intent:         PublishIntent{CreateDraft: true, SaveDraft: true},
+				ConvertRequest: &converter.ConvertRequest{},
+				SaveDraftPath:  draftPath,
+				CoverImagePath: coverPath,
+			})
+			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+				t.Fatalf("Convert() error = %v, want %q", err, tt.wantError)
+			}
+			if converterFake.calls != 0 || processor.totalCalls() != 0 || cover.calls != 0 {
+				t.Fatalf("missing dependency caused effects: converter=%d assets=%d cover=%d", converterFake.calls, processor.totalCalls(), cover.calls)
+			}
+			if draftFake, ok := tt.drafts.(*fakeDraftCreator); ok && draftFake.calls != 0 {
+				t.Fatalf("draft creator calls = %d", draftFake.calls)
+			}
+			if _, statErr := os.Stat(draftPath); !os.IsNotExist(statErr) {
+				t.Fatalf("local draft output must not exist, stat error = %v", statErr)
+			}
+		})
+	}
+}
+
 func TestServiceConvertReturnsAIRequestWithoutRunningSideEffects(t *testing.T) {
 	dir := t.TempDir()
 	coverPath := filepath.Join(dir, "cover.jpg")
@@ -371,10 +430,7 @@ func TestServiceConvertUsesExistingCoverMediaIDWithoutUploadingCover(t *testing.
 		},
 		&fakeAssetProcessor{},
 		&fakeDraftCreator{result: &DraftResult{MediaID: "draft-2"}},
-		func(path string) (string, error) {
-			t.Fatalf("uploadCover should not be called when cover_media_id is provided")
-			return "", nil
-		},
+		nil,
 	)
 
 	output, err := svc.Convert(&ConvertInput{

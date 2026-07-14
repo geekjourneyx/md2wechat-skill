@@ -9,6 +9,7 @@ import (
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 	"github.com/geekjourneyx/md2wechat-skill/internal/converter"
+	"github.com/geekjourneyx/md2wechat-skill/internal/image"
 	"gopkg.in/yaml.v3"
 )
 
@@ -398,13 +399,47 @@ func buildChecks(input *Input, result *Result) []Check {
 	}
 
 	for _, asset := range result.Assets {
-		if asset.Kind == string(converter.ImageTypeLocal) && !asset.Exists {
+		if asset.Kind != string(converter.ImageTypeLocal) {
+			continue
+		}
+		if !asset.Exists {
 			checks = append(checks, Check{
 				Level:        LevelError,
 				Code:         "LOCAL_IMAGE_MISSING",
 				Message:      fmt.Sprintf("Local image not found: %s", asset.Source),
 				Field:        "images",
 				SuggestedFix: "fix the image path or remove the missing image reference",
+			})
+			continue
+		}
+		info, err := os.Stat(asset.ResolvedSource)
+		if err != nil {
+			checks = append(checks, Check{
+				Level:        LevelError,
+				Code:         "LOCAL_IMAGE_MISSING",
+				Message:      fmt.Sprintf("Local image not found: %s", asset.Source),
+				Field:        "images",
+				SuggestedFix: "fix the image path or remove the missing image reference",
+			})
+			continue
+		}
+		if !info.Mode().IsRegular() {
+			checks = append(checks, Check{
+				Level:        LevelError,
+				Code:         "LOCAL_IMAGE_NOT_FILE",
+				Message:      fmt.Sprintf("Local image is not a regular file: %s", asset.Source),
+				Field:        "images",
+				SuggestedFix: "replace the image path with an existing regular image file",
+			})
+			continue
+		}
+		if !image.IsValidImageFormat(asset.ResolvedSource) {
+			checks = append(checks, Check{
+				Level:        LevelError,
+				Code:         "LOCAL_IMAGE_UNSUPPORTED_FORMAT",
+				Message:      fmt.Sprintf("Local image has an unsupported format: %s", asset.Source),
+				Field:        "images",
+				SuggestedFix: "use a supported image file: jpg, jpeg, png, gif, bmp, or webp",
 			})
 		}
 	}
@@ -490,13 +525,31 @@ func buildChecks(input *Input, result *Result) []Check {
 		})
 	}
 	if input.DraftRequested && strings.TrimSpace(input.CoverImagePath) != "" {
-		if _, err := os.Stat(input.CoverImagePath); err != nil {
+		info, err := os.Stat(input.CoverImagePath)
+		switch {
+		case err != nil:
 			checks = append(checks, Check{
 				Level:        LevelError,
 				Code:         "COVER_IMAGE_MISSING",
 				Message:      fmt.Sprintf("Cover image not found: %s", input.CoverImagePath),
 				Field:        "cover",
 				SuggestedFix: "fix the --cover path or provide an existing local image file",
+			})
+		case !info.Mode().IsRegular():
+			checks = append(checks, Check{
+				Level:        LevelError,
+				Code:         "COVER_IMAGE_NOT_FILE",
+				Message:      fmt.Sprintf("Cover image is not a regular file: %s", input.CoverImagePath),
+				Field:        "cover",
+				SuggestedFix: "pass --cover with an existing regular image file",
+			})
+		case !image.IsValidImageFormat(input.CoverImagePath):
+			checks = append(checks, Check{
+				Level:        LevelError,
+				Code:         "COVER_IMAGE_UNSUPPORTED_FORMAT",
+				Message:      fmt.Sprintf("Cover image has an unsupported format: %s", input.CoverImagePath),
+				Field:        "cover",
+				SuggestedFix: "use a supported cover image: jpg, jpeg, png, gif, bmp, or webp",
 			})
 		}
 	}
@@ -563,7 +616,8 @@ func blocksUpload(code string) bool {
 		return true
 	}
 	switch code {
-	case "LOCAL_IMAGE_MISSING", "MISSING_WECHAT_CONFIG", "MISSING_PUBLISH_API_KEY":
+	case "LOCAL_IMAGE_MISSING", "LOCAL_IMAGE_NOT_FILE", "LOCAL_IMAGE_UNSUPPORTED_FORMAT",
+		"MISSING_WECHAT_CONFIG", "MISSING_PUBLISH_API_KEY":
 		return true
 	default:
 		return false
@@ -575,7 +629,8 @@ func blocksDraft(code string) bool {
 		return true
 	}
 	switch code {
-	case "MISSING_COVER", "COVER_IMAGE_MISSING", "CONFLICTING_COVER_INPUTS", "COVER_MEDIA_ID_INVALID":
+	case "MISSING_COVER", "COVER_IMAGE_MISSING", "COVER_IMAGE_NOT_FILE", "COVER_IMAGE_UNSUPPORTED_FORMAT",
+		"CONFLICTING_COVER_INPUTS", "COVER_MEDIA_ID_INVALID":
 		return true
 	default:
 		return false

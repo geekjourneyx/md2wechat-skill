@@ -88,6 +88,14 @@ func (s *Service) Convert(input *ConvertInput) (*ConvertOutput, error) {
 	if err := validateConvertInput(input); err != nil {
 		return nil, err
 	}
+	if input.Intent.CreateDraft {
+		if s.drafts == nil {
+			return nil, fmt.Errorf("draft creator is required")
+		}
+		if strings.TrimSpace(input.CoverImagePath) != "" && s.uploadCover == nil {
+			return nil, fmt.Errorf("cover uploader is required")
+		}
+	}
 
 	result := s.converter.Convert(input.ConvertRequest)
 	if result == nil {

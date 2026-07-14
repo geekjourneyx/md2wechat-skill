@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,6 +42,9 @@ func TestRunPreviewWritesExactConverterHTML(t *testing.T) {
 	previewFontSize = "medium"
 	previewBackgroundType = "none"
 	outputFile := filepath.Join(t.TempDir(), "preview.html")
+	if err := os.WriteFile(outputFile, []byte("PREEXISTING_SENTINEL"), 0600); err != nil {
+		t.Fatalf("write existing preview: %v", err)
+	}
 	previewOutput = outputFile
 	previewTitle = ""
 	previewAuthor = ""
@@ -96,6 +100,13 @@ func TestRunPreviewWritesExactConverterHTML(t *testing.T) {
 	}
 	if !bytes.Equal(data, []byte(convertedHTML)) {
 		t.Fatalf("preview bytes differ from converter HTML\n got: %q\nwant: %q", data, convertedHTML)
+	}
+	info, err := os.Stat(outputFile)
+	if err != nil {
+		t.Fatalf("stat preview: %v", err)
+	}
+	if info.Mode().Perm() != 0644 {
+		t.Fatalf("preview mode = %o, want 644", info.Mode().Perm())
 	}
 	for _, forbidden := range []string{markdownPath, "Readiness", "<aside", "--panel", markdown} {
 		if bytes.Contains(data, []byte(forbidden)) {
@@ -378,6 +389,106 @@ func TestRunPreviewReturnsPreviewFailedForInvalidOutputPath(t *testing.T) {
 	}
 	if previewOutput != "" {
 		t.Fatalf("previewOutput leaked invalid path %q", previewOutput)
+	}
+}
+
+func TestRunPreviewTempWriteFailureDoesNotCreateOrOverwriteExplicitOutput(t *testing.T) {
+	oldCfg, oldLog := cfg, log
+	oldMode, oldTheme := previewMode, previewTheme
+	oldFont, oldBackground := previewFontSize, previewBackgroundType
+	oldOutput := previewOutput
+	oldNewConverter := newMarkdownConverter
+	oldWriteTemp := previewWriteTemp
+	t.Cleanup(func() {
+		cfg, log = oldCfg, oldLog
+		previewMode, previewTheme = oldMode, oldTheme
+		previewFontSize, previewBackgroundType = oldFont, oldBackground
+		previewOutput = oldOutput
+		newMarkdownConverter = oldNewConverter
+		previewWriteTemp = oldWriteTemp
+	})
+
+	cfg = &config.Config{MD2WechatAPIKey: "api-key"}
+	log = zap.NewNop()
+	previewMode = "api"
+	previewTheme = "default"
+	previewFontSize = "medium"
+	previewBackgroundType = "none"
+	convertedHTML := []byte("<p>replacement preview bytes</p>")
+	newMarkdownConverter = func() converter.Converter {
+		return &fakeConverter{result: &converter.ConvertResult{
+			Success: true,
+			Mode:    converter.ModeAPI,
+			HTML:    string(convertedHTML),
+		}}
+	}
+	previewWriteTemp = func(file *os.File, data []byte) (int, error) {
+		written, err := file.Write(data[:len(data)/2])
+		if err != nil {
+			return written, err
+		}
+		return written, errors.New("injected temp write failure")
+	}
+
+	markdownPath := filepath.Join(t.TempDir(), "article.md")
+	if err := os.WriteFile(markdownPath, []byte("# 标题\n"), 0600); err != nil {
+		t.Fatalf("write markdown: %v", err)
+	}
+
+	for _, tt := range []struct {
+		name     string
+		existing bool
+	}{
+		{name: "preserves existing destination", existing: true},
+		{name: "does not create nonexistent destination"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			outputDir := t.TempDir()
+			outputFile := filepath.Join(outputDir, "preview.html")
+			sentinel := []byte("PREEXISTING_SENTINEL")
+			if tt.existing {
+				if err := os.WriteFile(outputFile, sentinel, 0600); err != nil {
+					t.Fatalf("write sentinel: %v", err)
+				}
+			}
+			previewOutput = outputFile
+
+			result, err := runPreview(markdownPath)
+			if err == nil {
+				t.Fatal("runPreview() error = nil, want temp write failure")
+			}
+			cliErr, ok := err.(*cliError)
+			if !ok || cliErr.Code != codePreviewFailed {
+				t.Fatalf("error = %#v", err)
+			}
+			if result != nil {
+				t.Fatalf("result = %#v, want nil", result)
+			}
+			if previewOutput != "" {
+				t.Fatalf("previewOutput leaked explicit path %q", previewOutput)
+			}
+
+			data, readErr := os.ReadFile(outputFile)
+			if tt.existing {
+				if readErr != nil || !bytes.Equal(data, sentinel) {
+					t.Fatalf("destination changed: data=%q err=%v", data, readErr)
+				}
+			} else if !os.IsNotExist(readErr) {
+				t.Fatalf("nonexistent destination was created: data=%q err=%v", data, readErr)
+			}
+
+			entries, readDirErr := os.ReadDir(outputDir)
+			if readDirErr != nil {
+				t.Fatalf("read output dir: %v", readDirErr)
+			}
+			wantEntries := 0
+			if tt.existing {
+				wantEntries = 1
+			}
+			if len(entries) != wantEntries {
+				t.Fatalf("output dir entries = %#v, want %d", entries, wantEntries)
+			}
+		})
 	}
 }
 

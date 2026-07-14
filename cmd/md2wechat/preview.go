@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/action"
 	"github.com/geekjourneyx/md2wechat-skill/internal/converter"
@@ -28,6 +30,10 @@ type previewRunResult struct {
 	Inspect    *inspectpkg.Result
 	Conversion *converter.ConvertResult
 	OutputFile string
+}
+
+var previewWriteTemp = func(file *os.File, data []byte) (int, error) {
+	return file.Write(data)
 }
 
 var previewCmd = &cobra.Command{
@@ -143,26 +149,63 @@ func runPreview(markdownFile string) (*previewRunResult, error) {
 		return nil, wrapCLIError(codePreviewFailed, err, err.Error())
 	}
 
-	outputFile := requestedOutput
-	temporaryOutput := false
-	if outputFile == "" {
-		tmp, err := os.CreateTemp("", "md2wechat-preview-*.html")
-		if err != nil {
-			return nil, wrapCLIError(codePreviewFailed, err, err.Error())
-		}
-		outputFile = tmp.Name()
-		temporaryOutput = true
-		if err := tmp.Close(); err != nil {
-			_ = os.Remove(outputFile)
-			return nil, wrapCLIError(codePreviewFailed, err, err.Error())
-		}
-	}
-	if err := os.WriteFile(outputFile, []byte(converted.HTML), 0644); err != nil {
-		if temporaryOutput {
-			_ = os.Remove(outputFile)
-		}
+	outputFile, err := writePreviewHTML(requestedOutput, []byte(converted.HTML))
+	if err != nil {
 		return nil, wrapCLIError(codePreviewFailed, err, err.Error())
 	}
 	runResult.OutputFile = outputFile
 	return runResult, nil
+}
+
+func writePreviewHTML(outputFile string, data []byte) (string, error) {
+	explicitOutput := outputFile != ""
+	tempDir := ""
+	tempPattern := "md2wechat-preview-*.html"
+	if explicitOutput {
+		tempDir = filepath.Dir(outputFile)
+		tempPattern = "." + filepath.Base(outputFile) + ".tmp-*"
+	}
+
+	temp, err := os.CreateTemp(tempDir, tempPattern)
+	if err != nil {
+		return "", err
+	}
+	tempPath := temp.Name()
+	removeTemp := true
+	defer func() {
+		if removeTemp {
+			_ = temp.Close()
+			_ = os.Remove(tempPath)
+		}
+	}()
+
+	written, err := previewWriteTemp(temp, data)
+	if err != nil {
+		return "", err
+	}
+	if written != len(data) {
+		return "", io.ErrShortWrite
+	}
+	if explicitOutput {
+		if err := temp.Chmod(0644); err != nil {
+			return "", err
+		}
+	}
+	if err := temp.Sync(); err != nil {
+		return "", err
+	}
+	if err := temp.Close(); err != nil {
+		return "", err
+	}
+
+	if explicitOutput {
+		if err := os.Rename(tempPath, outputFile); err != nil {
+			return "", err
+		}
+		removeTemp = false
+		return outputFile, nil
+	}
+
+	removeTemp = false
+	return tempPath, nil
 }
