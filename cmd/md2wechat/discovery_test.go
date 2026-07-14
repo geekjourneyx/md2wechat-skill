@@ -112,6 +112,9 @@ func TestDiscoveryListCommandsExcludeHeavyDetailAndStayWithinBudget(t *testing.T
 
 	cfg = &config.Config{DefaultTheme: "default", ImageProvider: "openai"}
 	jsonOutput = true
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MD2WECHAT_THEMES_DIR", "")
+	t.Setenv("MD2WECHAT_PROMPTS_DIR", "")
 	promptKind = ""
 	promptArchetype = ""
 	promptTag = ""

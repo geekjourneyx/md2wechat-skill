@@ -141,19 +141,24 @@ md2wechat providers show openrouter --json
 md2wechat providers show volcengine --json
 ```
 
-当前 CLI 会枚举 provider 元数据，包括：
+`providers list --json` 只返回选择下一条命令所需的轻量元数据：
 
 - `name`
 - `aliases`
 - `description`
+- `supports_size`
+- `current`
+- `configured`
+
+需要检查某个 provider 的模型或配置要求时，再调用 `providers show <name> --json`。`show` 保留上面的身份与状态字段，并返回完整定义：
+
 - `required_config`
 - `optional_config`
 - `default_base_url`
 - `default_model`
 - `supported_models`
-- `supports_size`
-- `current`
-- `configured`
+
+因此，Agent 应先用 `list` 选择 provider，只在准备配置或调用具体 provider 时读取 `show`，避免在枚举阶段加载完整模型表。
 
 当前内置支持的图片 provider：
 
@@ -181,14 +186,17 @@ md2wechat themes show autumn-warm --json
 
 这意味着纯二进制安装也能列出官方默认主题，用户和平台仍可通过目录覆盖内置主题。
 
-`themes list --json` 和 `themes show --json` 返回的是稳定 view，而不是内部 Go struct。关键字段包括：
+`themes list --json` 返回的是轻量稳定 view，而不是内部 Go struct。它只包含选主题所需的字段：
 
 - `name`
 - `type`: `api` 或 `ai`
+- `description`
+- `version`
 - `selectable`: 是否可被 `convert --theme` 直接选择
 - `api_theme`: API 服务实际使用的主题名
-- `style`: Agent 选主题时可参考的风格元数据
 - `metadata_incomplete`: 主题缺少稳定风格字段时为 `true`
+
+`themes show <name> --json` 返回完整稳定 view，并在这些字段之外提供 `style` 风格元数据。Agent 应先用 `list` 按模式和可选状态筛选，只有需要检查具体主题风格时才调用 `show`。
 
 Collection descriptor 也会出现在发现结果里。例如 `api-collection` 用于描述 API 主题集合，但它不是可执行主题，所以 `selectable: false`。`api.yaml` 中的分组条目会展开为可执行 API 主题。Agent 必须选择 `selectable: true` 且 `type` 匹配当前模式的主题。
 
@@ -221,6 +229,8 @@ md2wechat prompts list --kind image --archetype infographic --json
 md2wechat prompts list --kind image --tag editorial --json
 ```
 
+`prompts list --json` 只返回选择 prompt 所需的轻量身份与适用性字段：`name`、`kind`、`description`、`version`，以及存在时的 `archetype`、`primary_use_case`、`compatible_use_cases`、`recommended_aspect_ratios`、`default_aspect_ratio`、`tags`、`variables`。列表不会返回完整模板正文、示例或来源元数据。
+
 ### 查看 Prompt 定义
 
 ```bash
@@ -232,6 +242,8 @@ md2wechat prompts show cover-default --kind image --json
 md2wechat prompts show cover-hero --kind image --archetype cover --tag hero --json
 md2wechat prompts show infographic-victorian-engraving-banner --kind image --archetype infographic --tag victorian --json
 ```
+
+`prompts show <name> --kind <kind> --json` 返回完整定义，包括 `examples`、`template`、`metadata` 和 `source`。只有在需要检查或复用具体模板定义时才调用 `show`。
 
 对于图片 prompt，`archetype` 表示主要分组，不代表只能用于这一种场景。优先查看 `prompts show --json` 返回的：
 
@@ -251,6 +263,8 @@ md2wechat prompts render cover-default \
   --var article_summary='一份关于封面图策略的实战清单' \
   --json
 ```
+
+`prompts render` 的 `data` 包含轻量 `prompt` 身份、实际使用的 `vars` 和物化后的 `rendered` 文本。它不会在 `rendered` 旁再次复制 `template`、`examples`、`metadata` 或 `source`；如需原始完整定义，使用 `prompts show`。
 
 ### 用 preset 直接生成图片
 
