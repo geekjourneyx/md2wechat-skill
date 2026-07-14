@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -8,6 +9,24 @@ import (
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/action"
 )
+
+func TestPrintJSONUsesCompactMachineOutput(t *testing.T) {
+	got := captureStdout(t, func() {
+		printJSON(map[string]any{
+			"alpha":  "one",
+			"nested": map[string]any{"beta": true},
+		})
+	})
+
+	trimmed := bytes.TrimSpace(got)
+	if bytes.Contains(trimmed, []byte("\n")) {
+		t.Fatalf("printJSON() emitted indented JSON: %q", got)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(trimmed, &decoded); err != nil {
+		t.Fatalf("printJSON() emitted invalid JSON: %v", err)
+	}
+}
 
 func TestRunVersionOutputsJSONEnvelopeWhenRequested(t *testing.T) {
 	oldJSON, oldVersion := jsonOutput, Version

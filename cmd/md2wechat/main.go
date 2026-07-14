@@ -535,7 +535,6 @@ func responseWith(resp cliResponse) {
 
 func printJSON(v any) {
 	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "  ")
 	encoder.SetEscapeHTML(false)
 	if err := encoder.Encode(v); err != nil {
 		fmt.Fprintf(os.Stderr, "JSON encode error: %v\n", err)

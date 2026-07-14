@@ -44,12 +44,17 @@ func TestLayoutListDefaultsToRecommendedLifecycle(t *testing.T) {
 		}
 	})
 
-	output := string(stdout)
-	if strings.Contains(output, `"name": "dialogue"`) {
-		t.Fatalf("default list unexpectedly included compatibility module:\n%s", stdout)
+	modules := decodeLayoutListModules(t, stdout)
+	if len(modules) == 0 {
+		t.Fatal("default list did not include any layout modules")
 	}
-	if !strings.Contains(output, `"lifecycle": "recommended"`) {
-		t.Fatalf("default list did not include recommended lifecycle summaries:\n%s", stdout)
+	for _, module := range modules {
+		if module.Name == "dialogue" {
+			t.Fatalf("default list unexpectedly included compatibility module: %#v", module)
+		}
+		if module.Lifecycle != layoutcatalog.LifecycleRecommended {
+			t.Fatalf("default list module lifecycle = %q, want %q: %#v", module.Lifecycle, layoutcatalog.LifecycleRecommended, module)
+		}
 	}
 }
 
@@ -63,16 +68,46 @@ func TestLayoutListSelectsCompatibilityLifecycle(t *testing.T) {
 		}
 	})
 
-	output := string(stdout)
-	if !strings.Contains(output, `"name": "dialogue"`) {
-		t.Fatalf("compatibility list did not include compatibility module:\n%s", stdout)
+	modules := decodeLayoutListModules(t, stdout)
+	foundDialogue := false
+	for _, module := range modules {
+		if module.Name == "dialogue" {
+			foundDialogue = true
+		}
+		if module.Name == "hero" {
+			t.Fatalf("compatibility list unexpectedly included recommended module: %#v", module)
+		}
+		if module.Lifecycle != layoutcatalog.LifecycleCompatibility {
+			t.Fatalf("compatibility list module lifecycle = %q, want %q: %#v", module.Lifecycle, layoutcatalog.LifecycleCompatibility, module)
+		}
 	}
-	if strings.Contains(output, `"hero"`) {
-		t.Fatalf("compatibility list unexpectedly included recommended module:\n%s", stdout)
+	if !foundDialogue {
+		t.Fatalf("compatibility list did not include dialogue module: %#v", modules)
 	}
-	if !strings.Contains(output, `"lifecycle": "compatibility"`) {
-		t.Fatalf("compatibility list did not include lifecycle summary:\n%s", stdout)
+}
+
+type layoutListModuleSummary struct {
+	Name      string `json:"name"`
+	Lifecycle string `json:"lifecycle"`
+}
+
+func decodeLayoutListModules(t *testing.T, stdout []byte) []layoutListModuleSummary {
+	t.Helper()
+
+	var response struct {
+		Success bool   `json:"success"`
+		Code    string `json:"code"`
+		Data    struct {
+			Modules []layoutListModuleSummary `json:"modules"`
+		} `json:"data"`
 	}
+	if err := json.Unmarshal(stdout, &response); err != nil {
+		t.Fatalf("unmarshal layout list response: %v\n%s", err, stdout)
+	}
+	if !response.Success || response.Code != codeLayoutShown {
+		t.Fatalf("unexpected layout list envelope: success=%v code=%q", response.Success, response.Code)
+	}
+	return response.Data.Modules
 }
 
 func TestLayoutListSelectsRecommendedLifecycleExplicitly(t *testing.T) {
