@@ -92,7 +92,8 @@ Use CLI output as the source of truth for currently available modes, providers, 
 - Assume `md2wechat` is already available on `PATH`.
 - `convert` defaults to API mode unless the user explicitly asks for `--mode ai`.
 - API conversion requires md2wechat API credentials.
-- WeChat draft creation requires WeChat credentials.
+- WeChat upload, article draft creation, and `create_image_post` require WeChat credentials whenever the user explicitly requests those side effects.
+- Read-only discovery, `inspect`, `preview`, and plain conversion do not globally require WeChat credentials.
 - Named WeChat account execution requires a valid `MD2WECHAT_API_KEY`; the CLI validates it before upload or draft side effects.
 - Direct image generation requires image-provider credentials; image plan mode (`--plan --json`) only emits prompt intent for a host Agent or external tool and does not require image-provider credentials.
 - `title suggest --json` only emits a title-generation prompt request for the host Agent or external model. It does not call a model, upload, create drafts, or write back to Markdown.
@@ -183,6 +184,8 @@ Brand Profile lives at `~/.config/md2wechat/brand.md`.
 ## Publishing Side Effects
 
 Do not create drafts, upload images, publish, or call remote image generation unless the user asks for that action.
+
+Before every explicit WeChat side effect—image upload, article draft creation, or `create_image_post`—require configured WeChat credentials and use the target-matched readiness/preflight path. Keep discovery, inspection, preview, and plain conversion credential-free.
 
 Before draft creation:
 

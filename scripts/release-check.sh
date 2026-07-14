@@ -113,16 +113,112 @@ grep -q 'version --json' .github/workflows/release.yml || fail "release workflow
 grep -q 'MD2WECHAT_RELEASE_BASE_URL' .github/workflows/release.yml || fail "release workflow must smoke the installers from the same bundle"
 grep -q 'HOMEBREW_TAP_GITHUB_TOKEN' .github/workflows/release.yml || fail "release workflow must update the tap repository with HOMEBREW_TAP_GITHUB_TOKEN"
 grep -q 'generate-homebrew-formula.sh' .github/workflows/release.yml || fail "release workflow must generate the Homebrew formula via scripts/generate-homebrew-formula.sh"
-grep -q '"install"' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill metadata must declare install resources"
-grep -q '"clawdbot"' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill metadata must use metadata.clawdbot"
-grep -q '"bins":\["md2wechat"\]' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill metadata must declare md2wechat as a required bin"
-grep -q '"formula":"geekjourneyx/tap/md2wechat"' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill metadata must declare the brew install path"
-grep -q "\"module\":\"github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v${version}\"" platforms/openclaw/md2wechat/SKILL.md \
-  || fail "OpenClaw skill metadata must pin the go install path to v${version}"
-! sed -n '1,8p' platforms/openclaw/md2wechat/SKILL.md | grep -Eq '"env":\[[^]]*"WECHAT_(APPID|SECRET)"' \
-  || fail "OpenClaw skill metadata must not globally require WeChat publish credentials"
-grep -q 'releases/download/v' docs/INSTALL.md || fail "docs/INSTALL.md must point install instructions at fixed-version release assets"
-grep -q 'releases/download/v' docs/OPENCLAW.md || fail "docs/OPENCLAW.md must point OpenClaw install instructions at fixed-version release assets"
+if ! node - "$version" <<'NODE'
+const fs = require('fs');
+
+const version = process.argv[2];
+const path = 'platforms/openclaw/md2wechat/SKILL.md';
+const source = fs.readFileSync(path, 'utf8');
+const frontmatterMatch = source.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+
+function reject(message) {
+  console.error(`release-check: ${message}`);
+  process.exit(1);
+}
+
+if (!frontmatterMatch) {
+  reject('OpenClaw skill must begin with complete YAML frontmatter');
+}
+
+const frontmatter = frontmatterMatch[1];
+if (/WECHAT_(APPID|SECRET)/.test(frontmatter)) {
+  reject('OpenClaw skill frontmatter must not globally require WeChat publish credentials');
+}
+
+const metadataMatch = /^metadata:\s*/m.exec(frontmatter);
+if (!metadataMatch) {
+  reject('OpenClaw skill frontmatter must declare metadata');
+}
+
+const metadataStart = metadataMatch.index + metadataMatch[0].length;
+if (frontmatter[metadataStart] !== '{') {
+  reject('OpenClaw skill metadata must be a JSON object');
+}
+
+let depth = 0;
+let inString = false;
+let escaped = false;
+let metadataEnd = -1;
+for (let i = metadataStart; i < frontmatter.length; i += 1) {
+  const char = frontmatter[i];
+  if (inString) {
+    if (escaped) {
+      escaped = false;
+    } else if (char === '\\') {
+      escaped = true;
+    } else if (char === '"') {
+      inString = false;
+    }
+    continue;
+  }
+  if (char === '"') {
+    inString = true;
+  } else if (char === '{') {
+    depth += 1;
+  } else if (char === '}') {
+    depth -= 1;
+    if (depth === 0) {
+      metadataEnd = i + 1;
+      break;
+    }
+  }
+}
+
+if (metadataEnd === -1) {
+  reject('OpenClaw skill metadata JSON is incomplete');
+}
+
+let metadata;
+try {
+  metadata = JSON.parse(frontmatter.slice(metadataStart, metadataEnd));
+} catch (error) {
+  reject(`OpenClaw skill metadata JSON is invalid: ${error.message}`);
+}
+
+const clawdbot = metadata.clawdbot;
+if (!clawdbot || typeof clawdbot !== 'object') {
+  reject('OpenClaw skill metadata must use metadata.clawdbot');
+}
+if (!clawdbot.requires || !Array.isArray(clawdbot.requires.bins) || !clawdbot.requires.bins.includes('md2wechat')) {
+  reject('OpenClaw skill metadata must declare md2wechat as a required bin');
+}
+if (Array.isArray(clawdbot.requires.env) && clawdbot.requires.env.some((name) => /^WECHAT_(APPID|SECRET)$/.test(name))) {
+  reject('OpenClaw skill metadata must not globally require WeChat publish credentials');
+}
+if (!Array.isArray(clawdbot.install)) {
+  reject('OpenClaw skill metadata must declare install resources');
+}
+if (!clawdbot.install.some((entry) => entry && entry.formula === 'geekjourneyx/tap/md2wechat')) {
+  reject('OpenClaw skill metadata must declare the brew install path');
+}
+const expectedModule = `github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v${version}`;
+if (!clawdbot.install.some((entry) => entry && entry.module === expectedModule)) {
+  reject(`OpenClaw skill metadata must pin the go install path to v${version}`);
+}
+NODE
+then
+  fail "OpenClaw skill frontmatter contract failed"
+fi
+
+for release_doc in docs/INSTALL.md docs/OPENCLAW.md; do
+  grep -Fq "releases/download/v${version}" "$release_doc" \
+    || fail "$release_doc must point install instructions at v${version} release assets"
+  stale_release_url="$(grep -Eo 'releases/download/v[0-9]+\.[0-9]+\.[0-9]+' "$release_doc" \
+    | grep -Fvx "releases/download/v${version}" \
+    | head -n1 || true)"
+  [[ -z "$stale_release_url" ]] \
+    || fail "$release_doc contains a stale versioned release URL: $stale_release_url"
+done
 grep -q 'npm install -g @geekjourneyx/md2wechat' README.md || fail "README must document the npm install path"
 grep -q 'npm install -g @geekjourneyx/md2wechat' docs/INSTALL.md || fail "docs/INSTALL.md must document the npm install path"
 grep -q 'npx cnpm sync @geekjourneyx/md2wechat' docs/INSTALL.md || fail "docs/INSTALL.md must document the post-publish npmmirror sync step"
@@ -162,14 +258,22 @@ grep -q 'skills read md2wechat --json' scripts/install-openclaw.ps1 || fail "ins
 grep -q '`inspect` is the source-of-truth command' skills/md2wechat/SKILL.md || fail "skills/md2wechat/SKILL.md must describe inspect as the source-of-truth command"
 grep -q '`preview` writes only byte-identical final API HTML from a successful converter result' skills/md2wechat/SKILL.md || fail "skills/md2wechat/SKILL.md must describe exact API preview behavior"
 grep -q 'this invocation does not create or overwrite preview HTML' skills/md2wechat/SKILL.md || fail "skills/md2wechat/SKILL.md must describe action-required and failed preview no-write behavior"
+grep -q 'PREVIEW_ACTION_REQUIRED' skills/md2wechat/SKILL.md || fail "skills/md2wechat/SKILL.md must describe PREVIEW_ACTION_REQUIRED"
+grep -q 'PREVIEW_FAILED' skills/md2wechat/SKILL.md || fail "skills/md2wechat/SKILL.md must describe PREVIEW_FAILED"
 grep -q 'PREVIEW_ACTION_REQUIRED.*empty `data.output_file`' skills/md2wechat/SKILL.md || fail "skills/md2wechat/SKILL.md must describe action-required no-output behavior"
 grep -q 'Any pre-existing explicit output path is stale' skills/md2wechat/SKILL.md || fail "skills/md2wechat/SKILL.md must reject stale explicit preview output"
+grep -q 'WeChat upload, article draft creation, and `create_image_post` require WeChat credentials' skills/md2wechat/SKILL.md || fail "skills/md2wechat/SKILL.md must require credentials for every explicit WeChat side effect"
+grep -q 'Read-only discovery, `inspect`, `preview`, and plain conversion do not globally require WeChat credentials' skills/md2wechat/SKILL.md || fail "skills/md2wechat/SKILL.md must keep read-only paths credential-free"
 grep -q 'md2wechat skills read md2wechat --json' skills/md2wechat/SKILL.md || fail "skills/md2wechat/SKILL.md must route stale-SOP checks through skills read"
 grep -q '`inspect` is the source-of-truth command' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must describe inspect as the source-of-truth command"
 grep -q '`preview` writes only byte-identical final API HTML from a successful converter result' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must describe exact API preview behavior"
 grep -q 'this invocation does not create or overwrite preview HTML' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must describe action-required and failed preview no-write behavior"
+grep -q 'PREVIEW_ACTION_REQUIRED' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must describe PREVIEW_ACTION_REQUIRED"
+grep -q 'PREVIEW_FAILED' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must describe PREVIEW_FAILED"
 grep -q 'PREVIEW_ACTION_REQUIRED.*empty `data.output_file`' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must describe action-required no-output behavior"
 grep -q 'Any pre-existing explicit output path is stale' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must reject stale explicit preview output"
+grep -q 'WeChat upload, article draft creation, and `create_image_post` require WeChat credentials' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must require credentials for every explicit WeChat side effect"
+grep -q 'Read-only discovery, `inspect`, `preview`, and plain conversion do not globally require WeChat credentials' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must keep read-only paths credential-free"
 grep -q 'md2wechat skills read md2wechat --json' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must route stale-SOP checks through skills read"
 GOCACHE="${GOCACHE:-/tmp/md2wechat-go-build}" go test ./cmd/md2wechat -run '^TestLayoutDocumentation' -count=1 >/dev/null || fail "layout documentation contracts must pass"
 grep -q -- '--body-file' docs/LAYOUT.md || fail "LAYOUT must document complex body input"

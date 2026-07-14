@@ -127,7 +127,7 @@ grep -r "config" internal/config/
 | `VERSION` | 文件内容 | `x.y.z` |
 | `package.json` | `"version"` 字段 | `x.y.z` |
 | `.claude-plugin/marketplace.json` | plugin version / owner / author | `x.y.z` / 当前维护者身份 |
-| `platforms/openclaw/md2wechat/SKILL.md` | `metadata.openclaw.install` | 使用 `@latest` go 模块，发布后自动生效 |
+| `platforms/openclaw/md2wechat/SKILL.md` | `metadata.clawdbot.install` | Go 模块必须固定为 `@v< VERSION 文件内容 >` |
 | `CHANGELOG.md` | 新版本章节标题 | `## [x.y.z] - YYYY-MM-DD` |
 | `CHANGELOG.md` | 版本历史表格 | 新增一行 |
 
@@ -140,7 +140,7 @@ echo "marketplace:  $(sed -n 's/.*"version": "\([0-9][^"]*\)".*/\1/p' .claude-pl
 echo "CHANGELOG:    $(grep -m1 '^## \[' CHANGELOG.md | sed 's/^## \[\([^]]*\)\].*/\1/')"
 ```
 
-> **说明**：OpenClaw SKILL.md 使用 `@latest` go 模块安装，无固定版本 URL，每次发布 go 模块后自动生效。
+> **说明**：OpenClaw SKILL.md 的 Go 安装模块必须从唯一版本源 `VERSION` 派生并固定为 `@v${version}`；禁止使用 `@latest`。版本升级时与 `VERSION`、release 资产和安装文档一起同步。
 
 **强制规则：**
 - 发版前先运行 `bash scripts/quality-gates.sh`（step 0 会在 < 1s 内检查所有版本字段，发现漂移立即 fail）
