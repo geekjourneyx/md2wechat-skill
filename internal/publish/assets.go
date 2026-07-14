@@ -2,6 +2,7 @@ package publish
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -31,6 +32,45 @@ type ProcessOutput struct {
 	Assets []AssetRef
 }
 
+func validateAndResolveAssets(input *ProcessInput) ([]AssetRef, error) {
+	assets := append([]AssetRef(nil), input.Assets...)
+	for i := range assets {
+		asset := &assets[i]
+		switch asset.Kind {
+		case AssetKindLocal:
+			localPath := asset.ResolvedSource
+			if localPath == "" {
+				localPath = asset.Source
+			}
+			if !filepath.IsAbs(localPath) && input.MarkdownDir != "" {
+				localPath = filepath.Join(input.MarkdownDir, localPath)
+			}
+			if strings.TrimSpace(localPath) == "" {
+				return nil, fmt.Errorf("asset %d local path is required", i)
+			}
+			info, err := os.Stat(localPath)
+			if err != nil {
+				return nil, fmt.Errorf("asset %d local image: %w", i, err)
+			}
+			if info.IsDir() || !image.IsValidImageFormat(localPath) {
+				return nil, fmt.Errorf("asset %d is not a supported image file: %s", i, localPath)
+			}
+			asset.ResolvedSource = localPath
+		case AssetKindRemote:
+			if strings.TrimSpace(asset.Source) == "" {
+				return nil, fmt.Errorf("asset %d remote URL is required", i)
+			}
+		case AssetKindAI:
+			if strings.TrimSpace(asset.Prompt) == "" {
+				return nil, fmt.Errorf("asset %d AI prompt is required", i)
+			}
+		default:
+			return nil, fmt.Errorf("unsupported asset kind: %s", asset.Kind)
+		}
+	}
+	return assets, nil
+}
+
 // Process uploads or generates assets and rewrites the HTML to the published URLs.
 func (p *AssetPipeline) Process(input *ProcessInput) (*ProcessOutput, error) {
 	if input == nil {
@@ -45,10 +85,14 @@ func (p *AssetPipeline) Process(input *ProcessInput) (*ProcessOutput, error) {
 	if p.processor == nil {
 		return nil, fmt.Errorf("asset processor is required")
 	}
+	assets, err := validateAndResolveAssets(input)
+	if err != nil {
+		return nil, err
+	}
 
 	output := &ProcessOutput{
-		HTML:   InsertAssetPlaceholders(input.HTML, input.Assets),
-		Assets: append([]AssetRef(nil), input.Assets...),
+		HTML:   InsertAssetPlaceholders(input.HTML, assets),
+		Assets: assets,
 	}
 
 	var failed []string
@@ -58,15 +102,7 @@ func (p *AssetPipeline) Process(input *ProcessInput) (*ProcessOutput, error) {
 
 		switch asset.Kind {
 		case AssetKindLocal:
-			localPath := asset.ResolvedSource
-			if localPath == "" {
-				localPath = asset.Source
-			}
-			if !filepath.IsAbs(localPath) && input.MarkdownDir != "" {
-				localPath = filepath.Join(input.MarkdownDir, localPath)
-			}
-			uploadResult, err = p.processor.UploadLocalImage(localPath)
-			output.Assets[i].ResolvedSource = localPath
+			uploadResult, err = p.processor.UploadLocalImage(asset.ResolvedSource)
 		case AssetKindRemote:
 			uploadResult, err = p.processor.DownloadAndUpload(asset.Source)
 		case AssetKindAI:

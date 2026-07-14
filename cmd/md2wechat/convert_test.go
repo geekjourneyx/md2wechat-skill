@@ -218,6 +218,13 @@ func TestRunConvertDraftPipelineReplacesMixedImagesAndUsesMarkdownTitle(t *testi
 	}
 	markdownPath := filepath.Join(dir, "article.md")
 	localRelative := filepath.Join("images", "local.png")
+	localPath := filepath.Join(dir, localRelative)
+	if err := os.MkdirAll(filepath.Dir(localPath), 0o755); err != nil {
+		t.Fatalf("create local image directory: %v", err)
+	}
+	if err := os.WriteFile(localPath, []byte("png"), 0o600); err != nil {
+		t.Fatalf("write local image: %v", err)
+	}
 	markdown := strings.Join([]string{
 		"---",
 		"title: Frontmatter 标题",
@@ -250,7 +257,7 @@ func TestRunConvertDraftPipelineReplacesMixedImagesAndUsesMarkdownTitle(t *testi
 	}
 	processor := &fakeImageProcessor{
 		localResults: map[string]*image.UploadResult{
-			filepath.Join(dir, localRelative): {MediaID: "m-local", WechatURL: "https://wechat.local/local"},
+			localPath: {MediaID: "m-local", WechatURL: "https://wechat.local/local"},
 		},
 		onlineResults: map[string]*image.UploadResult{
 			"https://example.com/remote.png": {MediaID: "m-online", WechatURL: "https://wechat.local/remote"},
@@ -275,7 +282,7 @@ func TestRunConvertDraftPipelineReplacesMixedImagesAndUsesMarkdownTitle(t *testi
 		t.Fatalf("runConvert() error = %v", err)
 	}
 
-	if len(processor.localCalls) != 1 || processor.localCalls[0] != filepath.Join(dir, localRelative) {
+	if len(processor.localCalls) != 1 || processor.localCalls[0] != localPath {
 		t.Fatalf("local upload calls = %#v", processor.localCalls)
 	}
 	if len(processor.onlineCalls) != 1 || processor.onlineCalls[0] != "https://example.com/remote.png" {
@@ -805,6 +812,13 @@ func TestRunConvertImageFailureBlocksDraftCreation(t *testing.T) {
 	if err := os.WriteFile(markdownPath, []byte("# Title\n\n![local](images/local.png)\n"), 0600); err != nil {
 		t.Fatalf("write markdown: %v", err)
 	}
+	localPath := filepath.Join(dir, "images", "local.png")
+	if err := os.MkdirAll(filepath.Dir(localPath), 0o755); err != nil {
+		t.Fatalf("create local image directory: %v", err)
+	}
+	if err := os.WriteFile(localPath, []byte("png"), 0o600); err != nil {
+		t.Fatalf("write local image: %v", err)
+	}
 
 	newMarkdownConverter = func() converter.Converter {
 		return &fakeConverter{
@@ -823,7 +837,7 @@ func TestRunConvertImageFailureBlocksDraftCreation(t *testing.T) {
 	processor := &fakeImageProcessor{
 		localResults: map[string]*image.UploadResult{},
 		localErrs: map[string]error{
-			filepath.Join(dir, "images/local.png"): fmt.Errorf("upload failed"),
+			localPath: fmt.Errorf("upload failed"),
 		},
 	}
 	newImageProcessor = func() imageProcessor { return processor }
