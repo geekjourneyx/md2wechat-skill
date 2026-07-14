@@ -118,8 +118,8 @@ md2wechat preview article.md --json
 - `inspect` 用来确认最终标题、作者、摘要来源，以及 `data.readiness.targets/blockers` 中的 `convert/upload/draft` 目标状态。
 - Agent 在决定是否继续 `convert`、`upload`、`draft` 前，必须用即将执行的 same publish target 运行 `inspect`，并读取 `inspect --json` 的 `data.readiness.targets` 和 `data.readiness.blockers`。
 - `inspect` 的 `checks` 会直接暴露语义边界，例如 `TITLE_BODY_MISMATCH`、`DIGEST_METADATA_ONLY`、`IMAGE_REPLACEMENT_REQUIRES_UPLOAD_OR_DRAFT`。
-- `preview` 第一版会生成本地 HTML 预览文件；`--json` 返回输出路径和 render metadata。
-- `preview --mode ai` 不会声称展示最终视觉稿，只会明确降级为确认页。
+- `preview` 只在转换成功后生成本地 HTML 文件，文件字节与 converter 返回的 HTML 完全一致；inspect 诊断只出现在 `--json` 响应，不会混入 HTML。
+- `preview --mode ai` 返回 `PREVIEW_ACTION_REQUIRED`、`status: action_required` 和 prompt，`output_file` 为空且不创建 HTML。API 失败或空结果返回 `PREVIEW_FAILED`，同样不创建 HTML。
 - `--json` 走稳定 machine-readable contract；stdout 只保留 JSON，便于 Agent 和脚本直接解析。
 
 ## Article Advice

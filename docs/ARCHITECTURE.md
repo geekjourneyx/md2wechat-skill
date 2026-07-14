@@ -6,13 +6,13 @@ md2wechat-skill 的核心目标不是“把 Markdown 变好看”，而是把文
 
 当前代码按这条主线组织：
 
-`cmd -> inspect/preview + publish orchestrators -> asset pipeline -> draft/wechat adapters`
+`cmd -> inspect + converter/publish orchestrators -> asset pipeline -> draft/wechat adapters`
 
 这条主线的含义是：
 
 - `cmd/md2wechat` 只负责参数解析、命令入口、输出 envelope 和错误出口。
 - `internal/inspect` 负责把 metadata 来源、readiness 和 checks 收口成一份可解释真相。
-- `internal/preview` 负责消费 inspect 结果，生成只读本地确认页，而不是再实现一套业务判断。
+- `cmd/md2wechat/preview.go` 复用 inspect 诊断并调用 converter；只有成功结果会被原样写入 HTML 文件。
 - `internal/publish` 负责应用层编排，承接文章转换、图片处理、草稿保存和图片帖子创建。
 - `internal/publish/AssetPipeline` 负责解析后的资产上传、生成、下载和 HTML 回填。
 - `internal/draft` 和 `internal/wechat` 负责平台适配，不再承担命令级业务编排。
@@ -53,12 +53,6 @@ md2wechat-skill 的核心目标不是“把 Markdown 变好看”，而是把文
 - readiness 计算（旧布尔字段 + targets/blockers 结构化投影）
 - publish risk / semantic checks
 
-### `internal/preview`
-
-- 只读预览页渲染
-- exact / degraded preview fidelity 标记
-- inspect state 到 HTML 确认页的展示适配
-
 ### `internal/converter`
 
 - Markdown 转 HTML
@@ -94,12 +88,13 @@ md2wechat-skill 的核心目标不是“把 Markdown 变好看”，而是把文
 1. `inspect` 读取 Markdown 与配置
 2. 解析 metadata、正文结构、资产和上下文
 3. 输出 resolved metadata、source、readiness（含 targets/blockers）、checks
-4. `preview` 复用 inspect 结果，尽量生成 exact HTML；做不到时明确 degraded
+4. `preview` 复用 inspect 结果并调用 converter；成功时原样写入 HTML，AI handoff、失败或空结果不创建文件
 
 这里最重要的约束是：
 
 - `inspect` 是真相源
 - `preview` 不是第二套规则引擎
+- inspect 诊断属于 JSON 响应，不得包进 preview HTML
 - 任何 metadata/source/checks 的业务判断都不应该只存在于 `preview`
 
 ### `convert`

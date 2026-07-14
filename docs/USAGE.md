@@ -168,8 +168,8 @@ md2wechat preview article.md --json
 
 注意：
 
-- `preview` 第一版会生成静态预览文件，不会写回 Markdown，也不会触发上传或草稿。
-- `preview --mode ai` 只会给出确认页，不会伪造最终 AI 排版结果。
+- `preview` 只在转换成功时生成静态文件，内容与 converter HTML 字节一致；不会写回 Markdown，也不会触发上传或草稿。
+- `preview --mode ai --json` 返回 `PREVIEW_ACTION_REQUIRED` 和 prompt，不创建 HTML；API 失败或空结果也不创建 fallback/error 文件。
 - `inspect` 的检查项会显式提示 `TITLE_BODY_MISMATCH`、`DIGEST_METADATA_ONLY`、`IMAGE_REPLACEMENT_REQUIRES_UPLOAD_OR_DRAFT` 这类语义边界，不要把它们当成转换失败。
 - 如果最终要走 `convert --mode ai --custom-prompt`，发布前检查也要运行 `inspect --mode ai --custom-prompt "..." --json`，否则 theme readiness 不是同一个执行上下文。
 - `--title` / `--author` / `--digest` 作用于微信草稿 metadata；正文里是否显示 H1、作者、摘要，仍取决于 Markdown 正文和转换结果。

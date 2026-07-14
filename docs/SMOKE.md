@@ -63,12 +63,12 @@ md2wechat preview article.md --json
 
 - `inspect` 能返回最终 title / author / digest 来源、`data.readiness`、`data.checks`；`data.readiness.targets/blockers` 能表达目标是否 blocked 以及对应原因
 - 真实验证到 `TITLE_BODY_MISMATCH`、`DIGEST_METADATA_ONLY`、`IMAGE_REPLACEMENT_REQUIRES_UPLOAD_OR_DRAFT`
-- `preview` 能在可渲染时返回 exact preview，在 AI 或受限上下文下诚实 degraded
+- `preview` 在转换成功时写入字节一致的 converter HTML；AI handoff、API 失败和空结果均不创建 HTML
 
 结论：
 
 - confirm-first 路径真实可用
-- 确认层没有伪造最终视觉结果
+- 确认层没有用 dashboard、错误页或 Markdown fallback 伪造最终视觉结果
 
 ### 1. 图片生成
 

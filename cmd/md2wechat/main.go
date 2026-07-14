@@ -69,6 +69,7 @@ const (
 	codeAdviseCompleted          = "ADVISE_COMPLETED"
 	codePreviewReady             = "PREVIEW_READY"
 	codePreviewFailed            = "PREVIEW_FAILED"
+	codePreviewActionRequired    = "PREVIEW_ACTION_REQUIRED"
 	codeImageUploadFailed        = "IMAGE_UPLOAD_FAILED"
 	codeImageGenerateFailed      = "IMAGE_GENERATE_FAILED"
 	codeImagePlanReady           = "IMAGE_PLAN_READY"

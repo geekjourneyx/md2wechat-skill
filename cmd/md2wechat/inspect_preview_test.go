@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -14,8 +15,8 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestRunPreviewWritesExactHTMLPreviewFile(t *testing.T) {
-	oldCfg, oldLog := cfg, log
+func TestRunPreviewWritesExactConverterHTML(t *testing.T) {
+	oldCfg, oldLog, oldJSON := cfg, log, jsonOutput
 	oldMode, oldTheme := previewMode, previewTheme
 	oldFont, oldBackground := previewFontSize, previewBackgroundType
 	oldOutput := previewOutput
@@ -23,7 +24,7 @@ func TestRunPreviewWritesExactHTMLPreviewFile(t *testing.T) {
 	oldCover, oldUpload, oldDraft := previewCover, previewUpload, previewDraft
 	oldNewConverter := newMarkdownConverter
 	t.Cleanup(func() {
-		cfg, log = oldCfg, oldLog
+		cfg, log, jsonOutput = oldCfg, oldLog, oldJSON
 		previewMode, previewTheme = oldMode, oldTheme
 		previewFontSize, previewBackgroundType = oldFont, oldBackground
 		previewOutput = oldOutput
@@ -34,62 +35,86 @@ func TestRunPreviewWritesExactHTMLPreviewFile(t *testing.T) {
 
 	cfg = &config.Config{MD2WechatAPIKey: "api-key"}
 	log = zap.NewNop()
+	jsonOutput = true
 	previewMode = "api"
 	previewTheme = "default"
 	previewFontSize = "medium"
 	previewBackgroundType = "none"
-	previewOutput = filepath.Join(t.TempDir(), "preview.html")
+	outputFile := filepath.Join(t.TempDir(), "preview.html")
+	previewOutput = outputFile
 	previewTitle = ""
 	previewAuthor = ""
 	previewDigest = ""
 	previewCover = ""
 	previewUpload = false
 	previewDraft = false
+	convertedHTML := "\n<!doctype html>\n<section data-contract=\"纯净预览\">\n  <p>保留这些字节。</p>\n</section>\n"
 	newMarkdownConverter = func() converter.Converter {
 		return &fakeConverter{
 			result: &converter.ConvertResult{
 				Success: true,
 				Mode:    converter.ModeAPI,
 				Theme:   "default",
-				HTML:    "<p>exact preview</p>",
+				HTML:    convertedHTML,
 			},
 		}
 	}
 
 	markdownPath := filepath.Join(t.TempDir(), "article.md")
-	if err := os.WriteFile(markdownPath, []byte("# 标题\n\n正文"), 0600); err != nil {
+	markdown := "# PREVIEW_SOURCE_SENTINEL\n\nOriginal Markdown must not leak."
+	if err := os.WriteFile(markdownPath, []byte(markdown), 0600); err != nil {
 		t.Fatalf("write markdown: %v", err)
 	}
 
-	result, render, err := runPreview(markdownPath)
-	if err != nil {
-		t.Fatalf("runPreview() error = %v", err)
+	stdout := captureStdout(t, func() {
+		if err := previewCmd.RunE(previewCmd, []string{markdownPath}); err != nil {
+			t.Fatalf("preview RunE() error = %v", err)
+		}
+	})
+	var response map[string]any
+	if err := json.Unmarshal(stdout, &response); err != nil {
+		t.Fatalf("unmarshal response: %v\n%s", err, stdout)
 	}
-	if render["fidelity"] != "exact" || render["exact_html"] != true {
+	if response["code"] != codePreviewReady || response["status"] != string(action.StatusCompleted) {
+		t.Fatalf("response = %#v", response)
+	}
+	responseData, _ := response["data"].(map[string]any)
+	if responseData["output_file"] != outputFile {
+		t.Fatalf("output_file = %#v, want %q", responseData["output_file"], outputFile)
+	}
+	if _, ok := responseData["inspect"].(map[string]any); !ok {
+		t.Fatalf("inspect diagnostics missing: %#v", responseData)
+	}
+	render, _ := responseData["render"].(map[string]any)
+	if render["fidelity"] != inspectpkg.PreviewFidelityExact || render["exact_html"] != true {
 		t.Fatalf("render = %#v", render)
 	}
-	if result.Metadata.Title.Value != "标题" {
-		t.Fatalf("title = %#v", result.Metadata.Title)
-	}
 
-	data, err := os.ReadFile(previewOutput)
+	data, err := os.ReadFile(outputFile)
 	if err != nil {
 		t.Fatalf("read preview: %v", err)
 	}
-	content := string(data)
-	if !strings.Contains(content, "<p>exact preview</p>") {
-		t.Fatalf("preview file missing exact HTML: %s", content)
+	if !bytes.Equal(data, []byte(convertedHTML)) {
+		t.Fatalf("preview bytes differ from converter HTML\n got: %q\nwant: %q", data, convertedHTML)
+	}
+	for _, forbidden := range []string{markdownPath, "Readiness", "<aside", "--panel", markdown} {
+		if bytes.Contains(data, []byte(forbidden)) {
+			t.Fatalf("preview contains wrapper/source content %q: %s", forbidden, data)
+		}
+	}
+	if previewOutput != "" {
+		t.Fatalf("previewOutput leaked explicit path %q", previewOutput)
 	}
 }
 
-func TestRunPreviewWritesDegradedPreviewForAIMode(t *testing.T) {
-	oldCfg, oldLog := cfg, log
+func TestRunPreviewAIRequestWritesNoFile(t *testing.T) {
+	oldCfg, oldLog, oldJSON := cfg, log, jsonOutput
 	oldMode, oldTheme := previewMode, previewTheme
 	oldFont, oldBackground := previewFontSize, previewBackgroundType
 	oldOutput := previewOutput
 	oldNewConverter := newMarkdownConverter
 	t.Cleanup(func() {
-		cfg, log = oldCfg, oldLog
+		cfg, log, jsonOutput = oldCfg, oldLog, oldJSON
 		previewMode, previewTheme = oldMode, oldTheme
 		previewFontSize, previewBackgroundType = oldFont, oldBackground
 		previewOutput = oldOutput
@@ -98,18 +123,20 @@ func TestRunPreviewWritesDegradedPreviewForAIMode(t *testing.T) {
 
 	cfg = &config.Config{}
 	log = zap.NewNop()
+	jsonOutput = true
 	previewMode = "ai"
 	previewTheme = "autumn-warm"
 	previewFontSize = "medium"
 	previewBackgroundType = "none"
-	previewOutput = filepath.Join(t.TempDir(), "preview-ai.html")
+	outputFile := filepath.Join(t.TempDir(), "preview-ai.html")
+	previewOutput = outputFile
 	newMarkdownConverter = func() converter.Converter {
 		return &fakeConverter{
 			result: &converter.ConvertResult{
 				Success: true,
 				Mode:    converter.ModeAI,
 				Status:  action.StatusActionRequired,
-				Prompt:  "do work",
+				Prompt:  "render this exact article",
 			},
 		}
 	}
@@ -119,24 +146,31 @@ func TestRunPreviewWritesDegradedPreviewForAIMode(t *testing.T) {
 		t.Fatalf("write markdown: %v", err)
 	}
 
-	_, render, err := runPreview(markdownPath)
-	if err != nil {
-		t.Fatalf("runPreview() error = %v", err)
+	stdout := captureStdout(t, func() {
+		if err := previewCmd.RunE(previewCmd, []string{markdownPath}); err != nil {
+			t.Fatalf("preview RunE() error = %v", err)
+		}
+	})
+	var response map[string]any
+	if err := json.Unmarshal(stdout, &response); err != nil {
+		t.Fatalf("unmarshal response: %v\n%s", err, stdout)
 	}
-	if render["fidelity"] != "degraded" || render["exact_html"] != false {
-		t.Fatalf("render = %#v", render)
+	if response["code"] != codePreviewActionRequired || response["status"] != string(action.StatusActionRequired) {
+		t.Fatalf("response = %#v", response)
 	}
-
-	data, err := os.ReadFile(previewOutput)
-	if err != nil {
-		t.Fatalf("read preview: %v", err)
+	data, _ := response["data"].(map[string]any)
+	if data["prompt"] != "render this exact article" || data["output_file"] != "" {
+		t.Fatalf("data = %#v", data)
 	}
-	if !strings.Contains(string(data), "AI mode currently yields a prompt/request instead of final HTML") {
-		t.Fatalf("preview file missing degraded message: %s", string(data))
+	if _, err := os.Stat(outputFile); !os.IsNotExist(err) {
+		t.Fatalf("preview file must not exist, stat error = %v", err)
+	}
+	if previewOutput != "" {
+		t.Fatalf("previewOutput leaked stale path %q", previewOutput)
 	}
 }
 
-func TestRunPreviewDegradesWhenAPIRenderFails(t *testing.T) {
+func TestRunPreviewAPIFailureWritesNoFile(t *testing.T) {
 	oldCfg, oldLog := cfg, log
 	oldMode, oldTheme := previewMode, previewTheme
 	oldFont, oldBackground := previewFontSize, previewBackgroundType
@@ -156,7 +190,8 @@ func TestRunPreviewDegradesWhenAPIRenderFails(t *testing.T) {
 	previewTheme = "default"
 	previewFontSize = "medium"
 	previewBackgroundType = "none"
-	previewOutput = filepath.Join(t.TempDir(), "preview-failed.html")
+	outputFile := filepath.Join(t.TempDir(), "preview-failed.html")
+	previewOutput = outputFile
 	newMarkdownConverter = func() converter.Converter {
 		return &fakeConverter{
 			result: &converter.ConvertResult{
@@ -172,27 +207,66 @@ func TestRunPreviewDegradesWhenAPIRenderFails(t *testing.T) {
 		t.Fatalf("write markdown: %v", err)
 	}
 
-	result, render, err := runPreview(markdownPath)
-	if err != nil {
-		t.Fatalf("runPreview() error = %v", err)
+	err := previewCmd.RunE(previewCmd, []string{markdownPath})
+	if err == nil {
+		t.Fatal("expected API conversion failure")
 	}
-	if result.Readiness.PreviewFidelity != "degraded" {
-		t.Fatalf("preview_fidelity = %q", result.Readiness.PreviewFidelity)
+	cliErr, ok := err.(*cliError)
+	if !ok || cliErr.Code != codePreviewFailed {
+		t.Fatalf("error = %#v", err)
 	}
-	if render["fidelity"] != "degraded" || render["exact_html"] != false || render["error"] != "upstream render failed" {
-		t.Fatalf("render = %#v", render)
+	if _, err := os.Stat(outputFile); !os.IsNotExist(err) {
+		t.Fatalf("preview file must not exist, stat error = %v", err)
+	}
+	if previewOutput != "" {
+		t.Fatalf("previewOutput leaked stale path %q", previewOutput)
+	}
+}
+
+func TestRunPreviewNilConverterResultWritesNoFile(t *testing.T) {
+	oldCfg, oldLog := cfg, log
+	oldMode, oldTheme := previewMode, previewTheme
+	oldFont, oldBackground := previewFontSize, previewBackgroundType
+	oldOutput := previewOutput
+	oldNewConverter := newMarkdownConverter
+	t.Cleanup(func() {
+		cfg, log = oldCfg, oldLog
+		previewMode, previewTheme = oldMode, oldTheme
+		previewFontSize, previewBackgroundType = oldFont, oldBackground
+		previewOutput = oldOutput
+		newMarkdownConverter = oldNewConverter
+	})
+
+	cfg = &config.Config{MD2WechatAPIKey: "api-key"}
+	log = zap.NewNop()
+	previewMode = "api"
+	previewTheme = "default"
+	previewFontSize = "medium"
+	previewBackgroundType = "none"
+	outputFile := filepath.Join(t.TempDir(), "preview-nil.html")
+	previewOutput = outputFile
+	newMarkdownConverter = func() converter.Converter {
+		return &fakeConverter{result: nil}
 	}
 
-	data, err := os.ReadFile(previewOutput)
-	if err != nil {
-		t.Fatalf("read preview: %v", err)
+	markdownPath := filepath.Join(t.TempDir(), "article.md")
+	if err := os.WriteFile(markdownPath, []byte("# 标题\n"), 0600); err != nil {
+		t.Fatalf("write markdown: %v", err)
 	}
-	content := string(data)
-	if !strings.Contains(content, "Preview degraded: exact HTML could not be rendered in the current environment.") {
-		t.Fatalf("preview file missing degraded banner: %s", content)
+
+	err := previewCmd.RunE(previewCmd, []string{markdownPath})
+	if err == nil {
+		t.Fatal("expected nil conversion failure")
 	}
-	if !strings.Contains(content, "Render error: upstream render failed") {
-		t.Fatalf("preview file missing render error: %s", content)
+	cliErr, ok := err.(*cliError)
+	if !ok || cliErr.Code != codePreviewFailed {
+		t.Fatalf("error = %#v", err)
+	}
+	if _, err := os.Stat(outputFile); !os.IsNotExist(err) {
+		t.Fatalf("preview file must not exist, stat error = %v", err)
+	}
+	if previewOutput != "" {
+		t.Fatalf("previewOutput leaked stale path %q", previewOutput)
 	}
 }
 
@@ -232,15 +306,23 @@ func TestRunPreviewUsesTempFileWhenOutputUnset(t *testing.T) {
 		t.Fatalf("write markdown: %v", err)
 	}
 
-	_, _, err := runPreview(markdownPath)
+	result, err := runPreview(markdownPath)
 	if err != nil {
 		t.Fatalf("runPreview() error = %v", err)
 	}
-	if previewOutput == "" {
-		t.Fatal("expected previewOutput to be populated")
+	if result.OutputFile == "" {
+		t.Fatal("expected temp output path")
 	}
-	if _, err := os.Stat(previewOutput); err != nil {
+	t.Cleanup(func() { _ = os.Remove(result.OutputFile) })
+	data, err := os.ReadFile(result.OutputFile)
+	if err != nil {
 		t.Fatalf("preview output stat: %v", err)
+	}
+	if string(data) != "<p>temp preview</p>" {
+		t.Fatalf("preview bytes = %q", data)
+	}
+	if previewOutput != "" {
+		t.Fatalf("previewOutput leaked temp path %q", previewOutput)
 	}
 }
 
@@ -280,7 +362,7 @@ func TestRunPreviewReturnsPreviewFailedForInvalidOutputPath(t *testing.T) {
 		t.Fatalf("write markdown: %v", err)
 	}
 
-	_, _, err := runPreview(markdownPath)
+	_, err := runPreview(markdownPath)
 	if err == nil {
 		t.Fatal("expected error for invalid output path")
 	}
@@ -290,6 +372,9 @@ func TestRunPreviewReturnsPreviewFailedForInvalidOutputPath(t *testing.T) {
 	}
 	if cliErr.Code != codePreviewFailed {
 		t.Fatalf("error code = %q", cliErr.Code)
+	}
+	if previewOutput != "" {
+		t.Fatalf("previewOutput leaked invalid path %q", previewOutput)
 	}
 }
 
@@ -918,7 +1003,7 @@ func TestRunPreviewRejectsInvalidMode(t *testing.T) {
 		t.Fatalf("write markdown: %v", err)
 	}
 
-	_, _, err := runPreview(markdownPath)
+	_, err := runPreview(markdownPath)
 	if err == nil {
 		t.Fatal("expected error for invalid preview mode")
 	}
