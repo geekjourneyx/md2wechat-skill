@@ -55,13 +55,13 @@ npm install -g @geekjourneyx/md2wechat
 如果你已经有稳定可用的 Go 环境，也可以：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.1.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.2.0
 ```
 
 如果以上都不适合，再走固定版本安装脚本：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.1.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install.sh | bash
 ```
 
 安装脚本默认会把 CLI 放到：
@@ -158,13 +158,13 @@ npm install -g @geekjourneyx/md2wechat
 如果你已经有 Go 环境，再把第一步改成：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.1.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.2.0
 ```
 
 如果以上都不适合，再把第一步改成：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.1.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install.sh | bash
 ```
 
 如果你懒得自己操作，也可以直接把下面的话发给 Claude Code / Codex / OpenCode：
@@ -173,8 +173,8 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.
 请先安装 md2wechat CLI，再安装 md2wechat skill，并验证版本和能力发现都正常。
 执行：
 1. 如果我是 mac 用户，先运行：brew install geekjourneyx/tap/md2wechat
-2. 如果我已经有稳定可用的 Go 环境，也可以改成：go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.1.0
-3. 如果以上两种都不适合，再运行：curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.1.0/install.sh | bash
+2. 如果我已经有稳定可用的 Go 环境，也可以改成：go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.2.0
+3. 如果以上两种都不适合，再运行：curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install.sh | bash
 4. 运行：npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 5. 如果我是通过 install.sh 安装的，再执行：export PATH="$HOME/.local/bin:$PATH"
 6. md2wechat version --json
@@ -188,7 +188,7 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.
 ```text
 请帮我安装 OpenClaw 版 md2wechat，并验证 skill 和 CLI 都可用。
 执行：
-1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.1.0/install-openclaw.sh | bash
+1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install-openclaw.sh | bash
 2. 先执行：export PATH="$HOME/.local/bin:$PATH"
 3. md2wechat version --json
 4. md2wechat config init
@@ -218,7 +218,7 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果你已经有 Go 环境，再改成：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.1.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.2.0
 md2wechat version --json
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 ```
@@ -226,7 +226,7 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果以上都不适合，再改成：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.1.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install.sh | bash
 export PATH="$HOME/.local/bin:$PATH"
 md2wechat version --json
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
@@ -644,13 +644,16 @@ md2wechat preview article.md
 区别是：
 
 - `inspect`：解释系统最终会怎么理解你的文章，包括标题/作者/摘要来源、H1 风险；`--json` 会在 `data.readiness.targets/blockers` 输出机器可读的 `convert/upload/draft` 目标状态和 blocker 映射，是发布前能否继续的真相源。
-- `preview`：转换成功时把 converter 返回的 HTML 原样写入本地；inspect 诊断只留在 JSON 响应中，不会包进 HTML。
+- `preview`：只在 API 转换成功时把 converter 返回的最终 HTML 原样写入本地；inspect 诊断只留在 JSON 响应中，不会包进 HTML。
+- `convert`：执行转换，并且只在显式传入 `--upload` / `--draft` 时执行对应远程副作用。
 
 `preview` 不是可编辑工作台，也不会触发上传、草稿或写回 Markdown。API 失败或 converter 返回空结果时命令返回 `PREVIEW_FAILED`，本次调用不会新建或覆盖错误页或 Markdown fallback；显式输出路径中的既有文件仍可能保留，但属于陈旧内容。
 
 ### Q14.6：为什么 `preview --mode ai` 不给最终视觉稿？
 
 因为当前 AI 模式返回的是 prompt / request，不是最终 HTML。为了避免误导，`preview --mode ai --json` 返回 `PREVIEW_ACTION_REQUIRED`、`status: action_required`、`data.inspect` 和 prompt；`output_file` 为空，本次调用不会新建或覆盖确认页或其他预览 HTML。显式输出路径中的既有文件仍可能保留，但不能视为本次结果。
+
+需要判断下一步是否可执行时使用 `inspect --json`，不要把 AI preview prompt 或已有输出文件当作 readiness 证据。
 
 ### Q14.7：为什么我传了 `--title` / `--author` / `--digest`，但正文显示看起来没变？
 
@@ -900,6 +903,8 @@ For complex bodies, pass raw body content with `layout render <name> --body-file
 ### What does "unknown layout module" in validate output mean?
 
 `layout validate` warns (does not error) for `:::module-name` blocks it does not recognize. This preserves forward compatibility with documents produced by newer CLI releases. Check the spelling with `md2wechat layout list --json`; if the document requires a module absent from the current embedded catalog, upgrade the CLI or replace it with a discovered module.
+
+Discovery JSON is emitted as one compact object plus a final newline. Pipe it through `jq` for human-readable indentation. Use `capabilities` for aggregate routing facts, `list` for lightweight selection, `show` for a full selected definition, and `render` for materialized prompt/layout output.
 
 ---
 

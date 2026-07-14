@@ -2,7 +2,7 @@
 name: md2wechat
 description: Convert Markdown to WeChat Official Account HTML, inspect supported providers/themes/prompts, generate article images, create drafts, write with creator styles, prepare title suggestions, and remove AI writing traces.
 homepage: https://github.com/geekjourneyx/md2wechat-skill
-metadata: {"clawdbot":{"emoji":"📝","requires":{"bins":["md2wechat"],"env":["WECHAT_APPID","WECHAT_SECRET"]},"install":[{"id":"brew","kind":"brew","formula":"geekjourneyx/tap/md2wechat","bins":["md2wechat"],"label":"Install md2wechat (brew)"},{"id":"go","kind":"go","module":"github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@latest","bins":["md2wechat"],"label":"Install md2wechat (go)"}]}}
+metadata: {"clawdbot":{"emoji":"📝","requires":{"bins":["md2wechat"]},"install":[{"id":"brew","kind":"brew","formula":"geekjourneyx/tap/md2wechat","bins":["md2wechat"],"label":"Install md2wechat (brew)"},{"id":"go","kind":"go","module":"github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.2.0","bins":["md2wechat"],"label":"Install md2wechat (go)"}]}}
 ---
 
 # md2wechat
@@ -27,6 +27,8 @@ Treat `convert --draft` and `create_image_post` as different publish targets, no
 ## Discovery First
 
 Use CLI discovery as the source of truth, but keep it scoped to the next decision. Do not run the full catalog for tasks that do not need provider, theme, prompt, or layout selection.
+
+Use `capabilities` for aggregate routing facts, resource `list` for lightweight selection fields, `show` for one full resource definition, and `render` for materialized prompt/layout output. JSON stdout is compact; use `jq` only when a human needs formatted output.
 
 Run the smallest useful discovery set:
 
@@ -110,7 +112,7 @@ Prefer a confirm-first workflow for article work:
 3. `md2wechat convert <article.md> ...`
 4. Add `--upload`, `--draft`, `--cover`, or `--cover-media-id` only when the user explicitly asks for upload or draft creation.
 
-`inspect` is the source-of-truth command for resolved metadata, readiness, and publish checks. In `--json` output, read `data.readiness.targets` and `data.readiness.blockers` before deciding whether `convert`, `upload`, or `draft` is blocked. If the requested target is blocked, stop and report the matching blockers; do not continue by guessing from legacy booleans or `checks` alone. Do not invent `data.agent_readiness`, `data.target_readiness`, `ArticleState`, state files, or a second readiness/state object. `preview` writes only byte-identical HTML from a successful converter result; with `--json`, inspect diagnostics are returned in `data.inspect` and are never wrapped into that file. It does not upload images, create drafts, or write back to Markdown. `convert --preview` is the convert-path preview flag and is not the same as the standalone `preview` command. On `PREVIEW_ACTION_REQUIRED` or `PREVIEW_FAILED`, this invocation does not create or overwrite preview HTML. With `--json`, `PREVIEW_ACTION_REQUIRED` returns an empty `data.output_file`. Any pre-existing explicit output path is stale and must not be treated as this invocation's result; use the returned prompt for host-Agent work or report the failure.
+`inspect` is the source-of-truth command for structured metadata, checks, readiness targets, and blockers. In `--json` output, read `data.readiness.targets` and `data.readiness.blockers` before deciding whether `convert`, `upload`, or `draft` is blocked. If the requested target is blocked, stop and report the matching blockers; do not continue by guessing from legacy booleans or `checks` alone. Do not invent `data.agent_readiness`, `data.target_readiness`, `ArticleState`, state files, or a second readiness/state object. `preview` writes only byte-identical final API HTML from a successful converter result; with `--json`, inspect diagnostics are returned in `data.inspect` and are never wrapped into that file. It does not upload images, create drafts, or write back to Markdown. `convert` performs conversion and only the explicitly requested upload/draft effects. `convert --preview` is the convert-path preview flag and is not the same as the standalone `preview` command. On `PREVIEW_ACTION_REQUIRED` or `PREVIEW_FAILED`, this invocation does not create or overwrite preview HTML. With `--json`, `PREVIEW_ACTION_REQUIRED` returns an empty `data.output_file`. Any pre-existing explicit output path is stale and must not be treated as this invocation's result; use the returned prompt for host-Agent work or report the failure.
 When the intended execution path is `convert --mode ai --custom-prompt ...`, run `inspect` with the same `--mode ai --custom-prompt ...` before trusting readiness.
 
 ## Formatting Protocol

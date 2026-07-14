@@ -120,6 +120,10 @@ md2wechat skills list --json
 md2wechat skills read md2wechat --json
 ```
 
+四层 discovery 各司其职：`capabilities` 返回聚合路由事实，`list` 返回轻量选择字段，`show` 返回单个资源的完整定义，`render` 物化 prompt 或 layout。JSON stdout 是单行紧凑对象并以换行结束；人类阅读时可在命令后加 `| jq`，不要要求 CLI 改成缩进输出。
+
+文章命令边界固定为：`inspect` 返回结构化 metadata、checks、readiness targets 和 blockers；`preview` 只把成功的 API converter 最终 HTML 原样写入文件；`convert` 执行转换，并且只在用户明确请求时执行 upload/draft 副作用。AI preview 返回 `PREVIEW_ACTION_REQUIRED` 且不创建输出文件，需要 readiness 时使用 `inspect --json`。
+
 这些命令适合 Claude Code、Codex、WorkBuddy、Kimi Work、Hermes Agent、OpenClaw 以及其他能调用本地 CLI 的 Agent 使用。
 
 Agent 可以据此判断：
@@ -205,10 +209,10 @@ md2wechat layout validate --file article.md --json
 
 | 命令 | 用途 |
 |---|---|
-| `inspect` | 检查文章元数据和发布 readiness |
+| `inspect` | 返回结构化 metadata、checks、readiness targets 和 blockers |
 | `advise` | 为已有文章推荐可选的最小增强动作 |
-| `preview` | 成功时原样写入 HTML；失败或 AI handoff 不新建或覆盖，既有输出视为陈旧内容 |
-| `convert` | Markdown 转微信 HTML，可选创建草稿 |
+| `preview` | 只写入成功 API 转换的最终 HTML；失败或 AI handoff 不新建或覆盖 |
+| `convert` | 转换 Markdown，并按显式请求执行 upload/draft 副作用 |
 | `write` | 从想法生成文章 |
 | `humanize` | 重写 AI 文章，支持 `authentic` 强度 |
 | `title suggest` | 生成公众号标题建议的 AI 请求 |

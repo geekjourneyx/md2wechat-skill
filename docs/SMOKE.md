@@ -64,6 +64,7 @@ md2wechat preview article.md --json
 - `inspect` 能返回最终 title / author / digest 来源、`data.readiness`、`data.checks`；`data.readiness.targets/blockers` 能表达目标是否 blocked 以及对应原因
 - 真实验证到 `TITLE_BODY_MISMATCH`、`DIGEST_METADATA_ONLY`、`IMAGE_REPLACEMENT_REQUIRES_UPLOAD_OR_DRAFT`
 - `preview` 在转换成功时写入字节一致的 converter HTML；AI handoff、API 失败和空结果在本次调用中均不新建或覆盖 HTML，既有显式输出不得冒充本次结果
+- `convert` 只有在显式请求 `--upload` / `--draft` 时进入远程副作用，并在任何远程调用前拒绝已知无效的 draft intent、cover 或本地资产
 
 结论：
 
@@ -252,6 +253,7 @@ unsupported file type
 当前 `inspect --json`、`preview --json` 等命令已验证：
 
 - stdout 只输出 JSON
+- JSON 是单行紧凑对象并以最终换行结束；人工检查时用 `jq` 格式化
 - 结构化输出不再混入配置 banner
 - `inspect --json` 的 Agent 决策字段位于 `data.readiness.targets/blockers`
 - `skills read md2wechat --json` 能读取当前二进制内置 SOP，避免 smoke Agent 依赖旧 README 或旧外部 skill

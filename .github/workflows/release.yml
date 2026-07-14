@@ -154,7 +154,7 @@ jobs:
           chmod +x "$binary"
           output="$("$binary" version --json)"
           printf '%s\n' "$output"
-          echo "$output" | grep -q "\"version\": \"${VERSION}\""
+          echo "$output" | grep -q "\"version\":\"${VERSION}\""
 
       - name: Smoke Homebrew archive from same artifact
         env:
@@ -170,7 +170,7 @@ jobs:
 
           output="$("${extract_dir}/md2wechat" version --json)"
           printf '%s\n' "$output"
-          echo "$output" | grep -q "\"version\": \"${VERSION}\""
+          echo "$output" | grep -q "\"version\":\"${VERSION}\""
 
       - name: Smoke npm package against same artifact
         env:
@@ -190,7 +190,7 @@ jobs:
           package_dir="$(npm root -g --prefix "$prefix_dir")/@geekjourneyx/md2wechat"
           output="$(node "${package_dir}/scripts/run.js" version --json)"
           printf '%s\n' "$output"
-          echo "$output" | grep -q "\"version\": \"${VERSION}\""
+          echo "$output" | grep -q "\"version\":\"${VERSION}\""
 
       - name: Smoke shell installer against same artifact
         env:
@@ -204,7 +204,7 @@ jobs:
           MD2WECHAT_INSTALL_DIR="$install_dir" \
           bash "${bundle_dir}/install.sh"
 
-          "${install_dir}/md2wechat" version --json | grep -q "\"version\": \"${VERSION}\""
+          "${install_dir}/md2wechat" version --json | grep -q "\"version\":\"${VERSION}\""
 
       - name: Smoke OpenClaw installer against same artifact
         env:
@@ -225,7 +225,7 @@ jobs:
 
           test -f "${home_dir}/.openclaw/skills/md2wechat/SKILL.md"
           test -x "${install_dir}/md2wechat"
-          PATH="${install_dir}:${PATH}" "${install_dir}/md2wechat" version --json | grep -q "\"version\": \"${VERSION}\""
+          PATH="${install_dir}:${PATH}" "${install_dir}/md2wechat" version --json | grep -q "\"version\":\"${VERSION}\""
 
   smoke-release-windows:
     needs: build-release

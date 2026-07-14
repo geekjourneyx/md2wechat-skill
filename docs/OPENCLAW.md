@@ -93,7 +93,7 @@ npm install -g @geekjourneyx/md2wechat
 或者：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.1.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.2.0
 ```
 
 这三种方式只安装 CLI，**不会自动把 OpenClaw skill 壳写入 `~/.openclaw/skills/md2wechat/`**。如果你还没装 skill 壳，请继续使用上面的 `npx clawhub@latest install md2wechat`，或者直接使用下面的一键脚本安装。
@@ -105,7 +105,7 @@ go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.1.0
 适合没有安装 clawhub 的用户：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.1.0/install-openclaw.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install-openclaw.sh | bash
 ```
 
 **脚本功能：**
@@ -122,7 +122,7 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.
 ```text
 请帮我安装 OpenClaw 版 md2wechat，并验证 skill 和 CLI 都可用。
 按这个顺序执行：
-1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.1.0/install-openclaw.sh | bash
+1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install-openclaw.sh | bash
 2. 先执行：export PATH="$HOME/.local/bin:$PATH"
 3. md2wechat version --json
 4. md2wechat config init
@@ -139,7 +139,7 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.
 
 ```bash
 # 1. 下载固定版本 release 资产
-VERSION=3.1.0
+VERSION=3.2.0
 # 按你的平台选择对应二进制，这里以 Linux amd64 为例
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-openclaw-skill.tar.gz
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-linux-amd64
@@ -179,7 +179,7 @@ md2wechat config validate
 ~/.config/md2wechat/config.yaml
 ```
 
-推荐在这里配置微信公众号凭证和图片服务，而不是继续维护 `openclaw.json` 里的 skill 环境变量。
+Discovery、inspect、preview 和无发布副作用的本地转换不要求微信公众号凭证。只有显式上传或创建草稿时才配置 `WECHAT_APPID` / `WECHAT_SECRET`；推荐写入这里，而不是把它们设成 `openclaw.json` 的全局 skill 环境要求。
 
 最小示例：
 
@@ -251,6 +251,8 @@ md2wechat themes list --json
 md2wechat prompts list --json
 ```
 
+`capabilities` 提供聚合路由事实；资源 `list` 提供轻量选择字段，选定后再用 `show` 读取完整定义，`render` 负责物化 prompt/layout。JSON stdout 是单行紧凑对象并以换行结束，需要人工查看时加 `| jq`。
+
 `skills read` 读取当前 CLI 二进制内置的核心 coding-agent SOP，用来确认运行时协议和 CLI 版本一致。OpenClaw 专用安装 metadata、ClawHub 安装资源和平台差异仍以 `~/.openclaw/skills/md2wechat/SKILL.md` 或仓库内 `platforms/openclaw/md2wechat/SKILL.md` 为准。
 
 如果你要选图片模型，优先看 `providers show <name> --json` 返回的 `supported_models`，不要凭记忆写死。
@@ -295,7 +297,7 @@ md2wechat --help
 ```text
 请帮我安装 OpenClaw 版 md2wechat，并验证 CLI、配置初始化和能力发现都正常。
 执行：
-1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.1.0/install-openclaw.sh | bash
+1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install-openclaw.sh | bash
 2. 先执行：export PATH="$HOME/.local/bin:$PATH"
 3. md2wechat version --json
 4. md2wechat config init
@@ -314,13 +316,13 @@ md2wechat --help
 brew upgrade geekjourneyx/tap/md2wechat
 
 # 如果 CLI 是通过 go install 安装的
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.1.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.2.0
 
 # ClawHub 方式
 clawhub update md2wechat
 
 # 脚本方式（会覆盖安装）
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.1.0/install-openclaw.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install-openclaw.sh | bash
 ```
 
 ### Q: 配置没生效？

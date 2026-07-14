@@ -29,13 +29,13 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果你已经有稳定可用的 Go 环境，也可以把第一步改成：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.1.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.2.0
 ```
 
 如果以上都不适合，再改成固定版本安装脚本：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.1.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install.sh | bash
 export PATH="$HOME/.local/bin:$PATH"
 md2wechat skills read md2wechat --json
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
@@ -168,8 +168,10 @@ md2wechat preview article.md --json
 
 注意：
 
-- `preview` 只在转换成功时生成静态文件，内容与 converter HTML 字节一致；不会写回 Markdown，也不会触发上传或草稿。
+- `inspect` 返回结构化 metadata、checks、readiness targets 和 blockers，是下一步能否执行的真相源。
+- `preview` 只在 API 转换成功时生成静态文件，内容与 converter 最终 HTML 字节一致；不会写回 Markdown，也不会触发上传或草稿。
 - `preview --mode ai --json` 返回 `PREVIEW_ACTION_REQUIRED`、`data.inspect` 和 prompt；AI handoff、API 失败或空结果都不会在本次调用中新建或覆盖预览 HTML。显式输出路径中的既有文件仍可能保留，但属于陈旧结果。
+- `convert` 负责转换；只有显式 `--upload` / `--draft` 才允许对应远程副作用。
 - `inspect` 的检查项会显式提示 `TITLE_BODY_MISMATCH`、`DIGEST_METADATA_ONLY`、`IMAGE_REPLACEMENT_REQUIRES_UPLOAD_OR_DRAFT` 这类语义边界，不要把它们当成转换失败。
 - 如果最终要走 `convert --mode ai --custom-prompt`，发布前检查也要运行 `inspect --mode ai --custom-prompt "..." --json`，否则 theme readiness 不是同一个执行上下文。
 - `--title` / `--author` / `--digest` 作用于微信草稿 metadata；正文里是否显示 H1、作者、摘要，仍取决于 Markdown 正文和转换结果。

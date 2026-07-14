@@ -19,13 +19,13 @@ brew install geekjourneyx/tap/md2wechat
 如果你不用 Homebrew，再执行：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.1.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install.sh | bash
 ```
 
 Windows PowerShell：
 
 ```powershell
-$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.1.0"
+$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0"
 iex ((New-Object System.Net.WebClient).DownloadString("$env:MD2WECHAT_RELEASE_BASE_URL/install.ps1"))
 ```
 
@@ -73,7 +73,7 @@ api:
 ```
 
 默认主题和默认写作风格已经随二进制内置，不需要额外拷贝 `themes/` 或 `writers/` 目录。
-如果你要自定义它们，按优先级放到项目目录、`~/.config/md2wechat/...`，或者显式设置 `MD2WECHAT_THEMES_DIR` / `MD2WECHAT_WRITERS_DIR`。
+如果你要自定义主题，同名覆盖优先级是用户目录 `~/.config/md2wechat/themes` > 项目目录 `./themes` > `MD2WECHAT_THEMES_DIR` > 内置主题。writer style 的顺序单独见 [配置参考](CONFIG.md)。
 
 ### 3. 预览 Markdown
 
@@ -85,9 +85,9 @@ md2wechat convert article.md --preview
 
 建议顺序：
 
-1. 先跑 `inspect --json`，确认最终标题、摘要、H1 风险；需要上传或草稿时读取 `data.readiness.targets/blockers`
-2. 再跑 `preview`；转换成功时拿到原样 converter HTML，action-required 或失败时本次调用不新建或覆盖文件（既有显式输出属于陈旧内容）
-3. 最后再执行 `convert` / `--draft`
+1. 先跑 `inspect --json`，读取结构化 metadata、checks、readiness targets 和 blockers
+2. 再跑 `preview`；只有 API 转换成功时才会写入原样最终 HTML，AI 模式返回 `PREVIEW_ACTION_REQUIRED` 且没有输出文件
+3. 最后再执行 `convert`；只有用户明确要求时才加 `--upload` / `--draft`
 
 ### 4. 创建微信草稿
 

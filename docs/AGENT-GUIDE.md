@@ -33,6 +33,8 @@ md2wechat capabilities --json
 
 只有在命令能力、默认模式或版本边界不确定时才需要先跑此命令。
 
+Discovery 层级固定为：`capabilities` 提供聚合路由事实；资源 `list` 提供轻量选择字段；`show` 提供单个资源的完整定义；`render` 物化 prompt 或 layout。所有 `--json` stdout 都是单行紧凑对象并以换行结束，需要人工排版时使用 `| jq`。
+
 ### 1.1.1 读取当前二进制内置 SOP
 
 ```bash
@@ -51,10 +53,10 @@ md2wechat skills read md2wechat --json
 md2wechat themes list --json
 ```
 
-列出所有当前可用的主题。主题遵循以下加载优先级：
-1. `MD2WECHAT_THEMES_DIR` 环境变量指向的目录
-2. `./themes` 本地目录
-3. `~/.config/md2wechat/themes` 用户目录
+列出所有当前可用的主题。同名主题的实际覆盖优先级从高到低为：
+1. `~/.config/md2wechat/themes` 用户目录
+2. `./themes` 项目目录
+3. `MD2WECHAT_THEMES_DIR` 环境变量指向的目录
 4. 内置主题资产
 
 当需要选择主题，或 Brand Profile / 用户指令指定了主题时，Agent 必须读取 `type` 和 `selectable`：API 模式只能选择 `type: api` 且 `selectable: true` 的主题；AI 模式只能选择 `type: ai` 且 `selectable: true` 的主题。使用 `md2wechat themes show <theme_name> --json` 查看单个主题的详细配置。
@@ -360,7 +362,7 @@ md2wechat preview article.md
 md2wechat preview article.md --output /path/to/preview.html
 ```
 
-在浏览器中打开预览，Agent 等待用户确认后才执行后续操作。
+命令职责不能互换：`inspect` 返回结构化 metadata、checks、readiness targets 和 blockers；`preview` 只把成功 API converter 的最终 HTML 原样写入文件；`convert` 执行转换，并且只按用户明确请求的 flags 执行 upload/draft 副作用。需要判断能否继续时先用 `inspect --json`，不要从 preview 文件推断 readiness。
 
 只有 `PREVIEW_READY` 才有本次调用可打开的 `output_file`，其内容与 converter HTML 字节一致。`PREVIEW_ACTION_REQUIRED` 的 `--json` 响应会返回 `data.inspect` 和 prompt；它与 `PREVIEW_FAILED` 都不会在本次调用中新建或覆盖预览 HTML。显式输出路径中的既有文件仍可能保留，但必须视为陈旧内容。
 
@@ -755,4 +757,4 @@ JSON envelope 格式（v1）：
 
 ---
 
-*最后更新：与 md2wechat v3.1.0 同步*
+*最后更新：与 md2wechat v3.2.0 同步*

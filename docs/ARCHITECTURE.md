@@ -97,6 +97,8 @@ md2wechat-skill 的核心目标不是“把 Markdown 变好看”，而是把文
 - inspect 诊断属于 JSON 响应，不得包进 preview HTML
 - 任何 metadata/source/checks 的业务判断都不应该只存在于 `preview`
 
+三个命令的产品边界是：`inspect` 只返回结构化 metadata、checks、readiness targets 和 blockers；`preview` 只写入成功 API converter 的最终 HTML；`convert` 负责转换，并按显式 flags 执行 upload/draft 副作用。AI converter 只提供 handoff prompt，因此 standalone preview 返回 `PREVIEW_ACTION_REQUIRED` 且不创建输出文件。
+
 ### `convert`
 
 1. 读取 Markdown
@@ -130,7 +132,7 @@ metadata 解析顺序：
 2. `internal/action/action.go`
    - 统一 `completed / action_required / failed`
 3. CLI JSON envelope
-   - 统一 `success / code / message / schema_version / status / retryable / data / error`
+   - 统一 `success / code / message / schema_version / status / retryable / data / error`，stdout 为单行紧凑 JSON 加最终换行
 4. `internal/inspect`
    - 统一 resolved metadata / source / readiness（含 targets/blockers 投影）/ checks
 5. `AssetPipeline`

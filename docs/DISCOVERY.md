@@ -4,6 +4,8 @@
 
 这组命令的定位不是替代 `--help`，而是提供**可机读、可枚举、可提前探测**的能力接口。
 
+Discovery 的责任分层是：`capabilities` 返回聚合路由事实；资源 `list` 返回轻量选择字段；`show` 返回单个资源的完整定义；`render` 返回物化后的 prompt 或 layout。所有 `--json` stdout 都是单行紧凑对象并以最终换行结束；人工阅读可使用 `md2wechat ... --json | jq`。
+
 ## 推荐使用方式
 
 对于 Agent、脚本或 CI，discovery 应服务于下一步决策，而不是每次任务都全量枚举。使用最小必要集合：
@@ -115,10 +117,11 @@ md2wechat preview article.md --json
 
 其中：
 
-- `inspect` 用来确认最终标题、作者、摘要来源，以及 `data.readiness.targets/blockers` 中的 `convert/upload/draft` 目标状态。
+- `inspect` 只负责结构化 metadata、checks、readiness targets 和 blockers，用来确认最终标题、作者、摘要来源及 `convert/upload/draft` 目标状态。
 - Agent 在决定是否继续 `convert`、`upload`、`draft` 前，必须用即将执行的 same publish target 运行 `inspect`，并读取 `inspect --json` 的 `data.readiness.targets` 和 `data.readiness.blockers`。
 - `inspect` 的 `checks` 会直接暴露语义边界，例如 `TITLE_BODY_MISMATCH`、`DIGEST_METADATA_ONLY`、`IMAGE_REPLACEMENT_REQUIRES_UPLOAD_OR_DRAFT`。
-- `preview` 只在转换成功后生成本地 HTML 文件，文件字节与 converter 返回的 HTML 完全一致；inspect 诊断只在 `--json` 响应的 `data.inspect` 中返回，不会混入 HTML。
+- `preview` 只在 API 转换成功后生成本地 HTML 文件，文件字节与 converter 返回的最终 HTML 完全一致；inspect 诊断只在 `--json` 响应的 `data.inspect` 中返回，不会混入 HTML。
+- `convert` 负责转换，并且只按显式 `--upload` / `--draft` 请求执行远程副作用。
 - `preview --mode ai` 返回 `PREVIEW_ACTION_REQUIRED`、`status: action_required` 和 prompt，`output_file` 为空；API 失败或空结果返回 `PREVIEW_FAILED`。这些调用不会新建或覆盖预览 HTML；如果显式输出路径已有文件，它仍可能保留陈旧内容，不得视为本次调用的结果。
 - `--json` 走稳定 machine-readable contract；stdout 只保留 JSON，便于 Agent 和脚本直接解析。
 
@@ -177,11 +180,11 @@ md2wechat themes show default --json
 md2wechat themes show autumn-warm --json
 ```
 
-主题信息来自运行时 ThemeManager，遵循当前加载优先级：
+主题信息来自运行时 ThemeManager。同名主题的实际覆盖优先级从高到低为：
 
-1. `MD2WECHAT_THEMES_DIR`
+1. `~/.config/md2wechat/themes`
 2. `./themes`
-3. `~/.config/md2wechat/themes`
+3. `MD2WECHAT_THEMES_DIR`
 4. 内置 theme 资产
 
 这意味着纯二进制安装也能列出官方默认主题，用户和平台仍可通过目录覆盖内置主题。

@@ -217,9 +217,9 @@ md2wechat convert article.md --mode api
 
 `themes` 的优先级从高到低如下：
 
-1. `MD2WECHAT_THEMES_DIR`
+1. `~/.config/md2wechat/themes/`
 2. 当前项目目录下的 `themes/`
-3. `~/.config/md2wechat/themes/`
+3. `MD2WECHAT_THEMES_DIR`
 4. 二进制内置的官方默认 themes
 
 同名主题以前面的来源覆盖后面的来源。
