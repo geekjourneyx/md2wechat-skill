@@ -50,21 +50,27 @@ md2wechat 把公众号发布流程拆成一组可验证的 CLI 命令：
 
 ```bash
 npm install -g @geekjourneyx/md2wechat
-md2wechat config init
+md2wechat version --json
+md2wechat config init --json
+md2wechat config validate --json
 ```
 
-确认文章状态：
+API 模式预览和转换需要 md2wechat API Key；完成详细凭证配置后，先检查文章，再把 HTML 明确写入本地文件：
 
 ```bash
 md2wechat inspect article.md --json
-md2wechat preview article.md
+md2wechat preview article.md --output preview.html
+md2wechat convert article.md --output article.html
 ```
 
-转换并创建微信草稿：
+以上命令不会上传图片或创建草稿。需要创建微信草稿时，先按同一目标检查，再显式执行副作用：
 
 ```bash
+md2wechat inspect article.md --draft --cover cover.jpg --json
 md2wechat convert article.md --draft --cover cover.jpg
 ```
+
+如果使用可选的 `--wechat-account`，必须在 `inspect` 和 `convert` 两条命令中传入同一个账号名。
 
 安装方式、微信凭证和 IP 白名单配置见：
 
@@ -82,9 +88,8 @@ API 模式适合需要稳定输出、多人协作、批量发布或 Agent 自动
 |---|---|---|
 | 输出方式 | 生成 prompt，由外部 LLM 继续处理 | 直接返回微信 HTML |
 | 主题 | 3 个基础主题 | 48 个专业主题 |
-| 高级排版模块 | 不支持 | 53 个推荐 `:::module` 语法 |
-| 输出一致性 | 取决于外部 LLM | 同样输入得到同样输出 |
-| 响应速度 | 取决于外部 LLM | 秒级 |
+| 高级排版模块 | 不解析，`:::module` 作为普通段落输出 | API renderer 解析 53 个推荐 `:::module` 语法 |
+| 转换结果 | 需要外部 LLM 完成 HTML | converter 成功时返回最终 HTML |
 | 发布自动化 | 适合实验 | 适合团队、客户号、矩阵号 |
 
 专业能力包括：
@@ -120,7 +125,7 @@ md2wechat skills list --json
 md2wechat skills read md2wechat --json
 ```
 
-四层 discovery 各司其职：`capabilities` 返回聚合路由事实，`list` 返回轻量选择字段，`show` 返回单个资源的完整定义，`render` 物化 prompt 或 layout。JSON stdout 是单行紧凑对象并以换行结束；人类阅读时可在命令后加 `| jq`，不要要求 CLI 改成缩进输出。
+按任务选择 discovery：用 `capabilities` 获取聚合路由事实，用资源的 `list` 做选择，用 `show` 查看单个资源的完整定义，仅在该资源支持时使用 `render`。JSON stdout 是单行紧凑对象并以换行结束；人类阅读时可在命令后加 `| jq`，不要要求 CLI 改成缩进输出。
 
 文章命令边界固定为：`inspect` 返回结构化 metadata、checks、readiness targets 和 blockers；`preview` 只把成功的 API converter 最终 HTML 原样写入文件；`convert` 执行转换，并且只在用户明确请求时执行 upload/draft 副作用。AI preview 返回 `PREVIEW_ACTION_REQUIRED` 且不创建输出文件，需要 readiness 时使用 `inspect --json`。
 
@@ -165,7 +170,7 @@ md2wechat generate_cover --article article.md --plan --json
 md2wechat generate_infographic --article article.md --plan --json
 ```
 
-计划模式返回 `IMAGE_PLAN_READY`，不请求图片 provider，不要求 `IMAGE_API_KEY`，也不会上传到微信。适合 Codex、WorkBuddy、Kimi Work、Hermes Agent 等运行时已经暴露 Image Gen 工具的 Agent。详见 [docs/AGENT_IMAGE_GEN.md](docs/AGENT_IMAGE_GEN.md)。
+计划模式返回 `IMAGE_PLAN_READY`，不请求图片 provider，不要求 `IMAGE_API_KEY`，也不会上传到微信。仅当当前宿主运行时实际暴露 Image Gen 工具时，Agent 才能继续执行图片生成。详见 [docs/AGENT_IMAGE_GEN.md](docs/AGENT_IMAGE_GEN.md)。
 
 ---
 
@@ -193,6 +198,8 @@ md2wechat layout show hero --json
 md2wechat layout validate --file article.md --json
 ```
 
+本地 `layout validate` 只验证语法，不能证明远端 renderer 已部署；需要通过 API `preview` 或 `convert` 验证实际渲染。
+
 <p align="center">
 <img src="assets/theme-showcase/theme-showcase-default.png" alt="default 主题效果" width="180" />
 <img src="assets/theme-showcase/theme-showcase-bytedance.png" alt="bytedance 主题效果" width="180" />
@@ -219,6 +226,7 @@ md2wechat layout validate --file article.md --json
 | `generate_cover` | 生成封面图或图片计划 |
 | `generate_infographic` | 生成信息图或图片计划 |
 | `upload_image` | 上传图片到微信素材库 |
+| `create_image_post` | 创建微信图片消息（小绿书/newspic） |
 | `config wechat-accounts` | 查看本地多公众号账号配置 |
 | `doctor` | 本地配置体检 |
 
@@ -231,6 +239,7 @@ md2wechat layout validate --file article.md --json
 | [QUICKSTART](docs/QUICKSTART.md) | 新手主路径 |
 | [USAGE](docs/USAGE.md) | 命令完整说明 |
 | [DISCOVERY](docs/DISCOVERY.md) | Agent discovery 契约 |
+| [WORKBUDDY](docs/WORKBUDDY.md) | WorkBuddy 安装、检查、预览与草稿确认流程 |
 | [ADVISE](docs/ADVISE.md) | 已有文章的可选增强建议 |
 | [LAYOUT](docs/LAYOUT.md) | 高级排版模块教程与 discovery 用法 |
 | [HUMANIZE](docs/HUMANIZE.md) | AI 去痕与 authentic 写作 |
