@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Validated draft intent, local assets, image-post inputs, and cover requirements before authentication or remote upload/create calls, preventing known-invalid requests from causing partial side effects.
 - Added article-specific API-key readiness blockers to `inspect --json` so confirmation and execution reject the same publish path.
 
+### Breaking Changes
+- Changed `capabilities --json` fields `data.providers`, `data.themes`, and `data.prompts` from resource arrays to aggregate summary objects. Resource `list --json` responses now contain only the lightweight fields needed to select the next command.
+
+### Migration Guide
+- Read aggregate counts and routing facts from `capabilities --json`, select a resource with its `list --json` command, then use `show --json` or `render --json` when the full definition or materialized content is required. No compatibility flag is provided for the previous verbose shape.
+- The outer JSON envelope remains at `schema_version: "v1"`; that version identifies the shared response envelope and does not guarantee that every command-specific `data` payload is immutable across releases.
+
 ## [3.1.0] - 2026-07-13
 
 ### Added

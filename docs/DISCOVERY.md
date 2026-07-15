@@ -2,6 +2,8 @@
 
 `md2wechat` 提供了一组面向 Agent 和自动化脚本的发现命令，用来在执行前先确认当前 CLI 支持什么能力、有哪些可用资源、当前配置是否就绪。
 
+> v3.2 迁移：`capabilities --json` 的 `data.providers`、`data.themes`、`data.prompts` 已从资源数组改为聚合 summary object；各资源的 `list --json` 只返回轻量选择字段，完整定义或渲染结果请使用 `show --json` / `render --json`。外层 `schema_version: "v1"` 仅标识统一响应 envelope，不表示每个命令的 `data` payload 永不演进。
+
 这组命令的定位不是替代 `--help`，而是提供**可机读、可枚举、可提前探测**的能力接口。
 
 Discovery 的责任分层是：`capabilities` 返回聚合路由事实；资源 `list` 返回轻量选择字段；`show` 返回单个资源的完整定义；`render` 返回物化后的 prompt 或 layout。所有 `--json` stdout 都是单行紧凑对象并以最终换行结束；人工阅读可使用 `md2wechat ... --json | jq`。

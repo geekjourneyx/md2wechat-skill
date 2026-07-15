@@ -85,6 +85,8 @@ brew upgrade geekjourneyx/tap/md2wechat
 
 这个路径只安装 CLI 本身，不会运行远程 installer。Homebrew formula 会直接下载当前版本对应平台的预编译归档并安装 `md2wechat`。
 
+维护者在发布 GitHub Release 后，使用同一批版本化归档运行 `scripts/generate-homebrew-formula.sh`，再手动提交并推送 tap formula；Release workflow 不自动写入 tap 仓库。
+
 ---
 
 ## 方式三：Go install（已有 Go 环境时可选）

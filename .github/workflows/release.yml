@@ -168,6 +168,27 @@ jobs:
           printf '%s\n' "$output"
           echo "$output" | grep -q "\"version\":\"${VERSION}\""
 
+      - name: Smoke generated Homebrew formula from same artifact
+        env:
+          VERSION: ${{ needs.build-release.outputs.version }}
+        run: |
+          bundle_dir="${GITHUB_WORKSPACE}/release-artifact"
+          formula_path="$(mktemp)"
+          release_base_url="https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}"
+
+          scripts/generate-homebrew-formula.sh \
+            --version "${VERSION}" \
+            --base-url "${release_base_url}" \
+            --darwin-arm64-sha "$(sha256sum "${bundle_dir}/md2wechat_Darwin_arm64.tar.gz" | awk '{print $1}')" \
+            --darwin-x86-64-sha "$(sha256sum "${bundle_dir}/md2wechat_Darwin_x86_64.tar.gz" | awk '{print $1}')" \
+            --linux-arm64-sha "$(sha256sum "${bundle_dir}/md2wechat_Linux_arm64.tar.gz" | awk '{print $1}')" \
+            --linux-x86-64-sha "$(sha256sum "${bundle_dir}/md2wechat_Linux_x86_64.tar.gz" | awk '{print $1}')" \
+            --output "${formula_path}"
+
+          grep -Fq "version \"${VERSION}\"" "${formula_path}"
+          grep -Fq "${release_base_url}" "${formula_path}"
+          ! grep -Eq '/latest/|/main/' "${formula_path}"
+
       - name: Smoke npm package against same artifact
         env:
           VERSION: ${{ needs.build-release.outputs.version }}
@@ -342,70 +363,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  update-homebrew-tap:
-    needs:
-      - build-release
-      - release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check tap token
-        env:
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
-        run: |
-          if [ -z "${HOMEBREW_TAP_GITHUB_TOKEN}" ]; then
-            echo "HOMEBREW_TAP_GITHUB_TOKEN is required to update geekjourneyx/homebrew-tap" >&2
-            exit 1
-          fi
-
-      - name: Checkout source repository
-        uses: actions/checkout@v4
-
-      - name: Download release bundle
-        uses: actions/download-artifact@v4
-        with:
-          name: md2wechat-release-${{ needs.build-release.outputs.version }}
-          path: release-artifact
-
-      - name: Checkout tap repository
-        uses: actions/checkout@v4
-        with:
-          repository: geekjourneyx/homebrew-tap
-          token: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
-          path: homebrew-tap
-
-      - name: Generate formula
-        env:
-          VERSION: ${{ needs.build-release.outputs.version }}
-        run: |
-          release_base_url="https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}"
-          formula_path="${GITHUB_WORKSPACE}/homebrew-tap/Formula/md2wechat.rb"
-
-          mkdir -p "$(dirname "${formula_path}")"
-
-          scripts/generate-homebrew-formula.sh \
-            --version "${VERSION}" \
-            --base-url "${release_base_url}" \
-            --darwin-arm64-sha "$(sha256sum release-artifact/md2wechat_Darwin_arm64.tar.gz | awk '{print $1}')" \
-            --darwin-x86-64-sha "$(sha256sum release-artifact/md2wechat_Darwin_x86_64.tar.gz | awk '{print $1}')" \
-            --linux-arm64-sha "$(sha256sum release-artifact/md2wechat_Linux_arm64.tar.gz | awk '{print $1}')" \
-            --linux-x86-64-sha "$(sha256sum release-artifact/md2wechat_Linux_x86_64.tar.gz | awk '{print $1}')" \
-            --output "${formula_path}"
-
-      - name: Commit and push tap update
-        working-directory: homebrew-tap
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          if git diff --quiet -- Formula/md2wechat.rb; then
-            echo "Formula already up to date"
-            exit 0
-          fi
-
-          git add Formula/md2wechat.rb
-          git commit -m "md2wechat v${{ needs.build-release.outputs.version }}"
-          git push origin HEAD:main
-
   publish-npm:
     needs:
       - build-release
@@ -414,15 +371,6 @@ jobs:
       - release
     runs-on: ubuntu-latest
     steps:
-      - name: Check npm token
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -z "${NPM_TOKEN}" ]; then
-            echo "NPM_TOKEN is required to publish @geekjourneyx/md2wechat" >&2
-            exit 1
-          fi
-
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -442,7 +390,37 @@ jobs:
             exit 1
           fi
 
+      - name: Check whether npm version already exists
+        id: npm_version
+        env:
+          VERSION: ${{ needs.build-release.outputs.version }}
+        run: |
+          if published_version="$(npm view "@geekjourneyx/md2wechat@${VERSION}" version 2>/dev/null)"; then
+            if [ "${published_version}" != "${VERSION}" ]; then
+              echo "npm returned version ${published_version}, expected ${VERSION}" >&2
+              exit 1
+            fi
+            echo "exists=true" >> "${GITHUB_OUTPUT}"
+            echo "@geekjourneyx/md2wechat@${VERSION} already exists; skipping publish"
+          else
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Check npm token
+        if: steps.npm_version.outputs.exists != 'true'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "${NPM_TOKEN}" ]; then
+            echo "NPM_TOKEN is required to publish @geekjourneyx/md2wechat" >&2
+            exit 1
+          fi
+
       - name: Publish npm package
+        if: steps.npm_version.outputs.exists != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public
+
+      - name: Sync npmmirror
+        run: npx cnpm sync @geekjourneyx/md2wechat

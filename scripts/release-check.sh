@@ -95,6 +95,9 @@ grep -q 'npm pack' .github/workflows/release.yml || fail "release workflow must 
 grep -q 'npm install -g' .github/workflows/release.yml || fail "release workflow must smoke npm global install"
 grep -q 'npm publish --access public' .github/workflows/release.yml || fail "release workflow must publish the npm package"
 grep -q 'NPM_TOKEN' .github/workflows/release.yml || fail "release workflow must require NPM_TOKEN for npm publish"
+grep -Fq 'npm view "@geekjourneyx/md2wechat@${VERSION}" version' .github/workflows/release.yml || fail "release workflow must check whether the exact npm version already exists"
+[[ "$(grep -Fc "if: steps.npm_version.outputs.exists != 'true'" .github/workflows/release.yml)" -eq 2 ]] || fail "release workflow must condition both token validation and npm publish on a missing version"
+grep -Fq 'npx cnpm sync @geekjourneyx/md2wechat' .github/workflows/release.yml || fail "release workflow must sync npmmirror after an idempotent npm publish"
 grep -q 'install.sh' .github/workflows/release.yml || fail "release workflow must publish install.sh"
 grep -q 'install.ps1' .github/workflows/release.yml || fail "release workflow must publish install.ps1"
 grep -q 'install-openclaw.ps1' .github/workflows/release.yml || fail "release workflow must publish install-openclaw.ps1"
@@ -106,7 +109,8 @@ grep -q 'md2wechat_Linux_x86_64.tar.gz' .github/workflows/release.yml || fail "r
 grep -q 'platforms/openclaw/md2wechat' .github/workflows/release.yml || fail "release workflow must package the OpenClaw-specific skill"
 grep -q 'version --json' .github/workflows/release.yml || fail "release workflow must smoke version --json"
 grep -q 'MD2WECHAT_RELEASE_BASE_URL' .github/workflows/release.yml || fail "release workflow must smoke the installers from the same bundle"
-grep -q 'HOMEBREW_TAP_GITHUB_TOKEN' .github/workflows/release.yml || fail "release workflow must update the tap repository with HOMEBREW_TAP_GITHUB_TOKEN"
+! grep -q '^  update-homebrew-tap:' .github/workflows/release.yml || fail "release workflow must not automatically update the Homebrew tap"
+! grep -q 'HOMEBREW_TAP_GITHUB_TOKEN' .github/workflows/release.yml || fail "release workflow must not require a Homebrew tap write token"
 grep -q 'generate-homebrew-formula.sh' .github/workflows/release.yml || fail "release workflow must generate the Homebrew formula via scripts/generate-homebrew-formula.sh"
 if ! node - <<'NODE'
 const fs = require('fs');
