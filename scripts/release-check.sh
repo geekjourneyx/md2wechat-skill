@@ -109,8 +109,8 @@ grep -q 'md2wechat_Linux_x86_64.tar.gz' .github/workflows/release.yml || fail "r
 grep -q 'platforms/openclaw/md2wechat' .github/workflows/release.yml || fail "release workflow must package the OpenClaw-specific skill"
 grep -q 'version --json' .github/workflows/release.yml || fail "release workflow must smoke version --json"
 grep -q 'MD2WECHAT_RELEASE_BASE_URL' .github/workflows/release.yml || fail "release workflow must smoke the installers from the same bundle"
-! grep -q '^  update-homebrew-tap:' .github/workflows/release.yml || fail "release workflow must not automatically update the Homebrew tap"
-! grep -q 'HOMEBREW_TAP_GITHUB_TOKEN' .github/workflows/release.yml || fail "release workflow must not require a Homebrew tap write token"
+grep -q '^  update-homebrew-tap:' .github/workflows/release.yml || fail "release workflow must automatically update the Homebrew tap"
+grep -q 'HOMEBREW_TAP_GITHUB_TOKEN' .github/workflows/release.yml || fail "release workflow must use HOMEBREW_TAP_GITHUB_TOKEN for tap updates"
 grep -q 'generate-homebrew-formula.sh' .github/workflows/release.yml || fail "release workflow must generate the Homebrew formula via scripts/generate-homebrew-formula.sh"
 if ! node - <<'NODE'
 const fs = require('fs');
