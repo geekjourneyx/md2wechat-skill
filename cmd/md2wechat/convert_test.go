@@ -1119,6 +1119,104 @@ func TestHandleAIResultWritesPromptToPromptFileInsteadOfHTML(t *testing.T) {
 	}
 }
 
+func TestHandleAIResultWriteFailureReturnsBeforeActionRequired(t *testing.T) {
+	oldLog, oldJSON, oldOutput := log, jsonOutput, convertOutput
+	t.Cleanup(func() {
+		log, jsonOutput, convertOutput = oldLog, oldJSON, oldOutput
+	})
+	log = zap.NewNop()
+	jsonOutput = true
+	convertOutput = filepath.Join(t.TempDir(), "missing", "result.html")
+	result := &converter.ConvertResult{Error: "AI_MODE_REQUEST:prompt body"}
+
+	stdout := captureStdout(t, func() {
+		err := handleAIResult(result, "article.md")
+		if err == nil {
+			t.Fatal("handleAIResult() error = nil")
+		}
+		cliErr, ok := err.(*cliError)
+		if !ok || cliErr.Code != codeConvertFailed {
+			t.Fatalf("handleAIResult() error = %#v, want %s", err, codeConvertFailed)
+		}
+	})
+	if strings.Contains(string(stdout), codeConvertAIRequestReady) || strings.Contains(string(stdout), "action_required") {
+		t.Fatalf("stdout announced readiness before prompt write: %s", stdout)
+	}
+	if len(stdout) != 0 {
+		t.Fatalf("stdout = %q, want empty on prompt write failure", stdout)
+	}
+}
+
+func TestRunConvertOutputWriteFailureDoesNotReportCompletion(t *testing.T) {
+	oldCfg, oldLog, oldJSON := cfg, log, jsonOutput
+	oldMode, oldTheme, oldAPIKey := convertMode, convertTheme, convertAPIKey
+	oldFontSize, oldBackground := convertFontSize, convertBackgroundType
+	oldCustomPrompt, oldOutput := convertCustomPrompt, convertOutput
+	oldPreview, oldUpload, oldDraft := convertPreview, convertUpload, convertDraft
+	oldSaveDraft, oldCover, oldCoverMediaID := convertSaveDraft, convertCoverImage, convertCoverMediaID
+	oldTitle, oldAuthor, oldDigest := convertTitle, convertAuthor, convertDigest
+	oldNewConverter := newMarkdownConverter
+	t.Cleanup(func() {
+		cfg, log, jsonOutput = oldCfg, oldLog, oldJSON
+		convertMode, convertTheme, convertAPIKey = oldMode, oldTheme, oldAPIKey
+		convertFontSize, convertBackgroundType = oldFontSize, oldBackground
+		convertCustomPrompt, convertOutput = oldCustomPrompt, oldOutput
+		convertPreview, convertUpload, convertDraft = oldPreview, oldUpload, oldDraft
+		convertSaveDraft, convertCoverImage, convertCoverMediaID = oldSaveDraft, oldCover, oldCoverMediaID
+		convertTitle, convertAuthor, convertDigest = oldTitle, oldAuthor, oldDigest
+		newMarkdownConverter = oldNewConverter
+	})
+
+	cfg = &config.Config{MD2WechatAPIKey: "api-key"}
+	log = zap.NewNop()
+	jsonOutput = true
+	convertMode = "api"
+	convertTheme = "default"
+	convertAPIKey = "api-key"
+	convertFontSize = "medium"
+	convertBackgroundType = "none"
+	convertCustomPrompt = ""
+	convertOutput = filepath.Join(t.TempDir(), "missing", "out.html")
+	convertPreview = false
+	convertUpload = false
+	convertDraft = false
+	convertSaveDraft = ""
+	convertCoverImage = ""
+	convertCoverMediaID = ""
+	convertTitle = ""
+	convertAuthor = ""
+	convertDigest = ""
+	newMarkdownConverter = func() converter.Converter {
+		return &fakeConverter{result: &converter.ConvertResult{
+			Success: true,
+			Mode:    converter.ModeAPI,
+			Theme:   "default",
+			HTML:    "<p>body</p>",
+		}}
+	}
+	markdownPath := filepath.Join(t.TempDir(), "article.md")
+	if err := os.WriteFile(markdownPath, []byte("# Title\n\nBody"), 0600); err != nil {
+		t.Fatalf("write markdown: %v", err)
+	}
+
+	stdout := captureStdout(t, func() {
+		err := runConvert(nil, []string{markdownPath})
+		if err == nil {
+			t.Fatal("runConvert() error = nil")
+		}
+		cliErr, ok := err.(*cliError)
+		if !ok || cliErr.Code != codeConvertFailed {
+			t.Fatalf("runConvert() error = %#v, want %s", err, codeConvertFailed)
+		}
+	})
+	if strings.Contains(string(stdout), codeConvertCompleted) || strings.Contains(string(stdout), `"output_file"`) {
+		t.Fatalf("stdout reported a usable completed artifact: %s", stdout)
+	}
+	if len(stdout) != 0 {
+		t.Fatalf("stdout = %q, want empty on output write failure", stdout)
+	}
+}
+
 func TestRunConvertOutputsStableJSONEnvelopeWhenRequested(t *testing.T) {
 	oldCfg, oldLog := cfg, log
 	oldMode, oldTheme, oldAPIKey := convertMode, convertTheme, convertAPIKey

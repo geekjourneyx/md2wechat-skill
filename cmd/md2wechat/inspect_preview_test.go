@@ -492,6 +492,76 @@ func TestRunPreviewTempWriteFailureDoesNotCreateOrOverwriteExplicitOutput(t *tes
 	}
 }
 
+func TestRunPreviewRejectsEmptyHTMLWithoutTouchingExplicitOutput(t *testing.T) {
+	oldCfg, oldLog := cfg, log
+	oldMode, oldTheme := previewMode, previewTheme
+	oldFont, oldBackground := previewFontSize, previewBackgroundType
+	oldOutput := previewOutput
+	oldNewConverter := newMarkdownConverter
+	t.Cleanup(func() {
+		cfg, log = oldCfg, oldLog
+		previewMode, previewTheme = oldMode, oldTheme
+		previewFontSize, previewBackgroundType = oldFont, oldBackground
+		previewOutput = oldOutput
+		newMarkdownConverter = oldNewConverter
+	})
+
+	cfg = &config.Config{MD2WechatAPIKey: "api-key"}
+	log = zap.NewNop()
+	previewMode = "api"
+	previewTheme = "default"
+	previewFontSize = "medium"
+	previewBackgroundType = "none"
+	markdownPath := filepath.Join(t.TempDir(), "article.md")
+	if err := os.WriteFile(markdownPath, []byte("# Title\n"), 0600); err != nil {
+		t.Fatalf("write markdown: %v", err)
+	}
+
+	for _, tt := range []struct {
+		name     string
+		html     string
+		existing bool
+	}{
+		{name: "preserves existing destination for empty html", html: "", existing: true},
+		{name: "does not create destination for whitespace html", html: " \n\t "},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			outputFile := filepath.Join(t.TempDir(), "preview.html")
+			sentinel := []byte("PREEXISTING_SENTINEL")
+			if tt.existing {
+				if err := os.WriteFile(outputFile, sentinel, 0600); err != nil {
+					t.Fatalf("write sentinel: %v", err)
+				}
+			}
+			previewOutput = outputFile
+			newMarkdownConverter = func() converter.Converter {
+				return &fakeConverter{result: &converter.ConvertResult{
+					Success: true,
+					Mode:    converter.ModeAPI,
+					HTML:    tt.html,
+				}}
+			}
+
+			result, err := runPreview(markdownPath)
+			if err == nil {
+				t.Fatalf("runPreview() error = nil, result = %#v", result)
+			}
+			cliErr, ok := err.(*cliError)
+			if !ok || cliErr.Code != codePreviewFailed {
+				t.Fatalf("runPreview() error = %#v, want %s", err, codePreviewFailed)
+			}
+			data, readErr := os.ReadFile(outputFile)
+			if tt.existing {
+				if readErr != nil || !bytes.Equal(data, sentinel) {
+					t.Fatalf("destination changed: data=%q err=%v", data, readErr)
+				}
+			} else if !os.IsNotExist(readErr) {
+				t.Fatalf("destination was created: data=%q err=%v", data, readErr)
+			}
+		})
+	}
+}
+
 func TestInspectCommandStrictExitsWithCodeTwoWhenErrorsExist(t *testing.T) {
 	oldCfg, oldJSON, oldStrict := cfg, jsonOutput, inspectStrict
 	oldExit := exitFunc

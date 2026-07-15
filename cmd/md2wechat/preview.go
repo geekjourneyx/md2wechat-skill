@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/action"
 	"github.com/geekjourneyx/md2wechat-skill/internal/converter"
@@ -148,8 +149,12 @@ func runPreview(markdownFile string) (*previewRunResult, error) {
 		err := fmt.Errorf("%s", message)
 		return nil, wrapCLIError(codePreviewFailed, err, err.Error())
 	}
+	if strings.TrimSpace(converted.HTML) == "" {
+		err := fmt.Errorf("preview conversion returned empty HTML")
+		return nil, wrapCLIError(codePreviewFailed, err, err.Error())
+	}
 
-	outputFile, err := writePreviewHTML(requestedOutput, []byte(converted.HTML))
+	outputFile, err := writeOutputFileAtomically(requestedOutput, []byte(converted.HTML))
 	if err != nil {
 		return nil, wrapCLIError(codePreviewFailed, err, err.Error())
 	}
@@ -157,7 +162,7 @@ func runPreview(markdownFile string) (*previewRunResult, error) {
 	return runResult, nil
 }
 
-func writePreviewHTML(outputFile string, data []byte) (string, error) {
+func writeOutputFileAtomically(outputFile string, data []byte) (string, error) {
 	explicitOutput := outputFile != ""
 	tempDir := ""
 	tempPattern := "md2wechat-preview-*.html"

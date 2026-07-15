@@ -172,6 +172,9 @@ func (a *apiConverter) Convert(req *APIRequest, apiKey string) (string, error) {
 			Message: fmt.Sprintf("API returned error code %d: %s", apiResp.Code, apiResp.Msg),
 		}
 	}
+	if strings.TrimSpace(apiResp.Data.HTML) == "" {
+		return "", fmt.Errorf("API returned empty HTML")
+	}
 
 	// 返回 HTML
 	return apiResp.Data.HTML, nil

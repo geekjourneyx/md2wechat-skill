@@ -2,6 +2,7 @@ package converter
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -354,6 +355,31 @@ func TestConvertViaAPIStripsFrontMatterBeforeSendingMarkdown(t *testing.T) {
 	}
 	if !strings.Contains(received.Markdown, "# Heading Title") || !strings.Contains(received.Markdown, "body") {
 		t.Fatalf("api request missing body content: %q", received.Markdown)
+	}
+}
+
+func TestAPIConverterRejectsSuccessfulResponseWithoutHTML(t *testing.T) {
+	for _, html := range []string{"", " \n\t "} {
+		t.Run(fmt.Sprintf("html_%q", html), func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"code": 0,
+					"msg":  "ok",
+					"data": map[string]any{"html": html},
+				})
+			}))
+			defer server.Close()
+
+			api := NewAPIConverterWithURL(zap.NewNop(), server.URL)
+			got, err := api.Convert(&APIRequest{Markdown: "# Title", Theme: "default"}, "api-key")
+			if err == nil {
+				t.Fatalf("Convert() error = nil, got HTML %q", got)
+			}
+			if got != "" {
+				t.Fatalf("Convert() HTML = %q, want empty on error", got)
+			}
+		})
 	}
 }
 

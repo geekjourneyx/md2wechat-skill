@@ -240,7 +240,9 @@ func TestOutputHTMLWritesFileAndResponseSuccessPrintsJSON(t *testing.T) {
 
 	log = zap.NewNop()
 	outputPath := filepath.Join(t.TempDir(), "out.html")
-	outputHTML("<p>body</p>", outputPath, false)
+	if err := outputHTML("<p>body</p>", outputPath, false); err != nil {
+		t.Fatalf("outputHTML() error = %v", err)
+	}
 
 	data, err := os.ReadFile(outputPath)
 	if err != nil {
@@ -296,7 +298,9 @@ func TestOutputHTMLPreviewWritesPureHTMLToStdout(t *testing.T) {
 	}
 	os.Stdout = w
 
-	outputHTML("<p>body</p>", "", true)
+	if err := outputHTML("<p>body</p>", "", true); err != nil {
+		t.Fatalf("outputHTML() error = %v", err)
+	}
 
 	if err := w.Close(); err != nil {
 		t.Fatalf("close stdout pipe writer: %v", err)

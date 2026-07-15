@@ -208,7 +208,9 @@ func runConvert(cmd *cobra.Command, args []string) error {
 		zap.Int("image_count", len(output.Artifact.Assets)))
 
 	if convertOutput != "" {
-		outputHTML(output.Artifact.HTML, convertOutput, false)
+		if err := outputHTML(output.Artifact.HTML, convertOutput, false); err != nil {
+			return wrapCLIError(codeConvertFailed, err, err.Error())
+		}
 	}
 
 	if jsonOutput {
@@ -234,7 +236,9 @@ func runConvert(cmd *cobra.Command, args []string) error {
 	}
 
 	// 输出 HTML
-	outputHTML(output.Artifact.HTML, "", convertPreview)
+	if err := outputHTML(output.Artifact.HTML, "", convertPreview); err != nil {
+		return wrapCLIError(codeConvertFailed, err, err.Error())
+	}
 
 	return nil
 }
@@ -276,15 +280,15 @@ func handleAIResult(result *converter.ConvertResult, markdownFile string) error 
 		response["requested_output_file"] = convertOutput
 	}
 
-	responseActionRequiredWith(codeConvertAIRequestReady, "Convert AI request prepared", response)
-
 	if promptOutputPath != "" {
-		if err := os.WriteFile(promptOutputPath, []byte(prompt), 0644); err != nil {
-			log.Warn("failed to save prompt", zap.Error(err))
-		} else {
-			log.Info("ai prompt saved", zap.String("file", promptOutputPath))
+		if _, err := writeOutputFileAtomically(promptOutputPath, []byte(prompt)); err != nil {
+			wrapped := fmt.Errorf("write AI prompt file: %w", err)
+			return wrapCLIError(codeConvertFailed, wrapped, wrapped.Error())
 		}
+		log.Info("ai prompt saved", zap.String("file", promptOutputPath))
 	}
+
+	responseActionRequiredWith(codeConvertAIRequestReady, "Convert AI request prepared", response)
 
 	return nil
 }
@@ -426,19 +430,21 @@ func uploadCoverImage(imagePath string) (string, error) {
 }
 
 // outputHTML 输出 HTML
-func outputHTML(html, outputPath string, preview bool) {
+func outputHTML(html, outputPath string, preview bool) error {
 	if preview || outputPath == "" {
 		// 预览模式或未指定输出，输出纯 HTML 到标准输出
 		if _, err := fmt.Fprint(os.Stdout, html); err != nil {
 			log.Error("failed to write html to stdout", zap.Error(err))
+			return fmt.Errorf("write HTML to stdout: %w", err)
 		}
 	}
 
 	if outputPath != "" {
-		if err := os.WriteFile(outputPath, []byte(html), 0644); err != nil {
+		if _, err := writeOutputFileAtomically(outputPath, []byte(html)); err != nil {
 			log.Error("failed to write output file", zap.Error(err))
-		} else {
-			log.Info("html saved", zap.String("file", outputPath))
+			return fmt.Errorf("write output file: %w", err)
 		}
+		log.Info("html saved", zap.String("file", outputPath))
 	}
+	return nil
 }
