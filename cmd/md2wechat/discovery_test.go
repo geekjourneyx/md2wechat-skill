@@ -534,6 +534,71 @@ func TestCapabilitiesUsesCompactCatalogSummaries(t *testing.T) {
 	}
 }
 
+func TestProviderConfiguredBelongsOnlyToCurrentProvider(t *testing.T) {
+	oldCfg, oldJSON := cfg, jsonOutput
+	t.Cleanup(func() {
+		cfg, jsonOutput = oldCfg, oldJSON
+	})
+
+	cfg = &config.Config{
+		ImageProvider: "volc",
+		ImageAPIKey:   "configured-key",
+	}
+	jsonOutput = true
+
+	listOutput := captureStdout(t, func() {
+		if err := providersListCmd.RunE(providersListCmd, nil); err != nil {
+			t.Fatalf("providers list: %v", err)
+		}
+	})
+	var listResponse struct {
+		Data struct {
+			Providers []providerListItem `json:"providers"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(listOutput, &listResponse); err != nil {
+		t.Fatalf("decode providers list: %v\n%s", err, listOutput)
+	}
+	configuredCount := 0
+	for _, provider := range listResponse.Data.Providers {
+		if provider.Configured {
+			configuredCount++
+			if provider.Name != "volcengine" || !provider.Current {
+				t.Fatalf("configured list provider = %#v, want current volcengine", provider)
+			}
+		}
+	}
+	if configuredCount != 1 {
+		t.Fatalf("configured list provider count = %d, want 1", configuredCount)
+	}
+
+	showOutput := captureStdout(t, func() {
+		if err := providersShowCmd.RunE(providersShowCmd, []string{"volc"}); err != nil {
+			t.Fatalf("providers show alias: %v", err)
+		}
+	})
+	var showResponse struct {
+		Data struct {
+			Provider providerView `json:"provider"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(showOutput, &showResponse); err != nil {
+		t.Fatalf("decode provider show: %v\n%s", err, showOutput)
+	}
+	if provider := showResponse.Data.Provider; provider.Name != "volcengine" || !provider.Current || !provider.Configured {
+		t.Fatalf("shown provider = %#v, want current configured volcengine", provider)
+	}
+
+	capabilities, err := buildCapabilitiesData()
+	if err != nil {
+		t.Fatalf("build capabilities: %v", err)
+	}
+	providers := capabilities["providers"].(map[string]any)
+	if providers["current"] != "volc" || providers["current_configured"] != true {
+		t.Fatalf("capabilities providers = %#v", providers)
+	}
+}
+
 func TestCapabilitiesReportsEffectiveConfiguredDefaultTheme(t *testing.T) {
 	oldCfg := cfg
 	t.Cleanup(func() { cfg = oldCfg })

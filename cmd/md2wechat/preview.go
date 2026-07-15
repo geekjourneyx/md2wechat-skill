@@ -44,7 +44,11 @@ var previewCmd = &cobra.Command{
 	Short: "Generate a standalone article preview HTML file",
 	Args:  cobra.ExactArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		return initConfig()
+		if err := initConfig(); err != nil {
+			return err
+		}
+		applyEffectiveCommandTheme(cmd, &previewTheme)
+		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		result, err := runPreview(args[0])

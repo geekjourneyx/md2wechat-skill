@@ -297,13 +297,14 @@ func loadDiscoveryConfig() *config.Config {
 
 func buildProviderViews() ([]providerView, error) {
 	currentCfg := loadDiscoveryConfig()
+	currentProvider := strings.TrimSpace(currentCfg.ImageProvider)
+	if currentProvider == "" {
+		currentProvider = "openai"
+	}
+	hasAPIKey := strings.TrimSpace(currentCfg.ImageAPIKey) != ""
 	result := make([]providerView, 0, len(image.SupportedProviders()))
 	for _, meta := range image.SupportedProviders() {
-		current := currentCfg.ImageProvider
-		if current == "" {
-			current = "openai"
-		}
-		configured := strings.TrimSpace(currentCfg.ImageAPIKey) != ""
+		current := meta.Name == currentProvider || contains(meta.Aliases, currentProvider)
 		result = append(result, providerView{
 			Name:            meta.Name,
 			Aliases:         meta.Aliases,
@@ -314,8 +315,8 @@ func buildProviderViews() ([]providerView, error) {
 			DefaultModel:    meta.DefaultModel,
 			SupportedModels: meta.SupportedModels,
 			SupportsSize:    meta.SupportsSize,
-			Current:         meta.Name == current || contains(meta.Aliases, current),
-			Configured:      configured,
+			Current:         current,
+			Configured:      current && hasAPIKey,
 		})
 	}
 	return result, nil
@@ -412,6 +413,13 @@ func buildCapabilitiesData() (map[string]any, error) {
 	if currentProvider == "" {
 		currentProvider = "openai"
 	}
+	currentProviderConfigured := false
+	for _, provider := range providers {
+		if provider.Current && provider.Configured {
+			currentProviderConfigured = true
+			break
+		}
+	}
 	defaultTheme := effectiveDefaultTheme(currentCfg)
 	return map[string]any{
 		"commands": topLevelCommandNames(),
@@ -425,7 +433,7 @@ func buildCapabilitiesData() (map[string]any, error) {
 		"providers": map[string]any{
 			"count":              len(providers),
 			"current":            currentProvider,
-			"current_configured": strings.TrimSpace(currentCfg.ImageAPIKey) != "",
+			"current_configured": currentProviderConfigured,
 		},
 		"image_generation": buildImageGenerationCapabilityData(),
 		"title_generation": buildTitleGenerationCapabilityData(),

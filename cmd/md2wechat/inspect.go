@@ -30,7 +30,11 @@ var inspectCmd = &cobra.Command{
 	Short: "Inspect resolved article metadata, readiness, and publish risks",
 	Args:  cobra.ExactArgs(1),
 	PreRunE: func(cmd *cobra.Command, args []string) error {
-		return initConfig()
+		if err := initConfig(); err != nil {
+			return err
+		}
+		applyEffectiveCommandTheme(cmd, &inspectTheme)
+		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		result, err := runInspect(args[0])

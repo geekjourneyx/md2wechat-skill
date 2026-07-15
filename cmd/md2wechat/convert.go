@@ -110,7 +110,7 @@ func init() {
 // runConvert 执行转换
 func runConvert(cmd *cobra.Command, args []string) error {
 	markdownFile := args[0]
-	applyEffectiveConvertTheme(cmd)
+	applyEffectiveCommandTheme(cmd, &convertTheme)
 
 	if err := validateConvertConfig(); err != nil {
 		return err
@@ -243,15 +243,15 @@ func runConvert(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func applyEffectiveConvertTheme(cmd *cobra.Command) {
-	if cmd == nil {
+func applyEffectiveCommandTheme(cmd *cobra.Command, theme *string) {
+	if cmd == nil || theme == nil {
 		return
 	}
 	themeFlag := cmd.Flags().Lookup("theme")
 	if themeFlag != nil && themeFlag.Changed {
 		return
 	}
-	convertTheme = effectiveDefaultTheme(cfg)
+	*theme = effectiveDefaultTheme(cfg)
 }
 
 // handleAIResult 处理 AI 模式结果
