@@ -38,7 +38,7 @@ md2wechat 把公众号发布流程拆成一组可验证的 CLI 命令：
 |---|---|
 | Markdown 转微信 HTML | `convert`，支持预览、上传图片、创建草稿 |
 | 发布前检查 | `inspect --json` 输出标题、摘要、图片、cover、draft readiness |
-| 稳定排版 | API 模式返回确定性 HTML，覆盖 68 个主推高级排版场景条目和 53 个主推 `:::` 语法名 |
+| 稳定排版 | API 模式成功时返回最终 HTML，覆盖 68 个主推高级排版场景条目和 53 个主推 `:::` 语法名 |
 | Agent 自动化 | `capabilities`、`doctor`、`themes`、`layout`、`providers` 等 discovery 命令 |
 | 内容生产 | `write`、`humanize`、`title suggest`、`generate_cover`、`generate_infographic` |
 | 多账号发布 | 命名公众号账号，本地只读发现，不输出 Secret |

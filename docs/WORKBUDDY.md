@@ -9,16 +9,16 @@
 
 ## 一、下载并登录 WorkBuddy
 
-1. 打开 [WorkBuddy 官网](https://www.workbuddy.cn/)，只从官网的“下载 WorkBuddy”入口选择安装包。
+1. 打开 [WorkBuddy 官方下载页](https://www.codebuddy.cn/work/)，只从官网的“下载 WorkBuddy”入口选择安装包。
 2. macOS 按芯片选择 Apple 芯片或 Intel 版本；Windows 选择 Windows x64 版本。系统要求和安装细节以官网当前提示为准。
 3. 安装并启动 WorkBuddy，点击“登录”，同意服务条款与隐私协议后使用微信扫码登录。
 4. 登录成功后，新建任务，并选择一个专门存放文章的本地工作目录。后续的 `article.md`、`cover.jpg` 和 HTML 都放在这个目录里，最容易检查。
 
-如果安装或登录界面与这里不同，先在左下角头像菜单执行“检查更新”，再查看 [WorkBuddy 官方安装文档](https://www.codebuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Installation-Win-Guide)。不要从非官网镜像下载客户端。
+如果安装或登录界面与这里不同，可分别查看 [Windows 官方安装指南](https://www.codebuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Installation-Win-Guide) 与 [Mac 官方安装指南](https://www.codebuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Installation-Mac-Guide)。不要从非官网镜像下载客户端。
 
 ## 二、安装 md2wechat Skill
 
-当前 WorkBuddy 界面的主路径是：
+按当前官方文档，常见入口是：
 
 1. 打开左侧“技能”。
 2. 点击“添加技能”，选择“查找技能”或进入“技能市场”。
@@ -183,7 +183,7 @@ API 模式需要 md2wechat API Key。它不是微信 `AppSecret`，也不是图�
 
 ### 草稿提示缺封面
 
-检查命令和执行命令都要带同一份 `--cover cover.jpg`，并确认文件在当前工作目录。也可以按命令帮助使用已有的永久 `cover-media-id`，但不要在检查与执行之间切换目标。
+检查命令和执行命令都要带同一份 `--cover cover.jpg`，并确认文件在当前工作目录。也可以按命令帮助使用已有的永久 `--cover-media-id`；此时 `inspect` 与 `convert` 必须使用同一个 `--cover-media-id` 值，不要在检查与执行之间切换目标。
 
 ### 微信返回 `ip not in whitelist`
 
@@ -195,7 +195,7 @@ API 模式需要 md2wechat API Key。它不是微信 `AppSecret`，也不是图�
 
 ### WorkBuddy 里找不到“技能”或“添加技能”
 
-不同版本可能显示“技能”“Skills”“SkillHub”或“插件”。先执行“检查更新”，再按官方技能说明核对当前入口，不要凭相似名称安装来源不明的 Skill。
+不同版本可能显示“技能”“Skills”“SkillHub”或“插件”。如果当前版本提供“检查更新”入口，先更新，再按官方技能说明核对当前入口，不要凭相似名称安装来源不明的 Skill。
 
 ## 十、相关文档
 
@@ -206,5 +206,5 @@ API 模式需要 md2wechat API Key。它不是微信 `AppSecret`，也不是图�
 - [Agent 图片计划模式](AGENT_IMAGE_GEN.md)
 - [能力发现与 Prompt Catalog](DISCOVERY.md)
 - [常见问题](FAQ.md)
-- [WorkBuddy 官网](https://www.workbuddy.cn/)
+- [WorkBuddy 官方下载页](https://www.codebuddy.cn/work/)
 - [WorkBuddy 官方技能说明](https://www.codebuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Skills-Market)
