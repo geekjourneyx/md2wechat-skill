@@ -27,7 +27,6 @@ require_file "scripts/install.sh"
 require_file "scripts/install.js"
 require_file "scripts/install.ps1"
 require_file "scripts/install-openclaw.ps1"
-require_file "scripts/install-openclaw.sh"
 require_file "scripts/run.js"
 require_file "scripts/quality-gates.sh"
 require_file "scripts/run-golangci-lint.sh"
@@ -39,6 +38,12 @@ require_file ".github/workflows/ci.yml"
 require_file "AGENTS.md"
 require_file "docs/OPENCLAW.md"
 require_file ".claude-plugin/marketplace.json"
+
+[[ ! -e "scripts/install-openclaw.sh" ]] \
+  || fail "scripts/install-openclaw.sh was removed in v3.2.0 and must not be restored"
+if rg -q 'install-openclaw\.sh' --glob '!CHANGELOG.md' --glob '!scripts/release-check.sh' .; then
+  fail "current release, documentation, and repository contracts must not reference the removed install-openclaw.sh"
+fi
 
 version="$(tr -d '[:space:]' < VERSION)"
 [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "VERSION must be SemVer, got: $version"
@@ -79,19 +84,10 @@ grep -q 'MD2WECHAT_INSTALL_DIR' scripts/install-openclaw.ps1 || fail "scripts/in
 grep -q 'MD2WECHAT_OPENCLAW_INSTALL_DIR' scripts/install-openclaw.ps1 || fail "scripts/install-openclaw.ps1 must support MD2WECHAT_OPENCLAW_INSTALL_DIR"
 grep -q 'MD2WECHAT_NONINTERACTIVE' scripts/install-openclaw.ps1 || fail "scripts/install-openclaw.ps1 must support MD2WECHAT_NONINTERACTIVE"
 grep -q 'MD2WECHAT_NO_PATH_UPDATE' scripts/install-openclaw.ps1 || fail "scripts/install-openclaw.ps1 must support MD2WECHAT_NO_PATH_UPDATE"
-grep -q 'MD2WECHAT_RELEASE_BASE_URL' scripts/install-openclaw.sh || fail "scripts/install-openclaw.sh must support MD2WECHAT_RELEASE_BASE_URL"
-grep -q 'MD2WECHAT_VERSION' scripts/install-openclaw.sh || fail "scripts/install-openclaw.sh must support MD2WECHAT_VERSION"
-grep -q 'MD2WECHAT_OPENCLAW_INSTALL_DIR' scripts/install-openclaw.sh || fail "scripts/install-openclaw.sh must support MD2WECHAT_OPENCLAW_INSTALL_DIR"
-grep -q 'MD2WECHAT_INSTALL_DIR' scripts/install-openclaw.sh || fail "scripts/install-openclaw.sh must support MD2WECHAT_INSTALL_DIR"
-grep -q 'MD2WECHAT_NONINTERACTIVE' scripts/install-openclaw.sh || fail "scripts/install-openclaw.sh must support MD2WECHAT_NONINTERACTIVE"
-! grep -q 'releases/latest/download' scripts/install-openclaw.sh || fail "scripts/install-openclaw.sh must not silently fall back to releases/latest/download"
 grep -q 'checksums.txt' scripts/install.sh || fail "scripts/install.sh must verify checksums.txt"
 grep -q 'checksums.txt' scripts/install.ps1 || fail "scripts/install.ps1 must verify checksums.txt"
 grep -q 'checksums.txt' scripts/install-openclaw.ps1 || fail "scripts/install-openclaw.ps1 must verify checksums.txt"
-grep -q 'checksums.txt' scripts/install-openclaw.sh || fail "scripts/install-openclaw.sh must verify checksums.txt"
-grep -q 'md2wechat-openclaw-skill.tar.gz' scripts/install-openclaw.sh || fail "scripts/install-openclaw.sh must install the OpenClaw release archive"
 grep -q 'md2wechat-openclaw-skill.tar.gz' scripts/install-openclaw.ps1 || fail "scripts/install-openclaw.ps1 must install the OpenClaw release archive"
-grep -q 'md2wechat-linux-amd64' scripts/install-openclaw.sh || fail "scripts/install-openclaw.sh must install a versioned md2wechat CLI"
 grep -q 'md2wechat-windows-amd64.exe' scripts/install-openclaw.ps1 || fail "scripts/install-openclaw.ps1 must install a versioned md2wechat CLI"
 grep -q 'upload-artifact' .github/workflows/release.yml || fail "release workflow must upload a release artifact"
 grep -q 'download-artifact' .github/workflows/release.yml || fail "release workflow must download a release artifact"
@@ -102,7 +98,6 @@ grep -q 'NPM_TOKEN' .github/workflows/release.yml || fail "release workflow must
 grep -q 'install.sh' .github/workflows/release.yml || fail "release workflow must publish install.sh"
 grep -q 'install.ps1' .github/workflows/release.yml || fail "release workflow must publish install.ps1"
 grep -q 'install-openclaw.ps1' .github/workflows/release.yml || fail "release workflow must publish install-openclaw.ps1"
-grep -q 'install-openclaw.sh' .github/workflows/release.yml || fail "release workflow must publish install-openclaw.sh"
 grep -q 'md2wechat-openclaw-skill.tar.gz' .github/workflows/release.yml || fail "release workflow must publish the OpenClaw skill archive"
 grep -q 'md2wechat_Darwin_arm64.tar.gz' .github/workflows/release.yml || fail "release workflow must publish the macOS arm64 Homebrew archive"
 grep -q 'md2wechat_Darwin_x86_64.tar.gz' .github/workflows/release.yml || fail "release workflow must publish the macOS x86_64 Homebrew archive"
@@ -113,10 +108,9 @@ grep -q 'version --json' .github/workflows/release.yml || fail "release workflow
 grep -q 'MD2WECHAT_RELEASE_BASE_URL' .github/workflows/release.yml || fail "release workflow must smoke the installers from the same bundle"
 grep -q 'HOMEBREW_TAP_GITHUB_TOKEN' .github/workflows/release.yml || fail "release workflow must update the tap repository with HOMEBREW_TAP_GITHUB_TOKEN"
 grep -q 'generate-homebrew-formula.sh' .github/workflows/release.yml || fail "release workflow must generate the Homebrew formula via scripts/generate-homebrew-formula.sh"
-if ! node - "$version" <<'NODE'
+if ! node - <<'NODE'
 const fs = require('fs');
 
-const version = process.argv[2];
 const path = 'platforms/openclaw/md2wechat/SKILL.md';
 const source = fs.readFileSync(path, 'utf8');
 const frontmatterMatch = source.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
@@ -188,28 +182,21 @@ try {
   reject(`OpenClaw skill metadata JSON is invalid: ${error.message}`);
 }
 
-const clawdbot = metadata.clawdbot;
-if (!clawdbot || typeof clawdbot !== 'object') {
-  reject('OpenClaw skill metadata must use metadata.clawdbot');
-}
-if (!clawdbot.requires || !Array.isArray(clawdbot.requires.bins) || !clawdbot.requires.bins.includes('md2wechat')) {
-  reject('OpenClaw skill metadata must declare md2wechat as a required bin');
-}
-if (Array.isArray(clawdbot.requires.env) && clawdbot.requires.env.some((name) => /^WECHAT_(APPID|SECRET)$/.test(name))) {
-  reject('OpenClaw skill metadata must not globally require WeChat publish credentials');
-}
-if (!Array.isArray(clawdbot.install)) {
-  reject('OpenClaw skill metadata must declare install resources');
-}
-if (!clawdbot.install.some((entry) => entry && entry.formula === 'geekjourneyx/tap/md2wechat')) {
-  reject('OpenClaw skill metadata must declare the brew install path');
-}
-const expectedModule = `github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v${version}`;
-const modulePath = 'github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat';
-const matchingModuleEntries = clawdbot.install.filter((entry) => entry && typeof entry.module === 'string'
-  && (entry.module === modulePath || entry.module.startsWith(`${modulePath}@`)));
-if (matchingModuleEntries.length === 0 || !matchingModuleEntries.every((entry) => entry.module === expectedModule)) {
-  reject(`every OpenClaw md2wechat Go install entry must equal ${expectedModule}`);
+const expected = {
+  openclaw: {
+    emoji: '📝',
+    requires: { bins: ['md2wechat'] },
+    install: [{
+      id: 'node',
+      kind: 'node',
+      package: '@geekjourneyx/md2wechat',
+      bins: ['md2wechat'],
+      label: 'Install md2wechat (npm)',
+    }],
+  },
+};
+if (JSON.stringify(metadata) !== JSON.stringify(expected)) {
+  reject('OpenClaw skill metadata must contain only the exact metadata.openclaw npm install contract');
 }
 NODE
 then
@@ -235,10 +222,8 @@ grep -q 'npx cnpm sync @geekjourneyx/md2wechat' docs/FAQ.md || fail "docs/FAQ.md
 grep -q 'brew install geekjourneyx/tap/md2wechat' docs/INSTALL.md || fail "docs/INSTALL.md must document the tap install path"
 ! grep -q 'raw.githubusercontent.com/geekjourneyx/md2wechat-skill/main/scripts/install.sh' README.md || fail "README must not point the md2wechat installer at main"
 ! grep -q 'raw.githubusercontent.com/geekjourneyx/md2wechat-skill/main/scripts/install.ps1' README.md || fail "README must not point the md2wechat installer at main"
-! grep -q 'raw.githubusercontent.com/geekjourneyx/md2wechat-skill/main/scripts/install-openclaw.sh' README.md || fail "README must not point the OpenClaw installer at main"
 ! grep -q 'raw.githubusercontent.com/geekjourneyx/md2wechat-skill/main/scripts/install.sh' docs/INSTALL.md || fail "docs/INSTALL.md must not point the md2wechat installer at main"
 ! grep -q 'raw.githubusercontent.com/geekjourneyx/md2wechat-skill/main/scripts/install.ps1' docs/INSTALL.md || fail "docs/INSTALL.md must not point the md2wechat installer at main"
-! grep -q 'raw.githubusercontent.com/geekjourneyx/md2wechat-skill/main/scripts/install-openclaw.sh' docs/OPENCLAW.md || fail "docs/OPENCLAW.md must not point the OpenClaw installer at main"
 grep -q 'md2wechat inspect article.md' README.md || fail "README must document inspect as part of the confirm-first flow"
 grep -q 'md2wechat preview article.md' README.md || fail "README must document preview as part of the confirm-first flow"
 grep -q 'md2wechat inspect article.md' docs/QUICKSTART.md || fail "docs/QUICKSTART.md must document inspect"
@@ -261,7 +246,6 @@ grep -q 'md2wechat skills read md2wechat --json' docs/USAGE.md || fail "docs/USA
 grep -q 'md2wechat skills read md2wechat --json' docs/SMOKE.md || fail "docs/SMOKE.md must include embedded SOP verification in smoke context"
 grep -q 'md2wechat skills read md2wechat --json' docs/OBSIDIAN.md || fail "docs/OBSIDIAN.md must document embedded SOP verification"
 grep -q 'md2wechat skills read md2wechat --json' docs/OPENCLAW.md || fail "docs/OPENCLAW.md must document embedded SOP verification"
-grep -q 'md2wechat skills read md2wechat --json' scripts/install-openclaw.sh || fail "install-openclaw.sh must print embedded SOP verification"
 grep -q 'skills read md2wechat --json' scripts/install-openclaw.ps1 || fail "install-openclaw.ps1 must print embedded SOP verification"
 grep -q '`inspect` is the source-of-truth command' skills/md2wechat/SKILL.md || fail "skills/md2wechat/SKILL.md must describe inspect as the source-of-truth command"
 grep -q '`preview` writes only byte-identical final API HTML from a successful converter result' skills/md2wechat/SKILL.md || fail "skills/md2wechat/SKILL.md must describe exact API preview behavior"

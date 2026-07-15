@@ -125,7 +125,7 @@ npx cnpm sync @geekjourneyx/md2wechat
 - `skills/md2wechat/`：给 Claude Code / Codex / OpenCode 的 coding-agent skill
 - `platforms/openclaw/md2wechat/`：给 OpenClaw / ClawHub 的专用 skill
 
-**OpenClaw 路径**还需要先安装 `md2wechat` CLI，不是只把 `SKILL.md` 放进去就够了。CLI 优先通过 `brew` 安装；如果你已有 Go 环境，也可以用 `go install`；否则再用固定版本 installer。skill 壳则继续通过 `clawhub` 或 OpenClaw installer 安装。优先看：
+**OpenClaw 路径**还需要安装 `md2wechat` CLI，不是只把 `SKILL.md` 放进去就够了。CLI 主路径是 npm，skill 壳通过 ClawHub 安装。优先看：
 
 - [OPENCLAW.md](OPENCLAW.md)
 
@@ -142,17 +142,11 @@ md2wechat skills read md2wechat --json
 
 这条路径用于读取当前二进制版本携带的 `skills/md2wechat/SKILL.md`，避免 Agent 读到旧 README、旧本地 skill 或依赖联网拉仓库。外部 skill 安装仍然有用，主要用于让 Claude Code / Codex / OpenCode 自动发现 `md2wechat` 能力。
 
-推荐先安装 CLI，再安装 skill。mac 用户优先 Homebrew：
-
-```bash
-brew install geekjourneyx/tap/md2wechat
-npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
-```
-
-如果你已经有 Node/npm 环境，也可以把第一步改成：
+推荐先安装 CLI，再安装 skill：
 
 ```bash
 npm install -g @geekjourneyx/md2wechat
+npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 ```
 
 如果你已经有 Go 环境，再把第一步改成：
@@ -188,8 +182,8 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.
 ```text
 请帮我安装 OpenClaw 版 md2wechat，并验证 skill 和 CLI 都可用。
 执行：
-1. curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install-openclaw.sh | bash
-2. 先执行：export PATH="$HOME/.local/bin:$PATH"
+1. npm install -g @geekjourneyx/md2wechat
+2. npx clawhub@latest install md2wechat
 3. md2wechat version --json
 4. md2wechat config init
 5. md2wechat config validate

@@ -163,7 +163,6 @@ Coverage guidance:
    - `skills/md2wechat/SKILL.md`
    - `platforms/openclaw/md2wechat/SKILL.md`
    - `scripts/install.sh`
-   - `scripts/install-openclaw.sh`
    - `docs/INSTALL.md`
    - `docs/FAQ.md`
 5. Run `bash scripts/quality-gates.sh` before declaring release work done. Step 0 checks VERSION / package.json / marketplace.json / CHANGELOG in under 1 second and fails fast if any are misaligned.

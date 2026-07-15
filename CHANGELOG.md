@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Made discovery JSON compact and split resource discovery by responsibility: `capabilities` for aggregate routing facts, `list` for lightweight selection, `show` for full definitions, and `render` for materialized prompts or layouts.
 - Made standalone API preview a pure artifact operation that writes the converter's exact HTML bytes without readiness wrappers, dashboards, or fallback pages; AI preview now returns `PREVIEW_ACTION_REQUIRED` without creating an output file.
-- Aligned Agent guidance, OpenClaw installation metadata, and fixed-version install examples with the v3.2.0 command contracts.
+- Migrated OpenClaw metadata from legacy brew/Go installers to the official npm-backed `metadata.openclaw` Node installer, and removed the redundant Unix-only `install-openclaw.sh`; use npm plus ClawHub on macOS/Linux, while the Windows PowerShell installer remains available.
 
 ### Fixed
 - Validated draft intent, local assets, image-post inputs, and cover requirements before authentication or remote upload/create calls, preventing known-invalid requests from causing partial side effects.

@@ -127,7 +127,7 @@ grep -r "config" internal/config/
 | `VERSION` | 文件内容 | `x.y.z` |
 | `package.json` | `"version"` 字段 | `x.y.z` |
 | `.claude-plugin/marketplace.json` | plugin version / owner / author | `x.y.z` / 当前维护者身份 |
-| `platforms/openclaw/md2wechat/SKILL.md` | `metadata.clawdbot.install` | Go 模块必须固定为 `@v< VERSION 文件内容 >` |
+| `platforms/openclaw/md2wechat/SKILL.md` | `metadata.openclaw.install` | 唯一安装项必须是 `@geekjourneyx/md2wechat` 的 Node/npm 安装资源 |
 | `CHANGELOG.md` | 新版本章节标题 | `## [x.y.z] - YYYY-MM-DD` |
 | `CHANGELOG.md` | 版本历史表格 | 新增一行 |
 
@@ -140,13 +140,13 @@ echo "marketplace:  $(sed -n 's/.*"version": "\([0-9][^"]*\)".*/\1/p' .claude-pl
 echo "CHANGELOG:    $(grep -m1 '^## \[' CHANGELOG.md | sed 's/^## \[\([^]]*\)\].*/\1/')"
 ```
 
-> **说明**：OpenClaw SKILL.md 的 Go 安装模块必须从唯一版本源 `VERSION` 派生并固定为 `@v${version}`；禁止使用 `@latest`。版本升级时与 `VERSION`、release 资产和安装文档一起同步。
+> **说明**：OpenClaw SKILL.md 使用官方 `kind: "node"` 安装资源，由 npm 包自身版本与 release 资产保持一致；metadata 不再携带 Homebrew 或 Go 安装项。
 
 **强制规则：**
 - 发版前先运行 `bash scripts/quality-gates.sh`（step 0 会在 < 1s 内检查所有版本字段，发现漂移立即 fail）
 - 发版前必须显式审校 `package.json`、`.claude-plugin/marketplace.json`
 - 发版前必须显式审校 `skills/md2wechat/SKILL.md` 与 `platforms/openclaw/md2wechat/SKILL.md`
-- 发版前必须显式审校 `scripts/install.sh`、`scripts/install-openclaw.sh`、`platforms/openclaw/md2wechat/SKILL.md`
+- 发版前必须显式审校 `scripts/install.sh`、`scripts/install-openclaw.ps1`、`platforms/openclaw/md2wechat/SKILL.md`
 - 如果这些文件中的版本、下载 URL、命令示例、维护者信息没有同步，本次发布不能算完成
 
 ### 3. 文档规范检查
@@ -429,7 +429,7 @@ ClawHub 发布跳过。如需手动发布，请稍后执行：
 
 ### 安装脚本
 - `scripts/install.sh` - CLI 全局安装
-- `scripts/install-openclaw.sh` - OpenClaw 安装
+- `scripts/install-openclaw.ps1` - Windows OpenClaw 安装
 
 ---
 

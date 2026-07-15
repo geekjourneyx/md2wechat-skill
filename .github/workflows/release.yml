@@ -99,10 +99,6 @@ jobs:
             printf '$env:MD2WECHAT_VERSION_DEFAULT = "%s"\n' "${VERSION}"
             cat scripts/install-openclaw.ps1
           } > "${bundle_dir}/install-openclaw.ps1"
-          {
-            printf 'export MD2WECHAT_VERSION_DEFAULT=%q\n' "${VERSION}"
-            cat scripts/install-openclaw.sh
-          } > "${bundle_dir}/install-openclaw.sh"
           mkdir -p "${bundle_dir}/openclaw-skill/skills/md2wechat"
           cp -r platforms/openclaw/md2wechat/. "${bundle_dir}/openclaw-skill/skills/md2wechat/"
           tar -czf "${bundle_dir}/md2wechat-openclaw-skill.tar.gz" -C "${bundle_dir}/openclaw-skill" skills/md2wechat
@@ -205,27 +201,6 @@ jobs:
           bash "${bundle_dir}/install.sh"
 
           "${install_dir}/md2wechat" version --json | grep -q "\"version\":\"${VERSION}\""
-
-      - name: Smoke OpenClaw installer against same artifact
-        env:
-          VERSION: ${{ needs.build-release.outputs.version }}
-        run: |
-          bundle_dir="${GITHUB_WORKSPACE}/release-artifact"
-          home_dir="$(mktemp -d)"
-          install_dir="${home_dir}/.local/bin"
-
-          mkdir -p "${home_dir}/.openclaw"
-
-          HOME="${home_dir}" \
-          MD2WECHAT_VERSION="$VERSION" \
-          MD2WECHAT_RELEASE_BASE_URL="file://${bundle_dir}" \
-          MD2WECHAT_INSTALL_DIR="${install_dir}" \
-          MD2WECHAT_NONINTERACTIVE=1 \
-          bash "${bundle_dir}/install-openclaw.sh"
-
-          test -f "${home_dir}/.openclaw/skills/md2wechat/SKILL.md"
-          test -x "${install_dir}/md2wechat"
-          PATH="${install_dir}:${PATH}" "${install_dir}/md2wechat" version --json | grep -q "\"version\":\"${VERSION}\""
 
   smoke-release-windows:
     needs: build-release
@@ -355,7 +330,6 @@ jobs:
             release-artifact/install.sh
             release-artifact/install.ps1
             release-artifact/install-openclaw.ps1
-            release-artifact/install-openclaw.sh
             release-artifact/md2wechat-openclaw-skill.tar.gz
             release-artifact/md2wechat_Darwin_arm64.tar.gz
             release-artifact/md2wechat_Darwin_x86_64.tar.gz
