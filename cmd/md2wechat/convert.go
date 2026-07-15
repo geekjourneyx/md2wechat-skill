@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/geekjourneyx/md2wechat-skill/internal/atomicfile"
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 	"github.com/geekjourneyx/md2wechat-skill/internal/converter"
 	"github.com/geekjourneyx/md2wechat-skill/internal/draft"
@@ -204,12 +205,6 @@ func runConvert(cmd *cobra.Command, args []string) error {
 		zap.String("theme", result.Theme),
 		zap.Int("image_count", len(output.Artifact.Assets)))
 
-	if convertOutput != "" {
-		if err := outputHTML(output.Artifact.HTML, convertOutput, false); err != nil {
-			return wrapCLIError(codeConvertFailed, err, err.Error())
-		}
-	}
-
 	if jsonOutput {
 		responseSuccessWith(codeConvertCompleted, "Conversion completed", map[string]any{
 			"mode":        string(result.Mode),
@@ -278,7 +273,7 @@ func handleAIResult(result *converter.ConvertResult, markdownFile string) error 
 	}
 
 	if promptOutputPath != "" {
-		if _, err := writeOutputFileAtomically(promptOutputPath, []byte(prompt)); err != nil {
+		if _, err := atomicfile.Write(promptOutputPath, []byte(prompt)); err != nil {
 			wrapped := fmt.Errorf("write AI prompt file: %w", err)
 			return wrapCLIError(codeConvertFailed, wrapped, wrapped.Error())
 		}
@@ -446,7 +441,7 @@ func outputHTML(html, outputPath string, preview bool) error {
 	}
 
 	if outputPath != "" {
-		if _, err := writeOutputFileAtomically(outputPath, []byte(html)); err != nil {
+		if _, err := atomicfile.Write(outputPath, []byte(html)); err != nil {
 			log.Error("failed to write output file", zap.Error(err))
 			return fmt.Errorf("write output file: %w", err)
 		}

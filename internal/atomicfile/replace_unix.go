@@ -1,9 +1,9 @@
 //go:build !windows
 
-package main
+package atomicfile
 
 import "os"
 
-func replaceOutputFile(source, destination string) error {
+func replaceFile(source, destination string) error {
 	return os.Rename(source, destination)
 }

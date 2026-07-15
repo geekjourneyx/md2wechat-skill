@@ -390,8 +390,8 @@ md2wechat upload_image cover.jpg --json
 ### 6.3 创建草稿
 
 ```bash
-md2wechat convert article.md --draft --cover ./cover.jpg --output draft.html
-md2wechat create_draft draft.html --json
+md2wechat convert article.md --save-draft draft.json
+md2wechat create_draft draft.json --json
 ```
 
 也可以一步到位：

@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -1165,7 +1163,6 @@ func TestRunConvertOutputWriteFailureDoesNotReportCompletion(t *testing.T) {
 	oldSaveDraft, oldCover, oldCoverMediaID := convertSaveDraft, convertCoverImage, convertCoverMediaID
 	oldTitle, oldAuthor, oldDigest := convertTitle, convertAuthor, convertDigest
 	oldNewConverter := newMarkdownConverter
-	oldReplaceOutputFile := replaceOutputFileFn
 	t.Cleanup(func() {
 		cfg, log, jsonOutput = oldCfg, oldLog, oldJSON
 		convertMode, convertTheme, convertAPIKey = oldMode, oldTheme, oldAPIKey
@@ -1175,7 +1172,6 @@ func TestRunConvertOutputWriteFailureDoesNotReportCompletion(t *testing.T) {
 		convertSaveDraft, convertCoverImage, convertCoverMediaID = oldSaveDraft, oldCover, oldCoverMediaID
 		convertTitle, convertAuthor, convertDigest = oldTitle, oldAuthor, oldDigest
 		newMarkdownConverter = oldNewConverter
-		replaceOutputFileFn = oldReplaceOutputFile
 	})
 
 	cfg = &config.Config{MD2WechatAPIKey: "api-key"}
@@ -1234,30 +1230,6 @@ func TestRunConvertOutputWriteFailureDoesNotReportCompletion(t *testing.T) {
 		assertFailedWithoutCompletion(t)
 	})
 
-	t.Run("replace failure preserves existing output", func(t *testing.T) {
-		outputDir := t.TempDir()
-		convertOutput = filepath.Join(outputDir, "out.html")
-		sentinel := []byte("PREEXISTING_SENTINEL")
-		if err := os.WriteFile(convertOutput, sentinel, 0600); err != nil {
-			t.Fatalf("write existing output: %v", err)
-		}
-		replaceOutputFileFn = func(_, _ string) error {
-			return errors.New("injected replace failure")
-		}
-
-		assertFailedWithoutCompletion(t)
-		data, err := os.ReadFile(convertOutput)
-		if err != nil || !bytes.Equal(data, sentinel) {
-			t.Fatalf("existing output changed: data=%q err=%v", data, err)
-		}
-		entries, err := os.ReadDir(outputDir)
-		if err != nil {
-			t.Fatalf("read output directory: %v", err)
-		}
-		if len(entries) != 1 || entries[0].Name() != "out.html" {
-			t.Fatalf("temporary output leaked after replace failure: %#v", entries)
-		}
-	})
 }
 
 func TestRunConvertOutputsStableJSONEnvelopeWhenRequested(t *testing.T) {

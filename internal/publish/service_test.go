@@ -350,6 +350,37 @@ func TestServiceConvertReturnsAIRequestWithoutRunningSideEffects(t *testing.T) {
 	}
 }
 
+func TestConvertOutputFailurePreventsDraft(t *testing.T) {
+	dir := t.TempDir()
+	coverPath := filepath.Join(dir, "cover.jpg")
+	if err := os.WriteFile(coverPath, []byte("cover"), 0600); err != nil {
+		t.Fatalf("write cover: %v", err)
+	}
+
+	converterFake := &fakeMarkdownConverter{result: &converter.ConvertResult{
+		Mode:    converter.ModeAPI,
+		Success: true,
+		HTML:    "<p>body</p>",
+	}}
+	processor := &fakeAssetProcessor{}
+	cover := &fakeCoverUploader{}
+	drafts := &fakeDraftCreator{}
+	svc := NewService(zap.NewNop(), converterFake, processor, drafts, cover.upload)
+
+	_, err := svc.Convert(&ConvertInput{
+		Intent:         PublishIntent{CreateDraft: true},
+		ConvertRequest: &converter.ConvertRequest{Mode: converter.ModeAPI},
+		OutputFile:     filepath.Join(dir, "missing", "article.html"),
+		CoverImagePath: coverPath,
+	})
+	if err == nil || !strings.Contains(err.Error(), "write output file") {
+		t.Fatalf("Convert() error = %v, want output write failure", err)
+	}
+	if cover.calls != 0 || drafts.calls != 0 {
+		t.Fatalf("output failure caused publish effects: cover=%d draft=%d", cover.calls, drafts.calls)
+	}
+}
+
 func TestServiceConvertProcessesAssetsAndCreatesDraft(t *testing.T) {
 	dir := t.TempDir()
 	localPath := filepath.Join(dir, "images", "local.png")
@@ -405,6 +436,7 @@ func TestServiceConvertProcessesAssetsAndCreatesDraft(t *testing.T) {
 	)
 
 	draftPath := filepath.Join(dir, "draft.json")
+	outputPath := filepath.Join(dir, "out.html")
 	output, err := svc.Convert(&ConvertInput{
 		Source: ArticleSource{
 			Path:     filepath.Join(dir, "article.md"),
@@ -428,7 +460,7 @@ func TestServiceConvertProcessesAssetsAndCreatesDraft(t *testing.T) {
 			APIKey:   "api-key",
 		},
 		MarkdownDir:    dir,
-		OutputFile:     filepath.Join(dir, "out.html"),
+		OutputFile:     outputPath,
 		SaveDraftPath:  draftPath,
 		CoverImagePath: filepath.Join(dir, "cover.jpg"),
 	})
@@ -459,6 +491,13 @@ func TestServiceConvertProcessesAssetsAndCreatesDraft(t *testing.T) {
 	}
 	if len(drafter.artifacts) != 1 {
 		t.Fatalf("draft artifacts = %#v", drafter.artifacts)
+	}
+	data, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != drafter.artifacts[0].HTML {
+		t.Fatalf("output HTML differs from draft artifact")
 	}
 	artifact := drafter.artifacts[0]
 	if artifact.Metadata.Title != "文章标题" || artifact.Metadata.Author != "作者" || artifact.Metadata.Digest != "摘要" {

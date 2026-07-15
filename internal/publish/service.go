@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/geekjourneyx/md2wechat-skill/internal/atomicfile"
 	"github.com/geekjourneyx/md2wechat-skill/internal/converter"
 	"github.com/geekjourneyx/md2wechat-skill/internal/image"
 	"go.uber.org/zap"
@@ -129,6 +130,12 @@ func (s *Service) Convert(input *ConvertInput) (*ConvertOutput, error) {
 		}
 		output.Artifact.HTML = assetOutput.HTML
 		output.Artifact.Assets = assetOutput.Assets
+	}
+
+	if input.OutputFile != "" {
+		if _, err := atomicfile.Write(input.OutputFile, []byte(output.Artifact.HTML)); err != nil {
+			return nil, fmt.Errorf("write output file: %w", err)
+		}
 	}
 
 	if input.SaveDraftPath != "" {

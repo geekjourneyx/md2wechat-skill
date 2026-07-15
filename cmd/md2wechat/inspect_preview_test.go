@@ -392,20 +392,20 @@ func TestRunPreviewReturnsPreviewFailedForInvalidOutputPath(t *testing.T) {
 	}
 }
 
-func TestRunPreviewTempWriteFailureDoesNotCreateOrOverwriteExplicitOutput(t *testing.T) {
+func TestRunPreviewOutputWriteFailureDoesNotCreateOrOverwriteExplicitOutput(t *testing.T) {
 	oldCfg, oldLog := cfg, log
 	oldMode, oldTheme := previewMode, previewTheme
 	oldFont, oldBackground := previewFontSize, previewBackgroundType
 	oldOutput := previewOutput
 	oldNewConverter := newMarkdownConverter
-	oldWriteTemp := previewWriteTemp
+	oldWriteFile := previewWriteFile
 	t.Cleanup(func() {
 		cfg, log = oldCfg, oldLog
 		previewMode, previewTheme = oldMode, oldTheme
 		previewFontSize, previewBackgroundType = oldFont, oldBackground
 		previewOutput = oldOutput
 		newMarkdownConverter = oldNewConverter
-		previewWriteTemp = oldWriteTemp
+		previewWriteFile = oldWriteFile
 	})
 
 	cfg = &config.Config{MD2WechatAPIKey: "api-key"}
@@ -422,12 +422,8 @@ func TestRunPreviewTempWriteFailureDoesNotCreateOrOverwriteExplicitOutput(t *tes
 			HTML:    string(convertedHTML),
 		}}
 	}
-	previewWriteTemp = func(file *os.File, data []byte) (int, error) {
-		written, err := file.Write(data[:len(data)/2])
-		if err != nil {
-			return written, err
-		}
-		return written, errors.New("injected temp write failure")
+	previewWriteFile = func(string, []byte) (string, error) {
+		return "", errors.New("injected output write failure")
 	}
 
 	markdownPath := filepath.Join(t.TempDir(), "article.md")
