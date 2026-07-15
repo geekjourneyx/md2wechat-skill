@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -1156,6 +1158,7 @@ func TestRunConvertOutputWriteFailureDoesNotReportCompletion(t *testing.T) {
 	oldSaveDraft, oldCover, oldCoverMediaID := convertSaveDraft, convertCoverImage, convertCoverMediaID
 	oldTitle, oldAuthor, oldDigest := convertTitle, convertAuthor, convertDigest
 	oldNewConverter := newMarkdownConverter
+	oldReplaceOutputFile := replaceOutputFileFn
 	t.Cleanup(func() {
 		cfg, log, jsonOutput = oldCfg, oldLog, oldJSON
 		convertMode, convertTheme, convertAPIKey = oldMode, oldTheme, oldAPIKey
@@ -1165,6 +1168,7 @@ func TestRunConvertOutputWriteFailureDoesNotReportCompletion(t *testing.T) {
 		convertSaveDraft, convertCoverImage, convertCoverMediaID = oldSaveDraft, oldCover, oldCoverMediaID
 		convertTitle, convertAuthor, convertDigest = oldTitle, oldAuthor, oldDigest
 		newMarkdownConverter = oldNewConverter
+		replaceOutputFileFn = oldReplaceOutputFile
 	})
 
 	cfg = &config.Config{MD2WechatAPIKey: "api-key"}
@@ -1176,7 +1180,6 @@ func TestRunConvertOutputWriteFailureDoesNotReportCompletion(t *testing.T) {
 	convertFontSize = "medium"
 	convertBackgroundType = "none"
 	convertCustomPrompt = ""
-	convertOutput = filepath.Join(t.TempDir(), "missing", "out.html")
 	convertPreview = false
 	convertUpload = false
 	convertDraft = false
@@ -1199,22 +1202,55 @@ func TestRunConvertOutputWriteFailureDoesNotReportCompletion(t *testing.T) {
 		t.Fatalf("write markdown: %v", err)
 	}
 
-	stdout := captureStdout(t, func() {
-		err := runConvert(nil, []string{markdownPath})
-		if err == nil {
-			t.Fatal("runConvert() error = nil")
+	assertFailedWithoutCompletion := func(t *testing.T) {
+		t.Helper()
+		stdout := captureStdout(t, func() {
+			err := runConvert(nil, []string{markdownPath})
+			if err == nil {
+				t.Fatal("runConvert() error = nil")
+			}
+			cliErr, ok := err.(*cliError)
+			if !ok || cliErr.Code != codeConvertFailed {
+				t.Fatalf("runConvert() error = %#v, want %s", err, codeConvertFailed)
+			}
+		})
+		if strings.Contains(string(stdout), codeConvertCompleted) || strings.Contains(string(stdout), `"output_file"`) {
+			t.Fatalf("stdout reported a usable completed artifact: %s", stdout)
 		}
-		cliErr, ok := err.(*cliError)
-		if !ok || cliErr.Code != codeConvertFailed {
-			t.Fatalf("runConvert() error = %#v, want %s", err, codeConvertFailed)
+		if len(stdout) != 0 {
+			t.Fatalf("stdout = %q, want empty on output write failure", stdout)
+		}
+	}
+
+	t.Run("cannot create temp output", func(t *testing.T) {
+		convertOutput = filepath.Join(t.TempDir(), "missing", "out.html")
+		assertFailedWithoutCompletion(t)
+	})
+
+	t.Run("replace failure preserves existing output", func(t *testing.T) {
+		outputDir := t.TempDir()
+		convertOutput = filepath.Join(outputDir, "out.html")
+		sentinel := []byte("PREEXISTING_SENTINEL")
+		if err := os.WriteFile(convertOutput, sentinel, 0600); err != nil {
+			t.Fatalf("write existing output: %v", err)
+		}
+		replaceOutputFileFn = func(_, _ string) error {
+			return errors.New("injected replace failure")
+		}
+
+		assertFailedWithoutCompletion(t)
+		data, err := os.ReadFile(convertOutput)
+		if err != nil || !bytes.Equal(data, sentinel) {
+			t.Fatalf("existing output changed: data=%q err=%v", data, err)
+		}
+		entries, err := os.ReadDir(outputDir)
+		if err != nil {
+			t.Fatalf("read output directory: %v", err)
+		}
+		if len(entries) != 1 || entries[0].Name() != "out.html" {
+			t.Fatalf("temporary output leaked after replace failure: %#v", entries)
 		}
 	})
-	if strings.Contains(string(stdout), codeConvertCompleted) || strings.Contains(string(stdout), `"output_file"`) {
-		t.Fatalf("stdout reported a usable completed artifact: %s", stdout)
-	}
-	if len(stdout) != 0 {
-		t.Fatalf("stdout = %q, want empty on output write failure", stdout)
-	}
 }
 
 func TestRunConvertOutputsStableJSONEnvelopeWhenRequested(t *testing.T) {

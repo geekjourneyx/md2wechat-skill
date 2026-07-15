@@ -240,6 +240,9 @@ func TestOutputHTMLWritesFileAndResponseSuccessPrintsJSON(t *testing.T) {
 
 	log = zap.NewNop()
 	outputPath := filepath.Join(t.TempDir(), "out.html")
+	if err := os.WriteFile(outputPath, []byte("PREEXISTING_SENTINEL"), 0600); err != nil {
+		t.Fatalf("write existing output: %v", err)
+	}
 	if err := outputHTML("<p>body</p>", outputPath, false); err != nil {
 		t.Fatalf("outputHTML() error = %v", err)
 	}

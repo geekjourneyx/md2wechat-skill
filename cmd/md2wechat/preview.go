@@ -37,6 +37,8 @@ var previewWriteTemp = func(file *os.File, data []byte) (int, error) {
 	return file.Write(data)
 }
 
+var replaceOutputFileFn = replaceOutputFile
+
 var previewCmd = &cobra.Command{
 	Use:   "preview <markdown_file>",
 	Short: "Generate a standalone article preview HTML file",
@@ -204,7 +206,7 @@ func writeOutputFileAtomically(outputFile string, data []byte) (string, error) {
 	}
 
 	if explicitOutput {
-		if err := os.Rename(tempPath, outputFile); err != nil {
+		if err := replaceOutputFileFn(tempPath, outputFile); err != nil {
 			return "", err
 		}
 		removeTemp = false
