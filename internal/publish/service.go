@@ -16,6 +16,7 @@ import (
 // MarkdownConverter is the conversion dependency needed by the publish service.
 type MarkdownConverter interface {
 	Convert(req *converter.ConvertRequest) *converter.ConvertResult
+	ExtractImages(markdown string) []converter.ImageRef
 }
 
 // AssetProcessor is the asset-processing dependency needed by the publish service.
@@ -76,17 +77,11 @@ func NewService(log *zap.Logger, conv MarkdownConverter, assets AssetProcessor, 
 
 // Convert executes the normalized publish pipeline.
 func (s *Service) Convert(input *ConvertInput) (*ConvertOutput, error) {
-	if input == nil {
-		return nil, fmt.Errorf("convert input is required")
-	}
-	if input.ConvertRequest == nil {
-		return nil, fmt.Errorf("convert request is required")
+	if err := s.Preflight(input); err != nil {
+		return nil, err
 	}
 	if s.converter == nil {
 		return nil, fmt.Errorf("markdown converter is required")
-	}
-	if err := validateConvertInput(input); err != nil {
-		return nil, err
 	}
 	if input.Intent.CreateDraft {
 		if s.drafts == nil {
@@ -171,6 +166,30 @@ func (s *Service) Convert(input *ConvertInput) (*ConvertOutput, error) {
 	}
 
 	return output, nil
+}
+
+// Preflight rejects locally observable publish blockers without conversion or remote side effects.
+func (s *Service) Preflight(input *ConvertInput) error {
+	if input == nil {
+		return fmt.Errorf("convert input is required")
+	}
+	if input.ConvertRequest == nil {
+		return fmt.Errorf("convert request is required")
+	}
+	if err := validateConvertInput(input); err != nil {
+		return err
+	}
+	if !input.Intent.Upload && !input.Intent.CreateDraft {
+		return nil
+	}
+	if s.converter == nil {
+		return fmt.Errorf("markdown converter is required")
+	}
+	assets := assetRefsFromImages(s.converter.ExtractImages(input.ConvertRequest.Markdown), input.MarkdownDir)
+	if _, err := validateAndResolveAssets(&ProcessInput{Assets: assets, MarkdownDir: input.MarkdownDir}); err != nil {
+		return &AssetError{Err: err}
+	}
+	return nil
 }
 
 func validateConvertInput(input *ConvertInput) error {

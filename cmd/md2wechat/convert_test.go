@@ -19,8 +19,10 @@ import (
 )
 
 type fakeConverter struct {
-	result *converter.ConvertResult
-	reqs   []*converter.ConvertRequest
+	result       *converter.ConvertResult
+	images       []converter.ImageRef
+	reqs         []*converter.ConvertRequest
+	extractCalls int
 }
 
 func TestRunConvertUsesConfiguredDefaultThemeUnlessFlagged(t *testing.T) {
@@ -172,7 +174,8 @@ func (f *fakeConverter) Convert(req *converter.ConvertRequest) *converter.Conver
 }
 
 func (f *fakeConverter) ExtractImages(markdown string) []converter.ImageRef {
-	return nil
+	f.extractCalls++
+	return f.images
 }
 
 type fakeImageProcessor struct {
@@ -187,6 +190,10 @@ type fakeImageProcessor struct {
 	localErrs    map[string]error
 	onlineErrs   map[string]error
 	generateErrs map[string]error
+}
+
+func (f *fakeImageProcessor) totalCalls() int {
+	return len(f.localCalls) + len(f.onlineCalls) + len(f.generateCalls)
 }
 
 func (f *fakeImageProcessor) UploadLocalImage(filePath string) (*image.UploadResult, error) {
@@ -1473,5 +1480,146 @@ func TestRunConvertJSONStillWritesOutputFileWhenRequested(t *testing.T) {
 	payload, _ := response["data"].(map[string]any)
 	if payload["output_file"] != outputPath {
 		t.Fatalf("output_file = %#v, want %q", payload["output_file"], outputPath)
+	}
+}
+
+func preserveConvertPreflightGlobals(t *testing.T) {
+	t.Helper()
+	oldCfg, oldLog := cfg, log
+	oldAccount := wechatAccountName
+	oldValidateAPIKey := validateAPIKeyForWeChatAccount
+	oldMode, oldTheme, oldAPIKey := convertMode, convertTheme, convertAPIKey
+	oldFontSize, oldBackground := convertFontSize, convertBackgroundType
+	oldCustomPrompt, oldOutput := convertCustomPrompt, convertOutput
+	oldPreview, oldUpload, oldDraft := convertPreview, convertUpload, convertDraft
+	oldSaveDraft, oldCover, oldCoverMediaID := convertSaveDraft, convertCoverImage, convertCoverMediaID
+	oldTitle, oldAuthor, oldDigest := convertTitle, convertAuthor, convertDigest
+	oldJSON := jsonOutput
+	oldNewConverter, oldNewProcessor := newMarkdownConverter, newImageProcessor
+	oldNewDraftCreator, oldUploadCover := newDraftCreator, uploadCoverImageFn
+	t.Cleanup(func() {
+		cfg, log = oldCfg, oldLog
+		wechatAccountName = oldAccount
+		validateAPIKeyForWeChatAccount = oldValidateAPIKey
+		convertMode, convertTheme, convertAPIKey = oldMode, oldTheme, oldAPIKey
+		convertFontSize, convertBackgroundType = oldFontSize, oldBackground
+		convertCustomPrompt, convertOutput = oldCustomPrompt, oldOutput
+		convertPreview, convertUpload, convertDraft = oldPreview, oldUpload, oldDraft
+		convertSaveDraft, convertCoverImage, convertCoverMediaID = oldSaveDraft, oldCover, oldCoverMediaID
+		convertTitle, convertAuthor, convertDigest = oldTitle, oldAuthor, oldDigest
+		jsonOutput = oldJSON
+		newMarkdownConverter, newImageProcessor = oldNewConverter, oldNewProcessor
+		newDraftCreator, uploadCoverImageFn = oldNewDraftCreator, oldUploadCover
+	})
+}
+
+func setConvertPreflightDefaults() {
+	log = zap.NewNop()
+	convertMode = "api"
+	convertTheme = "default"
+	convertAPIKey = ""
+	convertFontSize = "medium"
+	convertBackgroundType = "default"
+	convertCustomPrompt = ""
+	convertOutput = ""
+	convertPreview = false
+	convertUpload = false
+	convertDraft = false
+	convertSaveDraft = ""
+	convertCoverImage = ""
+	convertCoverMediaID = ""
+	convertTitle = ""
+	convertAuthor = ""
+	convertDigest = ""
+	jsonOutput = false
+}
+
+func TestRunConvertRejectsInvalidCoverBeforeNamedAccountAPIKeyValidation(t *testing.T) {
+	preserveConvertPreflightGlobals(t)
+	setConvertPreflightDefaults()
+
+	cfg = &config.Config{
+		MD2WechatAPIKey: "api-key",
+		WechatAccounts: map[string]config.WechatAccount{
+			"main": {AppID: "appid", Secret: "secret"},
+		},
+	}
+	wechatAccountName = "main"
+	convertDraft = true
+	convertCoverImage = filepath.Join(t.TempDir(), "missing-cover.jpg")
+
+	conv := &fakeConverter{result: &converter.ConvertResult{Success: true, Mode: converter.ModeAPI, Theme: "default", HTML: "<p>body</p>"}}
+	processor := &fakeImageProcessor{}
+	drafter := &fakeDraftCreator{}
+	newMarkdownConverter = func() converter.Converter { return conv }
+	newImageProcessor = func() imageProcessor { return processor }
+	newDraftCreator = func() publish.DraftCreator { return drafter }
+	uploadCoverImageFn = func(string) (string, error) { return "cover-id", nil }
+
+	validatorCalls := 0
+	validateAPIKeyForWeChatAccount = func(string) error {
+		validatorCalls++
+		return nil
+	}
+	markdownPath := filepath.Join(t.TempDir(), "article.md")
+	if err := os.WriteFile(markdownPath, []byte("# Title\n"), 0600); err != nil {
+		t.Fatalf("write markdown: %v", err)
+	}
+
+	err := runConvert(nil, []string{markdownPath})
+	cliErr, ok := err.(*cliError)
+	if !ok || cliErr.Code != codeConvertDraftFailed {
+		t.Fatalf("runConvert() error = %#v, want %s", err, codeConvertDraftFailed)
+	}
+	if validatorCalls != 0 || len(conv.reqs) != 0 || processor.totalCalls() != 0 || len(drafter.artifacts) != 0 {
+		t.Fatalf("invalid cover caused effects: validator=%d convert=%d assets=%d drafts=%d", validatorCalls, len(conv.reqs), processor.totalCalls(), len(drafter.artifacts))
+	}
+}
+
+func TestRunConvertRejectsInvalidLocalAssetBeforeProxyAPIKeyValidation(t *testing.T) {
+	preserveConvertPreflightGlobals(t)
+	setConvertPreflightDefaults()
+
+	cfg = &config.Config{
+		WechatAppID:     "appid",
+		WechatSecret:    "secret",
+		WechatProxyURL:  "https://proxy.example.com",
+		MD2WechatAPIKey: "api-key",
+	}
+	wechatAccountName = ""
+	convertUpload = true
+	imageRef := converter.ImageRef{Index: 0, Type: converter.ImageTypeLocal, Original: "missing.png", Placeholder: "<!-- IMG:0 -->"}
+	conv := &fakeConverter{
+		images: []converter.ImageRef{imageRef},
+		result: &converter.ConvertResult{
+			Success: true,
+			Mode:    converter.ModeAPI,
+			Theme:   "default",
+			HTML:    `<img src="missing.png">`,
+			Images:  []converter.ImageRef{imageRef},
+		},
+	}
+	processor := &fakeImageProcessor{}
+	newMarkdownConverter = func() converter.Converter { return conv }
+	newImageProcessor = func() imageProcessor { return processor }
+
+	validatorCalls := 0
+	validateAPIKeyForWeChatAccount = func(string) error {
+		validatorCalls++
+		return nil
+	}
+	dir := t.TempDir()
+	markdownPath := filepath.Join(dir, "article.md")
+	if err := os.WriteFile(markdownPath, []byte("# Title\n\n![image](missing.png)\n"), 0600); err != nil {
+		t.Fatalf("write markdown: %v", err)
+	}
+
+	err := runConvert(nil, []string{markdownPath})
+	cliErr, ok := err.(*cliError)
+	if !ok || cliErr.Code != codeConvertImageFailed {
+		t.Fatalf("runConvert() error = %#v, want %s", err, codeConvertImageFailed)
+	}
+	if validatorCalls != 0 || len(conv.reqs) != 0 || processor.totalCalls() != 0 {
+		t.Fatalf("invalid local asset caused effects: validator=%d convert=%d assets=%d", validatorCalls, len(conv.reqs), processor.totalCalls())
 	}
 }

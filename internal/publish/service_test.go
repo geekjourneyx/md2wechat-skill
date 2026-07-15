@@ -14,15 +14,22 @@ import (
 )
 
 type fakeMarkdownConverter struct {
-	result *converter.ConvertResult
-	reqs   []*converter.ConvertRequest
-	calls  int
+	result       *converter.ConvertResult
+	images       []converter.ImageRef
+	reqs         []*converter.ConvertRequest
+	calls        int
+	extractCalls int
 }
 
 func (f *fakeMarkdownConverter) Convert(req *converter.ConvertRequest) *converter.ConvertResult {
 	f.calls++
 	f.reqs = append(f.reqs, req)
 	return f.result
+}
+
+func (f *fakeMarkdownConverter) ExtractImages(string) []converter.ImageRef {
+	f.extractCalls++
+	return f.images
 }
 
 type fakeAssetProcessor struct {
@@ -168,6 +175,54 @@ func TestServiceConvertRejectsCoverWithoutDraftBeforeEffects(t *testing.T) {
 	}
 	if converterFake.calls != 0 || processor.totalCalls() != 0 || cover.calls != 0 || drafts.calls != 0 {
 		t.Fatalf("known blocker caused effects: converter=%d assets=%d cover=%d draft=%d", converterFake.calls, processor.totalCalls(), cover.calls, drafts.calls)
+	}
+}
+
+func TestServiceConvertRejectsInvalidLocalAssetsBeforeEffects(t *testing.T) {
+	dir := t.TempDir()
+	unsupported := filepath.Join(dir, "image.txt")
+	if err := os.WriteFile(unsupported, []byte("not an image"), 0600); err != nil {
+		t.Fatalf("write unsupported image: %v", err)
+	}
+	directory := filepath.Join(dir, "image.png")
+	if err := os.Mkdir(directory, 0700); err != nil {
+		t.Fatalf("create image directory: %v", err)
+	}
+
+	tests := []struct {
+		name   string
+		source string
+	}{
+		{name: "missing", source: "missing.png"},
+		{name: "unsupported", source: filepath.Base(unsupported)},
+		{name: "directory", source: filepath.Base(directory)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			imageRef := converter.ImageRef{Index: 0, Type: converter.ImageTypeLocal, Original: tt.source}
+			converterFake := &fakeMarkdownConverter{
+				images: []converter.ImageRef{imageRef},
+			}
+			processor := &fakeAssetProcessor{}
+			cover := &fakeCoverUploader{}
+			drafts := &fakeDraftCreator{}
+			svc := NewService(zap.NewNop(), converterFake, processor, drafts, cover.upload)
+
+			_, err := svc.Convert(&ConvertInput{
+				Intent: PublishIntent{Upload: true},
+				ConvertRequest: &converter.ConvertRequest{
+					Markdown: "![image](" + tt.source + ")",
+				},
+				MarkdownDir: dir,
+			})
+			if !IsAssetError(err) {
+				t.Fatalf("Convert() error = %T (%v), want *AssetError", err, err)
+			}
+			if converterFake.calls != 0 || processor.totalCalls() != 0 || cover.calls != 0 || drafts.calls != 0 {
+				t.Fatalf("invalid local asset caused effects: converter=%d assets=%d cover=%d draft=%d", converterFake.calls, processor.totalCalls(), cover.calls, drafts.calls)
+			}
+		})
 	}
 }
 
@@ -320,9 +375,15 @@ func TestServiceConvertProcessesAssetsAndCreatesDraft(t *testing.T) {
 		},
 	}
 	drafter := &fakeDraftCreator{result: &DraftResult{MediaID: "draft-1"}}
+	conversionImages := []converter.ImageRef{
+		{Index: 0, Type: converter.ImageTypeLocal, Original: filepath.Join("images", "local.png"), Placeholder: "<!-- IMG:0 -->"},
+		{Index: 1, Type: converter.ImageTypeOnline, Original: "https://example.com/r.png", Placeholder: "<!-- IMG:1 -->"},
+		{Index: 2, Type: converter.ImageTypeAI, Original: "draw fox", AIPrompt: "draw fox", Placeholder: "<!-- IMG:2 -->"},
+	}
 	svc := NewService(
 		zap.NewNop(),
 		&fakeMarkdownConverter{
+			images: conversionImages,
 			result: &converter.ConvertResult{
 				Mode:    converter.ModeAPI,
 				Theme:   "default",
@@ -330,11 +391,7 @@ func TestServiceConvertProcessesAssetsAndCreatesDraft(t *testing.T) {
 				Status:  action.StatusCompleted,
 				Action:  action.ActionConvert,
 				HTML:    `<img src="https://cdn.example.com/1"><img src="https://cdn.example.com/2"><img src="https://cdn.example.com/3">`,
-				Images: []converter.ImageRef{
-					{Index: 0, Type: converter.ImageTypeLocal, Original: filepath.Join("images", "local.png"), Placeholder: "<!-- IMG:0 -->"},
-					{Index: 1, Type: converter.ImageTypeOnline, Original: "https://example.com/r.png", Placeholder: "<!-- IMG:1 -->"},
-					{Index: 2, Type: converter.ImageTypeAI, Original: "draw fox", AIPrompt: "draw fox", Placeholder: "<!-- IMG:2 -->"},
-				},
+				Images:  conversionImages,
 			},
 		},
 		assets,

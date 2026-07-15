@@ -176,21 +176,18 @@ func runConvert(cmd *cobra.Command, args []string) error {
 		CoverMediaID:   strings.TrimSpace(convertCoverMediaID),
 	}
 
+	if err := service.Preflight(input); err != nil {
+		return mapConvertServiceError(err)
+	}
+	if convertUpload || convertDraft {
+		if err := prepareWeChatSideEffectWithAPIKey(convertAPIKey); err != nil {
+			return err
+		}
+	}
+
 	output, err := service.Convert(input)
 	if err != nil {
-		switch e := err.(type) {
-		case *publish.DraftError:
-			return wrapCLIError(codeConvertDraftFailed, e, e.Error())
-		default:
-			switch {
-			case publish.IsAssetError(err):
-				return wrapCLIError(codeConvertImageFailed, err, err.Error())
-			case publish.IsDraftSaveError(err), publish.IsDraftCreateError(err):
-				return wrapCLIError(codeConvertDraftFailed, err, err.Error())
-			default:
-				return wrapCLIError(codeConvertFailed, err, err.Error())
-			}
-		}
+		return mapConvertServiceError(err)
 	}
 	result := output.Conversion
 	if result == nil {
@@ -342,12 +339,21 @@ func validateConvertConfig() error {
 		return err
 	}
 
-	if convertUpload || convertDraft {
-		if err := prepareWeChatSideEffectWithAPIKey(convertAPIKey); err != nil {
-			return err
-		}
-	}
 	return nil
+}
+
+func mapConvertServiceError(err error) error {
+	if draftErr, ok := err.(*publish.DraftError); ok {
+		return wrapCLIError(codeConvertDraftFailed, draftErr, draftErr.Error())
+	}
+	switch {
+	case publish.IsAssetError(err):
+		return wrapCLIError(codeConvertImageFailed, err, err.Error())
+	case publish.IsDraftSaveError(err), publish.IsDraftCreateError(err):
+		return wrapCLIError(codeConvertDraftFailed, err, err.Error())
+	default:
+		return wrapCLIError(codeConvertFailed, err, err.Error())
+	}
 }
 
 func validateConvertThemeCompatibility() error {
