@@ -12,12 +12,90 @@ import (
 	"github.com/geekjourneyx/md2wechat-skill/internal/converter"
 	"github.com/geekjourneyx/md2wechat-skill/internal/image"
 	"github.com/geekjourneyx/md2wechat-skill/internal/publish"
+	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )
 
 type fakeConverter struct {
 	result *converter.ConvertResult
 	reqs   []*converter.ConvertRequest
+}
+
+func TestRunConvertUsesConfiguredDefaultThemeUnlessFlagged(t *testing.T) {
+	oldCfg, oldLog := cfg, log
+	oldTheme, oldMode, oldAPIKey := convertTheme, convertMode, convertAPIKey
+	oldFontSize, oldBackground := convertFontSize, convertBackgroundType
+	oldCustomPrompt, oldOutput := convertCustomPrompt, convertOutput
+	oldPreview, oldUpload, oldDraft := convertPreview, convertUpload, convertDraft
+	oldSaveDraft, oldCover, oldCoverMediaID := convertSaveDraft, convertCoverImage, convertCoverMediaID
+	oldTitle, oldAuthor, oldDigest := convertTitle, convertAuthor, convertDigest
+	oldNewConverter := newMarkdownConverter
+	t.Cleanup(func() {
+		cfg, log = oldCfg, oldLog
+		convertTheme, convertMode, convertAPIKey = oldTheme, oldMode, oldAPIKey
+		convertFontSize, convertBackgroundType = oldFontSize, oldBackground
+		convertCustomPrompt, convertOutput = oldCustomPrompt, oldOutput
+		convertPreview, convertUpload, convertDraft = oldPreview, oldUpload, oldDraft
+		convertSaveDraft, convertCoverImage, convertCoverMediaID = oldSaveDraft, oldCover, oldCoverMediaID
+		convertTitle, convertAuthor, convertDigest = oldTitle, oldAuthor, oldDigest
+		newMarkdownConverter = oldNewConverter
+	})
+
+	markdownPath := filepath.Join(t.TempDir(), "article.md")
+	if err := os.WriteFile(markdownPath, []byte("# Title\n\nBody"), 0o600); err != nil {
+		t.Fatalf("write markdown: %v", err)
+	}
+	cfg = &config.Config{MD2WechatAPIKey: "api-key", DefaultTheme: "chinese"}
+	log = zap.NewNop()
+	convertMode = "api"
+	convertAPIKey = "api-key"
+	convertFontSize = "medium"
+	convertBackgroundType = "none"
+	convertCustomPrompt = ""
+	convertOutput = ""
+	convertPreview = false
+	convertUpload = false
+	convertDraft = false
+	convertSaveDraft = ""
+	convertCoverImage = ""
+	convertCoverMediaID = ""
+	convertTitle = ""
+	convertAuthor = ""
+	convertDigest = ""
+
+	for _, tt := range []struct {
+		name      string
+		explicit  bool
+		wantTheme string
+	}{
+		{name: "unflagged uses configured theme", wantTheme: "chinese"},
+		{name: "explicit default overrides config", explicit: true, wantTheme: "default"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			convertTheme = "default"
+			cmd := &cobra.Command{Use: "convert"}
+			cmd.Flags().StringVar(&convertTheme, "theme", "default", "Theme name")
+			if tt.explicit {
+				if err := cmd.Flags().Set("theme", "default"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			conv := &fakeConverter{result: &converter.ConvertResult{
+				Success: true,
+				Mode:    converter.ModeAPI,
+				Theme:   tt.wantTheme,
+				HTML:    "<p>Body</p>",
+			}}
+			newMarkdownConverter = func() converter.Converter { return conv }
+
+			if err := runConvert(cmd, []string{markdownPath}); err != nil {
+				t.Fatalf("runConvert() error = %v", err)
+			}
+			if len(conv.reqs) != 1 || conv.reqs[0].Theme != tt.wantTheme {
+				t.Fatalf("converter requests = %#v, want theme %q", conv.reqs, tt.wantTheme)
+			}
+		})
+	}
 }
 
 func TestConvertHelpUsesRuntimeThemeDiscovery(t *testing.T) {

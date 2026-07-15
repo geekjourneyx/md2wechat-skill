@@ -303,7 +303,7 @@ func buildProviderViews() ([]providerView, error) {
 		if current == "" {
 			current = "openai"
 		}
-		configured := currentCfg.ImageAPIKey != ""
+		configured := strings.TrimSpace(currentCfg.ImageAPIKey) != ""
 		result = append(result, providerView{
 			Name:            meta.Name,
 			Aliases:         meta.Aliases,
@@ -412,6 +412,7 @@ func buildCapabilitiesData() (map[string]any, error) {
 	if currentProvider == "" {
 		currentProvider = "openai"
 	}
+	defaultTheme := effectiveDefaultTheme(currentCfg)
 	return map[string]any{
 		"commands": topLevelCommandNames(),
 		"convert": map[string]any{
@@ -419,7 +420,7 @@ func buildCapabilitiesData() (map[string]any, error) {
 			"supported_modes":  []string{"api", "ai"},
 			"font_sizes":       []string{"small", "medium", "large"},
 			"background_types": []string{"default", "grid", "none"},
-			"default_theme":    currentCfg.DefaultTheme,
+			"default_theme":    defaultTheme,
 		},
 		"providers": map[string]any{
 			"count":              len(providers),
@@ -431,7 +432,7 @@ func buildCapabilitiesData() (map[string]any, error) {
 		"article_advice":   buildArticleAdviceCapabilityData(),
 		"themes": map[string]any{
 			"count":   len(themes),
-			"default": currentCfg.DefaultTheme,
+			"default": defaultTheme,
 		},
 		"layout": buildLayoutCapabilityData(),
 		"prompts": map[string]any{
@@ -440,6 +441,15 @@ func buildCapabilitiesData() (map[string]any, error) {
 			"archetypes": sortedPromptArchetypes(allPrompts),
 		},
 	}, nil
+}
+
+func effectiveDefaultTheme(currentCfg *config.Config) string {
+	if currentCfg != nil {
+		if theme := strings.TrimSpace(currentCfg.DefaultTheme); theme != "" {
+			return theme
+		}
+	}
+	return "default"
 }
 
 func buildArticleAdviceCapabilityData() map[string]any {

@@ -52,7 +52,7 @@ func validateAndResolveAssets(input *ProcessInput) ([]AssetRef, error) {
 			if err != nil {
 				return nil, fmt.Errorf("asset %d local image: %w", i, err)
 			}
-			if info.IsDir() || !image.IsValidImageFormat(localPath) {
+			if !info.Mode().IsRegular() || !image.IsValidImageFormat(localPath) {
 				return nil, fmt.Errorf("asset %d is not a supported image file: %s", i, localPath)
 			}
 			asset.ResolvedSource = localPath

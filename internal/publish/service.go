@@ -220,7 +220,13 @@ func validateConvertInput(input *ConvertInput) error {
 			Hint:    "请确认 --cover 指向存在且可读取的本地图片文件",
 		}
 	}
-	if info.IsDir() {
+	if !info.Mode().IsRegular() {
+		if !info.IsDir() {
+			return &DraftError{
+				Message: fmt.Sprintf("封面图片路径必须是普通文件: %s", coverPath),
+				Hint:    "请使用 --cover 指定本地图片文件",
+			}
+		}
 		return &DraftError{
 			Message: fmt.Sprintf("封面图片路径不能是目录: %s", coverPath),
 			Hint:    "请使用 --cover 指定本地图片文件",

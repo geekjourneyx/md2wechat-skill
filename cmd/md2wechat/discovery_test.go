@@ -498,6 +498,18 @@ func TestCapabilitiesUsesCompactCatalogSummaries(t *testing.T) {
 	if providers["current_configured"] != false {
 		t.Fatalf("providers current_configured = %#v, want false for whitespace key", providers["current_configured"])
 	}
+	providerViews, err := buildProviderViews()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, provider := range providerViews {
+		if provider.Configured {
+			t.Fatalf("provider show view %q configured = true, want false for whitespace key", provider.Name)
+		}
+		if providerToListItem(provider).Configured {
+			t.Fatalf("provider list item %q configured = true, want false for whitespace key", provider.Name)
+		}
+	}
 	if themes["default"] != "default" {
 		t.Fatalf("themes default = %#v, want default", themes["default"])
 	}
@@ -519,6 +531,32 @@ func TestCapabilitiesUsesCompactCatalogSummaries(t *testing.T) {
 	}
 	if len(encoded) > 16*1024 {
 		t.Fatalf("capabilities payload = %d bytes, budget = 16384", len(encoded))
+	}
+}
+
+func TestCapabilitiesReportsEffectiveConfiguredDefaultTheme(t *testing.T) {
+	oldCfg := cfg
+	t.Cleanup(func() { cfg = oldCfg })
+
+	for _, tt := range []struct {
+		name       string
+		configured string
+		want       string
+	}{
+		{name: "configured", configured: "chinese", want: "chinese"},
+		{name: "blank falls back", configured: "  ", want: "default"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg = &config.Config{DefaultTheme: tt.configured}
+			data, err := buildCapabilitiesData()
+			if err != nil {
+				t.Fatal(err)
+			}
+			convertData := data["convert"].(map[string]any)
+			if got := convertData["default_theme"]; got != tt.want {
+				t.Fatalf("default_theme = %#v, want %q", got, tt.want)
+			}
+		})
 	}
 }
 

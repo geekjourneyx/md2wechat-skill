@@ -293,6 +293,14 @@ grep -q 'layout list --lifecycle compatibility --json' skills/md2wechat/SKILL.md
 grep -q 'layout list --lifecycle compatibility --json' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must isolate compatibility layouts"
 grep -q 'bash scripts/quality-gates.sh' .github/workflows/quality-gates.yml || fail ".github/workflows/quality-gates.yml must use the shared scripts/quality-gates.sh gate"
 grep -q 'VERSION' Makefile || fail "Makefile must reference VERSION"
+grep -Fq 'github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v$(VERSION)' Makefile \
+  || fail "make help must show a VERSION-pinned Go install command"
+! grep -Fq 'github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@latest' Makefile \
+  || fail "make help must not show @latest for Go install"
+grep -Fq 'required for explicit WeChat publishing effects' cmd/md2wechat/main.go \
+  || fail "root help must scope WeChat credentials to explicit publishing effects"
+! grep -Eq 'WECHAT_(APPID|SECRET).*\(required\)$' cmd/md2wechat/main.go \
+  || fail "root help must not describe WeChat credentials as globally required"
 grep -q 'artifact smoke' AGENTS.md || fail "AGENTS.md must mention artifact smoke"
 
 echo "release-check: OK (version $version)"

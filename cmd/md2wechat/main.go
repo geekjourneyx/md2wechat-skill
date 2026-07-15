@@ -434,8 +434,8 @@ func main() {
 and supports uploading materials and creating drafts.
 
 Environment Variables:
-  WECHAT_APPID                   WeChat Official Account AppID (required)
-  WECHAT_SECRET                  WeChat API Secret (required)
+  WECHAT_APPID                   WeChat Official Account AppID (required for explicit WeChat publishing effects)
+  WECHAT_SECRET                  WeChat API Secret (required for explicit WeChat publishing effects)
   IMAGE_API_KEY                  Image generation API key (for AI images)
   IMAGE_API_BASE                 Image API base URL (default: https://api.openai.com/v1)
   COMPRESS_IMAGES                Compress images > 1920px (default: true)
