@@ -462,7 +462,7 @@ md2wechat config validate
 md2wechat convert my-article.md --preview
 
 # 4. 创建草稿
-md2wechat convert my-article.md --draft
+md2wechat convert my-article.md --draft --cover cover.jpg
 ```
 
 ### 示例 2：使用精美主题

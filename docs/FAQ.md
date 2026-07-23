@@ -183,7 +183,7 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.
 请帮我安装 OpenClaw 版 md2wechat，并验证 skill 和 CLI 都可用。
 执行：
 1. npm install -g @geekjourneyx/md2wechat
-2. npx clawhub@latest install md2wechat
+2. openclaw skills install @geekjourneyx/md2wechat
 3. md2wechat version --json
 4. md2wechat config init
 5. md2wechat config validate

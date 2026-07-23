@@ -403,12 +403,15 @@ md2wechat convert article.md \
   --output draft.html
 ```
 
-响应包含 `media_id` 和 `publish_url`，用于后续发布。
+响应包含 `draft_id` 和 `draft_url`，用于后续发布。
 
 ### 6.4 创建图文消息（Image Post / 小绿书）
 
 ```bash
-md2wechat create_image_post article.md --cover ./cover.jpg --json
+md2wechat create_image_post \
+  --title "标题" \
+  --from-markdown article.md \
+  --json
 ```
 
 适用于内容更适合以卡片形式展示的场景。

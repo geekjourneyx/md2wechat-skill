@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Validated draft intent, local assets, image-post inputs, and cover requirements before authentication or remote upload/create calls, preventing known-invalid requests from causing partial side effects.
 - Added article-specific API-key readiness blockers to `inspect --json` so confirmation and execution reject the same publish path.
+- Preflighted article and image-post output destinations before remote publish effects, and exposed non-retryable partial-effect details when an image-post draft succeeds but its requested result file cannot be saved.
+- Made `config validate` reject malformed discovered configuration files while preserving normal command fallback.
+- Built release binaries with CGO disabled, including static Linux amd64 and arm64 artifacts.
+- Corrected Agent-facing draft fields, image-post commands, required-cover examples, and OpenClaw installation instructions.
 
 ### Breaking Changes
 - Changed `capabilities --json` fields `data.providers`, `data.themes`, and `data.prompts` from resource arrays to aggregate summary objects. Resource `list --json` responses now contain only the lightweight fields needed to select the next command.

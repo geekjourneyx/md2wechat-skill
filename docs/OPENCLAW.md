@@ -52,7 +52,7 @@ Your assistant. Your machine. Your rules.
 - 官网：[openclaw.ai](https://openclaw.ai/)
 - 文档：[docs.openclaw.ai](https://docs.openclaw.ai/)
 - 技能市场：[clawhub.ai](https://clawhub.ai/)
-- 当前技能页面：[clawhub.ai/geekjourneyx/md2wechat](https://clawhub.ai/geekjourneyx/md2wechat)
+- 当前技能页面：[clawhub.ai/geekjourneyx/skills/md2wechat](https://clawhub.ai/geekjourneyx/skills/md2wechat)
 - GitHub：[github.com/openclaw/openclaw](https://github.com/openclaw/openclaw)
 
 ---
@@ -65,14 +65,14 @@ Your assistant. Your machine. Your rules.
 
 ```bash
 # 安装 OpenClaw 专用 md2wechat skill 包
-npx clawhub@latest install md2wechat
+openclaw skills install @geekjourneyx/md2wechat
 ```
 
 Skill metadata 使用 OpenClaw 官方 Node 安装资源声明 `@geekjourneyx/md2wechat`。如果运行环境没有自动安装依赖，按下一节用 npm 安装 CLI。
 
 如果你更习惯从网页进入当前技能页面，可以直接打开：
 
-- [clawhub.ai/geekjourneyx/md2wechat](https://clawhub.ai/geekjourneyx/md2wechat)
+- [clawhub.ai/geekjourneyx/skills/md2wechat](https://clawhub.ai/geekjourneyx/skills/md2wechat)
 
 ---
 
@@ -82,7 +82,7 @@ Skill metadata 使用 OpenClaw 官方 Node 安装资源声明 `@geekjourneyx/md2
 
 ```bash
 npm install -g @geekjourneyx/md2wechat
-npx clawhub@latest install md2wechat
+openclaw skills install @geekjourneyx/md2wechat
 ```
 
 第一条安装 CLI，第二条安装 OpenClaw skill 壳。两者完成后直接运行验证命令。
@@ -108,7 +108,7 @@ macOS 和 Linux 不再提供 OpenClaw 专用 shell 安装器，使用 npm + Claw
 请帮我安装 OpenClaw 版 md2wechat，并验证 skill 和 CLI 都可用。
 按这个顺序执行：
 1. npm install -g @geekjourneyx/md2wechat
-2. npx clawhub@latest install md2wechat
+2. openclaw skills install @geekjourneyx/md2wechat
 3. md2wechat version --json
 4. md2wechat config init
 5. md2wechat config validate
@@ -263,7 +263,7 @@ md2wechat prompts list --json
 tree ~/.openclaw/skills/md2wechat/ -L 1
 ```
 
-如果目录不存在，重新运行 `npx clawhub@latest install md2wechat`。
+如果目录不存在，重新运行 `openclaw skills install @geekjourneyx/md2wechat`。
 
 ### Q: 运行时报错 "command not found"？
 
@@ -283,7 +283,7 @@ md2wechat --help
 请帮我安装 OpenClaw 版 md2wechat，并验证 CLI、配置初始化和能力发现都正常。
 执行：
 1. npm install -g @geekjourneyx/md2wechat
-2. npx clawhub@latest install md2wechat
+2. openclaw skills install @geekjourneyx/md2wechat
 3. md2wechat version --json
 4. md2wechat config init
 5. md2wechat config validate
@@ -300,8 +300,8 @@ md2wechat --help
 # 更新 CLI
 npm install -g @geekjourneyx/md2wechat
 
-# ClawHub 方式
-clawhub update md2wechat
+# OpenClaw 方式
+openclaw skills install @geekjourneyx/md2wechat
 ```
 
 ### Q: 配置没生效？

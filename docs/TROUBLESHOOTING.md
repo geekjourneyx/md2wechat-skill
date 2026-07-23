@@ -262,7 +262,7 @@ md2wechat convert 文章.md --upload
 md2wechat config validate
 
 # 2. 等待几分钟后重试
-md2wechat convert 文章.md --draft
+md2wechat convert 文章.md --draft --cover 封面.jpg
 ```
 
 ---
