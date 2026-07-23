@@ -316,6 +316,78 @@ func TestServiceConvertRejectsInvalidLocalSinksBeforeEffects(t *testing.T) {
 	}
 }
 
+func TestServiceConvertRejectsBrokenDraftSymlinkBeforeEffects(t *testing.T) {
+	dir := t.TempDir()
+	bodyPath := filepath.Join(dir, "body.png")
+	if err := os.WriteFile(bodyPath, []byte("body"), 0600); err != nil {
+		t.Fatalf("write body: %v", err)
+	}
+	coverPath := filepath.Join(dir, "cover.jpg")
+	if err := os.WriteFile(coverPath, []byte("cover"), 0600); err != nil {
+		t.Fatalf("write cover: %v", err)
+	}
+	saveDraftPath := filepath.Join(dir, "draft.json")
+	brokenTarget := filepath.Join(dir, "missing-target", "draft.json")
+	if err := os.Symlink(brokenTarget, saveDraftPath); err != nil {
+		t.Fatalf("create broken draft symlink: %v", err)
+	}
+
+	imageRef := converter.ImageRef{
+		Index:    0,
+		Type:     converter.ImageTypeLocal,
+		Original: "body.png",
+	}
+	converterFake := &fakeMarkdownConverter{
+		result: &converter.ConvertResult{
+			Mode:    converter.ModeAPI,
+			Success: true,
+			HTML:    "<p>body</p>",
+			Images:  []converter.ImageRef{imageRef},
+		},
+		images: []converter.ImageRef{imageRef},
+	}
+	processor := &fakeAssetProcessor{
+		localResults: map[string]*image.UploadResult{
+			bodyPath: {MediaID: "body-id", WechatURL: "https://wechat.local/body"},
+		},
+	}
+	cover := &fakeCoverUploader{}
+	drafts := &fakeDraftCreator{}
+	svc := NewService(zap.NewNop(), converterFake, processor, drafts, cover.upload)
+
+	_, err := svc.Convert(&ConvertInput{
+		Intent: PublishIntent{
+			Upload:      true,
+			CreateDraft: true,
+			SaveDraft:   true,
+		},
+		ConvertRequest: &converter.ConvertRequest{
+			Mode:     converter.ModeAPI,
+			Markdown: "![body](body.png)",
+		},
+		MarkdownDir:    dir,
+		SaveDraftPath:  saveDraftPath,
+		CoverImagePath: coverPath,
+	})
+	if err == nil || !strings.Contains(err.Error(), "prepare draft file") {
+		t.Errorf("Convert() error = %v, want prepare draft file", err)
+	}
+	if converterFake.calls != 0 ||
+		converterFake.extractCalls != 0 ||
+		processor.totalCalls() != 0 ||
+		cover.calls != 0 ||
+		drafts.calls != 0 {
+		t.Fatalf(
+			"effects: convert=%d extract=%d assets=%d cover=%d draft=%d",
+			converterFake.calls,
+			converterFake.extractCalls,
+			processor.totalCalls(),
+			cover.calls,
+			drafts.calls,
+		)
+	}
+}
+
 func TestServiceConvertRejectsMissingDraftDependenciesBeforeEffects(t *testing.T) {
 	dir := t.TempDir()
 	coverPath := filepath.Join(dir, "cover.jpg")

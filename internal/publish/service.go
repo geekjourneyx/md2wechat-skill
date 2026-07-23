@@ -196,7 +196,7 @@ func (s *Service) Preflight(input *ConvertInput) error {
 			}
 		}
 		if input.SaveDraftPath != "" {
-			if err := atomicfile.Probe(input.SaveDraftPath); err != nil {
+			if err := probeDraftSaveDestination(input.SaveDraftPath); err != nil {
 				return &DraftSaveError{
 					Err: fmt.Errorf("prepare draft file: %w", err),
 				}
@@ -211,6 +211,33 @@ func (s *Service) Preflight(input *ConvertInput) error {
 		return &AssetError{Err: err}
 	}
 	return nil
+}
+
+func probeDraftSaveDestination(destination string) error {
+	if destination == "" {
+		return nil
+	}
+
+	if _, err := os.Lstat(destination); err != nil {
+		if os.IsNotExist(err) {
+			return atomicfile.Probe(destination)
+		}
+		return err
+	}
+
+	info, err := os.Stat(destination)
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("destination is not a regular file: %s", destination)
+	}
+
+	file, err := os.OpenFile(destination, os.O_WRONLY, 0)
+	if err != nil {
+		return err
+	}
+	return file.Close()
 }
 
 func validateConvertInput(input *ConvertInput) error {
