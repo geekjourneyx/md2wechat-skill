@@ -151,7 +151,7 @@ func runConfigShow(showSecret bool) error {
 // runConfigValidate 验证配置
 func runConfigValidate() error {
 	config.SetQuiet(jsonOutput)
-	cfg, err := config.Load()
+	cfg, err := config.LoadStrict()
 	if err != nil {
 		return wrapCLIError(codeConfigInvalid, err, err.Error())
 	}

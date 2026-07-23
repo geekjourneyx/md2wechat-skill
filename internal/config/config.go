@@ -121,6 +121,19 @@ func Load() (*Config, error) {
 	return LoadWithDefaults("")
 }
 
+// LoadStrict rejects a malformed discovered config file before loading the
+// normal merged configuration. Load fallback remains unchanged.
+func LoadStrict() (*Config, error) {
+	configPath := findConfigFile()
+	if configPath != "" {
+		probe := &Config{}
+		if err := loadFromFile(probe, configPath); err != nil {
+			return nil, err
+		}
+	}
+	return LoadWithDefaults(configPath)
+}
+
 // LoadWithDefaults 使用指定配置文件路径加载配置
 func LoadWithDefaults(configPath string) (*Config, error) {
 	cfg := &Config{

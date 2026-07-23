@@ -1,6 +1,7 @@
 package config
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -659,6 +660,41 @@ wechat:
 	err = cfg.ResolveWeChatAccount("")
 	if err == nil || !IsWechatAccountAmbiguous(err) {
 		t.Fatalf("ResolveWeChatAccount() error = %v, want ambiguous", err)
+	}
+}
+
+func TestLoadStrictRejectsMalformedConfigWhileLoadFallsBack(t *testing.T) {
+	home := t.TempDir()
+	configDir := filepath.Join(home, ".config", "md2wechat")
+	if err := os.MkdirAll(configDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(configDir, "config.yaml"),
+		[]byte("wechat: ["),
+		0600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", home)
+
+	oldQuiet, oldWriter := quietOutput, statusWriter
+	SetQuiet(true)
+	SetStatusWriter(io.Discard)
+	t.Cleanup(func() {
+		quietOutput, statusWriter = oldQuiet, oldWriter
+	})
+
+	if _, err := LoadStrict(); err == nil ||
+		!strings.Contains(err.Error(), "parse yaml") {
+		t.Fatalf("LoadStrict() error = %v", err)
+	}
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() fallback error = %v", err)
+	}
+	if cfg.DefaultConvertMode != "api" {
+		t.Fatalf("fallback config = %#v", cfg)
 	}
 }
 

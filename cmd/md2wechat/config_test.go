@@ -227,6 +227,50 @@ func TestConfigValidateJSONEnvelope(t *testing.T) {
 	}
 }
 
+func TestConfigValidateRejectsMalformedConfigJSONEnvelope(t *testing.T) {
+	oldJSON, oldExit := jsonOutput, exitFunc
+	t.Cleanup(func() {
+		jsonOutput, exitFunc = oldJSON, oldExit
+	})
+
+	home := t.TempDir()
+	configDir := filepath.Join(home, ".config", "md2wechat")
+	if err := os.MkdirAll(configDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(configDir, "config.yaml"),
+		[]byte("wechat: ["),
+		0600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", home)
+	jsonOutput = true
+	exitFunc = func(int) {}
+
+	configCmd.SetArgs([]string{"validate"})
+	err := configCmd.Execute()
+	if err == nil {
+		t.Fatal("config validate error = nil")
+	}
+	cliErr, ok := extractCLIError(err)
+	if !ok || cliErr.Code != codeConfigInvalid {
+		t.Fatalf("config validate error = %#v, want %s", err, codeConfigInvalid)
+	}
+
+	stdout := captureStdout(t, func() {
+		responseError(err)
+	})
+	var response map[string]any
+	if err := json.Unmarshal(stdout, &response); err != nil {
+		t.Fatalf("unmarshal response: %v\n%s", err, stdout)
+	}
+	if response["success"] != false || response["code"] != codeConfigInvalid || response["retryable"] != false {
+		t.Fatalf("unexpected response: %#v", response)
+	}
+}
+
 func TestConfigInitJSONEnvelopeSuppressesHumanStderr(t *testing.T) {
 	oldJSON := jsonOutput
 	t.Cleanup(func() {
