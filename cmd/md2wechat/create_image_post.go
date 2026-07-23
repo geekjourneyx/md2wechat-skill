@@ -3,9 +3,11 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 
+	"github.com/geekjourneyx/md2wechat-skill/internal/atomicfile"
 	"github.com/geekjourneyx/md2wechat-skill/internal/draft"
 	"github.com/geekjourneyx/md2wechat-skill/internal/publish"
 	"github.com/spf13/cobra"
@@ -135,6 +137,16 @@ func runCreateImagePost() (any, error) {
 		}, nil
 	}
 
+	if imagePostOutput != "" {
+		if err := atomicfile.Probe(imagePostOutput); err != nil {
+			return nil, wrapCLIError(
+				codeImagePostCreateFailed,
+				err,
+				err.Error(),
+			)
+		}
+	}
+
 	if err := prepareWeChatSideEffect(); err != nil {
 		return nil, err
 	}
@@ -146,8 +158,24 @@ func runCreateImagePost() (any, error) {
 
 	if imagePostOutput != "" {
 		data, _ := json.MarshalIndent(result, "", "  ")
-		if err := os.WriteFile(imagePostOutput, data, 0644); err != nil {
-			return nil, wrapCLIError(codeImagePostCreateFailed, err, err.Error())
+		if _, err := atomicfile.Write(imagePostOutput, data); err != nil {
+			return nil, newCLIErrorWithDetails(
+				codeImagePostCreateFailed,
+				fmt.Sprintf(
+					"image post draft %s was created, but saving --output failed: %v",
+					result.MediaID,
+					err,
+				),
+				map[string]any{
+					"draft_created": true,
+					"media_id":      result.MediaID,
+					"output_saved":  false,
+					"output_file":   imagePostOutput,
+				},
+				[]string{
+					"Do not retry create_image_post automatically; inspect the WeChat draft first.",
+				},
+			)
 		}
 	}
 

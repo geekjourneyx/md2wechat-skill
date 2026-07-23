@@ -189,6 +189,20 @@ func (s *Service) Preflight(input *ConvertInput) error {
 	if !input.Intent.Upload && !input.Intent.CreateDraft {
 		return nil
 	}
+	if input.ConvertRequest.Mode != converter.ModeAI {
+		if input.OutputFile != "" {
+			if err := atomicfile.Probe(input.OutputFile); err != nil {
+				return fmt.Errorf("prepare output file: %w", err)
+			}
+		}
+		if input.SaveDraftPath != "" {
+			if err := atomicfile.Probe(input.SaveDraftPath); err != nil {
+				return &DraftSaveError{
+					Err: fmt.Errorf("prepare draft file: %w", err),
+				}
+			}
+		}
+	}
 	if s.converter == nil {
 		return fmt.Errorf("markdown converter is required")
 	}

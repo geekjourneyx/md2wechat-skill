@@ -226,6 +226,96 @@ func TestServiceConvertRejectsInvalidLocalAssetsBeforeEffects(t *testing.T) {
 	}
 }
 
+func TestServiceConvertRejectsInvalidLocalSinksBeforeEffects(t *testing.T) {
+	dir := t.TempDir()
+	bodyPath := filepath.Join(dir, "body.png")
+	if err := os.WriteFile(bodyPath, []byte("body"), 0600); err != nil {
+		t.Fatalf("write body: %v", err)
+	}
+	coverPath := filepath.Join(dir, "cover.jpg")
+	if err := os.WriteFile(coverPath, []byte("cover"), 0600); err != nil {
+		t.Fatalf("write cover: %v", err)
+	}
+
+	tests := []struct {
+		name          string
+		outputFile    string
+		saveDraftPath string
+		wantError     string
+	}{
+		{
+			name:       "output parent missing",
+			outputFile: filepath.Join(dir, "missing-output", "article.html"),
+			wantError:  "prepare output file",
+		},
+		{
+			name:          "saved draft parent missing",
+			saveDraftPath: filepath.Join(dir, "missing-draft", "draft.json"),
+			wantError:     "prepare draft file",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			imageRef := converter.ImageRef{
+				Index:    0,
+				Type:     converter.ImageTypeLocal,
+				Original: "body.png",
+			}
+			converterFake := &fakeMarkdownConverter{
+				result: &converter.ConvertResult{
+					Mode:    converter.ModeAPI,
+					Success: true,
+					HTML:    "<p>body</p>",
+					Images:  []converter.ImageRef{imageRef},
+				},
+				images: []converter.ImageRef{imageRef},
+			}
+			processor := &fakeAssetProcessor{
+				localResults: map[string]*image.UploadResult{
+					bodyPath: {MediaID: "body-id", WechatURL: "https://wechat.local/body"},
+				},
+			}
+			cover := &fakeCoverUploader{}
+			drafts := &fakeDraftCreator{}
+			svc := NewService(zap.NewNop(), converterFake, processor, drafts, cover.upload)
+
+			_, err := svc.Convert(&ConvertInput{
+				Intent: PublishIntent{
+					Upload:      true,
+					CreateDraft: true,
+					SaveDraft:   tt.saveDraftPath != "",
+				},
+				ConvertRequest: &converter.ConvertRequest{
+					Mode:     converter.ModeAPI,
+					Markdown: "![body](body.png)",
+				},
+				MarkdownDir:    dir,
+				OutputFile:     tt.outputFile,
+				SaveDraftPath:  tt.saveDraftPath,
+				CoverImagePath: coverPath,
+			})
+			if err == nil || !strings.Contains(err.Error(), tt.wantError) {
+				t.Fatalf("Convert() error = %v, want %q", err, tt.wantError)
+			}
+			if converterFake.calls != 0 ||
+				converterFake.extractCalls != 0 ||
+				processor.totalCalls() != 0 ||
+				cover.calls != 0 ||
+				drafts.calls != 0 {
+				t.Fatalf(
+					"effects: convert=%d extract=%d assets=%d cover=%d draft=%d",
+					converterFake.calls,
+					converterFake.extractCalls,
+					processor.totalCalls(),
+					cover.calls,
+					drafts.calls,
+				)
+			}
+		})
+	}
+}
+
 func TestServiceConvertRejectsMissingDraftDependenciesBeforeEffects(t *testing.T) {
 	dir := t.TempDir()
 	coverPath := filepath.Join(dir, "cover.jpg")
@@ -373,11 +463,16 @@ func TestConvertOutputFailurePreventsDraft(t *testing.T) {
 		OutputFile:     filepath.Join(dir, "missing", "article.html"),
 		CoverImagePath: coverPath,
 	})
-	if err == nil || !strings.Contains(err.Error(), "write output file") {
+	if err == nil || !strings.Contains(err.Error(), "prepare output file") {
 		t.Fatalf("Convert() error = %v, want output write failure", err)
 	}
-	if cover.calls != 0 || drafts.calls != 0 {
-		t.Fatalf("output failure caused publish effects: cover=%d draft=%d", cover.calls, drafts.calls)
+	if processor.totalCalls() != 0 || cover.calls != 0 || drafts.calls != 0 {
+		t.Fatalf(
+			"output failure caused publish effects: assets=%d cover=%d draft=%d",
+			processor.totalCalls(),
+			cover.calls,
+			drafts.calls,
+		)
 	}
 }
 

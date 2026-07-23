@@ -1,6 +1,7 @@
 package atomicfile
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,6 +12,36 @@ var writeTempFn = func(file *os.File, data []byte) (int, error) {
 }
 
 var replaceFileFn = replaceFile
+
+// Probe verifies the destination using Write's sibling-temp directory without
+// creating or replacing the destination.
+func Probe(destination string) error {
+	if destination == "" {
+		return nil
+	}
+
+	info, err := os.Stat(destination)
+	switch {
+	case err == nil && !info.Mode().IsRegular():
+		return fmt.Errorf("destination is not a regular file: %s", destination)
+	case err != nil && !os.IsNotExist(err):
+		return err
+	}
+
+	temp, err := os.CreateTemp(
+		filepath.Dir(destination),
+		"."+filepath.Base(destination)+".probe-*",
+	)
+	if err != nil {
+		return err
+	}
+	tempPath := temp.Name()
+	if err := temp.Close(); err != nil {
+		_ = os.Remove(tempPath)
+		return err
+	}
+	return os.Remove(tempPath)
+}
 
 // Write atomically replaces destination with data using a sibling temporary file.
 func Write(destination string, data []byte) (string, error) {
