@@ -66,7 +66,9 @@ jobs:
             output="$3"
 
             echo "Building ${output} for ${os}/${arch}..."
-            GOOS="${os}" GOARCH="${arch}" go build -trimpath -ldflags="${LDFLAGS}" -o "${bundle_dir}/${output}" ./cmd/md2wechat
+            CGO_ENABLED=0 GOOS="${os}" GOARCH="${arch}" \
+              go build -trimpath -ldflags="${LDFLAGS}" \
+              -o "${bundle_dir}/${output}" ./cmd/md2wechat
             echo "✓ ${output}"
           }
 
@@ -151,6 +153,10 @@ jobs:
           output="$("$binary" version --json)"
           printf '%s\n' "$output"
           echo "$output" | grep -q "\"version\":\"${VERSION}\""
+          file "${bundle_dir}/md2wechat-linux-amd64" |
+            grep -q 'statically linked'
+          file "${bundle_dir}/md2wechat-linux-arm64" |
+            grep -q 'statically linked'
 
       - name: Smoke Homebrew archive from same artifact
         env:

@@ -15,19 +15,19 @@ release:
 	@echo "Version: $(VERSION)"
 	@echo ""
 	@echo "📦 Building for Linux amd64..."
-	@GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/md2wechat-linux-amd64 ./cmd/md2wechat
+	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/md2wechat-linux-amd64 ./cmd/md2wechat
 	@echo "✓ Linux amd64"
 	@echo "📦 Building for Linux arm64..."
-	@GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/md2wechat-linux-arm64 ./cmd/md2wechat
+	@CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/md2wechat-linux-arm64 ./cmd/md2wechat
 	@echo "✓ Linux arm64"
 	@echo "📦 Building for macOS amd64 (Intel)..."
-	@GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/md2wechat-darwin-amd64 ./cmd/md2wechat
+	@CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/md2wechat-darwin-amd64 ./cmd/md2wechat
 	@echo "✓ macOS amd64"
 	@echo "📦 Building for macOS arm64 (Apple Silicon)..."
-	@GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/md2wechat-darwin-arm64 ./cmd/md2wechat
+	@CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/md2wechat-darwin-arm64 ./cmd/md2wechat
 	@echo "✓ macOS arm64"
 	@echo "📦 Building for Windows amd64..."
-	@GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/md2wechat-windows-amd64.exe ./cmd/md2wechat
+	@CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/md2wechat-windows-amd64.exe ./cmd/md2wechat
 	@echo "✓ Windows amd64"
 	@echo ""
 	@chmod +x bin/*-linux* bin/*-darwin* 2>/dev/null || true
