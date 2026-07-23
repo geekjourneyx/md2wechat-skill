@@ -479,7 +479,8 @@ md2wechat convert my-article.md \
   --mode ai \
   --theme autumn-warm \
   --upload \
-  --draft
+  --draft \
+  --cover cover.jpg
 ```
 
 ### 示例 3：批量处理
@@ -494,7 +495,8 @@ for file in articles/*.md; do
     --mode ai \
     --theme autumn-warm \
     --upload \
-    --draft
+    --draft \
+    --cover cover.jpg
 done
 ```
 
@@ -512,6 +514,7 @@ export WECHAT_SECRET="${{ secrets.WECHAT_SECRET }}"
 md2wechat convert article.md \
   --upload \
   --draft \
+  --cover cover.jpg \
   --save-draft /outputs/draft.json
 ```
 

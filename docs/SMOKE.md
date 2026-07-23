@@ -279,7 +279,7 @@ unsupported file type
 2. `md2wechat upload_image --json <normal-image.png>`
 3. `md2wechat create_image_post --json ...`
 4. `md2wechat test-draft --json ...`
-5. `md2wechat convert --mode api --upload --draft --output ...`
+5. `md2wechat convert --mode api --upload --draft --cover ... --output ...`
 6. 最后再测 `md2wechat convert --mode ai --json`
 
 ---

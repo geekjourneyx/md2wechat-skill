@@ -334,7 +334,7 @@ md2wechat config validate
 | **运行方式** | 本地终端 | 本地运行，通过聊天应用操控 |
 | **仓库内 skill 路径** | `skills/md2wechat/` | `platforms/openclaw/md2wechat/` |
 | **技能目录** | `~/.claude/skills/` | `~/.openclaw/skills/` |
-| **安装方式** | `/plugin` 命令 | npm + `clawhub` CLI |
+| **安装方式** | `/plugin` 命令 | npm + `openclaw skills install @geekjourneyx/md2wechat` |
 | **配置文件** | 环境变量 / `~/.config/md2wechat/config.yaml` | `~/.config/md2wechat/config.yaml` |
 | **LLM 支持** | Claude | Claude、GPT、DeepSeek、KIMI 等 |
 | **市场** | Plugin Marketplace | [ClawHub](https://clawhub.ai/) |
