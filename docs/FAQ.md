@@ -184,11 +184,12 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.
 执行：
 1. npm install -g @geekjourneyx/md2wechat
 2. openclaw skills install @geekjourneyx/md2wechat
-3. md2wechat version --json
-4. md2wechat config init
-5. md2wechat config validate
-6. md2wechat capabilities --json
-如果失败，请继续排查 ~/.openclaw/skills/md2wechat/ 和 `command -v md2wechat`，不要只给我报错。
+3. openclaw skills info md2wechat
+4. md2wechat version --json
+5. md2wechat config init
+6. md2wechat config validate
+7. md2wechat capabilities --json
+如果失败，请继续排查 OpenClaw 返回的技能状态和 `command -v md2wechat`，不要只给我报错。
 ```
 
 ### Q3：我在 Obsidian 的 Claudian 里怎么用 `/md2wechat`？

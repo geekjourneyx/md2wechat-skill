@@ -68,6 +68,14 @@ Your assistant. Your machine. Your rules.
 openclaw skills install @geekjourneyx/md2wechat
 ```
 
+原生命令默认把 skill 安装到当前 active workspace 的 `skills/`。如果需要用户级共享并保留 OpenClaw 的安装追踪，使用：
+
+```bash
+openclaw skills install @geekjourneyx/md2wechat --global
+```
+
+`--global` 安装和本文的手动共享安装都使用 `~/.openclaw/skills`。无论采用哪种方式，当前实际可见的 `Source` 和 `Path` 都以 `openclaw skills info md2wechat` 为准。
+
 Skill metadata 使用 OpenClaw 官方 Node 安装资源声明 `@geekjourneyx/md2wechat`。如果运行环境没有自动安装依赖，按下一节用 npm 安装 CLI。
 
 如果你更习惯从网页进入当前技能页面，可以直接打开：
@@ -109,12 +117,13 @@ macOS 和 Linux 不再提供 OpenClaw 专用 shell 安装器，使用 npm + Claw
 按这个顺序执行：
 1. npm install -g @geekjourneyx/md2wechat
 2. openclaw skills install @geekjourneyx/md2wechat
-3. md2wechat version --json
-4. md2wechat config init
-5. md2wechat config validate
-6. md2wechat capabilities --json
-7. md2wechat skills read md2wechat --json
-8. 检查 ~/.openclaw/skills/md2wechat/ 是否存在，并确认 `command -v md2wechat` 有输出
+3. openclaw skills info md2wechat
+4. md2wechat version --json
+5. md2wechat config init
+6. md2wechat config validate
+7. md2wechat capabilities --json
+8. md2wechat skills read md2wechat --json
+9. 确认 `command -v md2wechat` 有输出
 如果某一步失败，请继续排查并给我下一条修复命令，不要只返回报错原文。
 ```
 
@@ -201,16 +210,13 @@ api:
 
 ## 验证安装
 
-### 检查技能目录
+### 检查已安装技能
 
 ```bash
-ls ~/.openclaw/skills/md2wechat/
+openclaw skills info md2wechat
 ```
 
-至少应看到：
-```
-SKILL.md
-```
+命令应返回 `md2wechat` 的技能信息及当前可见的 `Source`、`Path`。原生安装默认位于 active workspace 的 `skills/`，使用 `--global` 或本文的手动共享安装时位于 `~/.openclaw/skills`；不要只用某个固定目录作为安装成功依据。
 
 ### 测试运行
 
@@ -238,7 +244,7 @@ md2wechat prompts list --json
 
 `capabilities` 提供聚合路由事实；资源 `list` 提供轻量选择字段，选定后再用 `show` 读取完整定义，`render` 负责物化 prompt/layout。JSON stdout 是单行紧凑对象并以换行结束，需要人工查看时加 `| jq`。
 
-`skills read` 读取当前 CLI 二进制内置的核心 coding-agent SOP，用来确认运行时协议和 CLI 版本一致。OpenClaw 专用安装 metadata、ClawHub 安装资源和平台差异仍以 `~/.openclaw/skills/md2wechat/SKILL.md` 或仓库内 `platforms/openclaw/md2wechat/SKILL.md` 为准。
+`skills read` 读取当前 CLI 二进制内置的核心 coding-agent SOP，用来确认运行时协议和 CLI 版本一致。OpenClaw 是否已发现当前 skill、实际来源和解析路径以 `openclaw skills info md2wechat` 为准；仓库内的平台差异说明位于 `platforms/openclaw/md2wechat/SKILL.md`。
 
 如果你要选图片模型，优先看 `providers show <name> --json` 返回的 `supported_models`，不要凭记忆写死。
 
@@ -256,14 +262,13 @@ md2wechat prompts list --json
 
 ### Q: 安装后找不到技能？
 
-**A:** 确认技能目录位置正确：
+**A:** 让 OpenClaw 从当前 workspace 查询技能：
 
 ```bash
-# 检查目录结构
-tree ~/.openclaw/skills/md2wechat/ -L 1
+openclaw skills info md2wechat
 ```
 
-如果目录不存在，重新运行 `openclaw skills install @geekjourneyx/md2wechat`。
+如果命令找不到技能，回到需要使用该技能的 workspace，重新运行 `openclaw skills install @geekjourneyx/md2wechat`。
 
 ### Q: 运行时报错 "command not found"？
 
@@ -284,12 +289,13 @@ md2wechat --help
 执行：
 1. npm install -g @geekjourneyx/md2wechat
 2. openclaw skills install @geekjourneyx/md2wechat
-3. md2wechat version --json
-4. md2wechat config init
-5. md2wechat config validate
-6. md2wechat capabilities --json
-7. md2wechat skills read md2wechat --json
-如果失败，请继续排查 skill 目录、PATH 和版本，不要只给我错误信息。
+3. openclaw skills info md2wechat
+4. md2wechat version --json
+5. md2wechat config init
+6. md2wechat config validate
+7. md2wechat capabilities --json
+8. md2wechat skills read md2wechat --json
+如果失败，请继续排查 OpenClaw 返回的技能状态、PATH 和版本，不要只给我错误信息。
 ```
 
 ### Q: 如何更新技能？
@@ -300,9 +306,14 @@ md2wechat --help
 # 更新 CLI
 npm install -g @geekjourneyx/md2wechat
 
-# OpenClaw 方式
-openclaw skills install @geekjourneyx/md2wechat
+# 更新 workspace 内由 OpenClaw 追踪的安装（在原安装 workspace 执行）
+openclaw skills update @geekjourneyx/md2wechat
+
+# 更新通过 --global 安装并由 OpenClaw 追踪的安装
+openclaw skills update @geekjourneyx/md2wechat --global
 ```
+
+如果使用本文的手动 archive 流程安装，OpenClaw 没有对应的 tracked install；请重新执行“方式三：手动安装”，不要使用 `skills update`。
 
 ### Q: 配置没生效？
 
@@ -320,7 +331,7 @@ md2wechat config validate
 | 平台 | 技能目录 |
 |------|---------|
 | Claude Code | `~/.claude/skills/` |
-| OpenClaw | `~/.openclaw/skills/` |
+| OpenClaw | 默认是 active workspace 的 `skills/`；`--global` 或本文手动共享路径是 `~/.openclaw/skills`；实际位置以 `skills info` 返回的 `Path` 为准 |
 
 可以同时安装在两个平台。
 
@@ -333,7 +344,7 @@ md2wechat config validate
 | **定位** | 终端 AI 编程助手 | 聊天应用 AI 助手（WhatsApp/Telegram 等） |
 | **运行方式** | 本地终端 | 本地运行，通过聊天应用操控 |
 | **仓库内 skill 路径** | `skills/md2wechat/` | `platforms/openclaw/md2wechat/` |
-| **技能目录** | `~/.claude/skills/` | `~/.openclaw/skills/` |
+| **技能目录** | `~/.claude/skills/` | 默认是 active workspace 的 `skills/`；共享路径是 `~/.openclaw/skills`；实际位置以 `openclaw skills info md2wechat` 为准 |
 | **安装方式** | `/plugin` 命令 | npm + `openclaw skills install @geekjourneyx/md2wechat` |
 | **配置文件** | 环境变量 / `~/.config/md2wechat/config.yaml` | `~/.config/md2wechat/config.yaml` |
 | **LLM 支持** | Claude | Claude、GPT、DeepSeek、KIMI 等 |

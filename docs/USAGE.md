@@ -205,16 +205,16 @@ md2wechat convert article.md --mode api --api-key "your_key"
 
 ### AI 模式（适合定制）
 
-使用 AI 生成 HTML，更加灵活。
+AI 模式是宿主 Agent handoff：CLI 只准备转换提示词，不直接调用模型生成 HTML。
 
 ```bash
-md2wechat convert article.md --mode ai --theme autumn-warm
+md2wechat convert article.md --mode ai --theme autumn-warm --json
 ```
 
-**特点**：
-- 高度可定制
-- 主题更精美
-- 需要 AI API Key
+该命令返回 `CONVERT_AI_REQUEST_READY`、`status: action_required` 和
+`data.prompt`。宿主 Agent 或外部模型执行这个 prompt 后，才会得到 HTML。
+本次 CLI 调用不会上传图片或创建草稿，也不要求在 md2wechat 中配置 AI
+API Key；模型访问能力由宿主 Agent 或外部模型提供。
 
 **可用主题**：
 - `autumn-warm` - 秋日暖光
@@ -226,11 +226,11 @@ md2wechat convert article.md --mode ai --theme autumn-warm
 
 | 特性 | API 模式 | AI 模式 |
 |------|---------|---------|
-| 速度 | 快 | 较慢 |
-| 稳定性 | 高 | 中 |
-| 主题选择 | 基础 | 丰富 |
-| 成本 | 需要 API Key | 需要 AI Key |
-| 适用场景 | 日常使用 | 追求美观 |
+| CLI 返回结果 | 转换后的 HTML | `action_required` 和 `data.prompt` |
+| HTML 生成方 | md2wechat API | 宿主 Agent 或外部模型 |
+| md2wechat 内置 AI Key | 不适用 | 不需要 |
+| 本次调用上传图片/创建草稿 | 按显式参数执行 | 不执行 |
+| 主题来源 | `themes list` 中的 API 主题 | `themes list` 中的 AI 主题 |
 
 ---
 
@@ -468,16 +468,14 @@ md2wechat convert my-article.md --draft --cover cover.jpg
 ### 示例 2：使用精美主题
 
 ```bash
-# 1. 使用 AI 模式 + 秋日暖光主题
+# 1. 使用 API 主题预览最终 HTML
 md2wechat convert my-article.md \
-  --mode ai \
-  --theme autumn-warm \
+  --theme apple \
   --preview
 
 # 2. 满意后，上传图片并创建草稿
 md2wechat convert my-article.md \
-  --mode ai \
-  --theme autumn-warm \
+  --theme apple \
   --upload \
   --draft \
   --cover cover.jpg
@@ -492,8 +490,7 @@ md2wechat convert my-article.md \
 for file in articles/*.md; do
   echo "Converting $file..."
   md2wechat convert "$file" \
-    --mode ai \
-    --theme autumn-warm \
+    --theme apple \
     --upload \
     --draft \
     --cover cover.jpg
@@ -509,26 +506,31 @@ done
 # 设置环境变量
 export WECHAT_APPID="${{ secrets.WECHAT_APPID }}"
 export WECHAT_SECRET="${{ secrets.WECHAT_SECRET }}"
+export MD2WECHAT_API_KEY="${{ secrets.MD2WECHAT_API_KEY }}"
+
+# 创建草稿元数据输出目录
+mkdir -p outputs
 
 # 转换并创建草稿
 md2wechat convert article.md \
   --upload \
   --draft \
   --cover cover.jpg \
-  --save-draft /outputs/draft.json
+  --save-draft outputs/draft.json
 ```
 
 ---
 
 ## 高级技巧
 
-### 组合使用模式
+### 将 AI 请求交给宿主 Agent
 
 ```bash
-# 使用 API 模式转换，但用 AI 模式的主题提示词
+# CLI 返回 action_required 和 prompt；由宿主 Agent 执行 prompt 生成 HTML
 md2wechat convert article.md \
-  --mode api \
-  --custom-prompt "参考 autumn-warm 主题的配色"
+  --mode ai \
+  --custom-prompt "使用克制的蓝色配色和清晰的信息层级" \
+  --json
 ```
 
 ### 仅处理图片
