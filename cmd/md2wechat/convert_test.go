@@ -115,6 +115,27 @@ func TestConvertHelpUsesRuntimeThemeDiscovery(t *testing.T) {
 	}
 }
 
+func TestConvertHelpDescribesAIAsHostAgentHandoff(t *testing.T) {
+	help := convertCmd.Long
+	for _, want := range []string{
+		"action_required prompt",
+		"host Agent or external model",
+		"does not call a model, generate HTML, upload assets, or create a draft",
+	} {
+		if !strings.Contains(help, want) {
+			t.Fatalf("convert help missing AI handoff contract %q: %q", want, help)
+		}
+	}
+	for _, stale := range []string{
+		"Use Claude AI to generate HTML",
+		"requires AI",
+	} {
+		if strings.Contains(help, stale) {
+			t.Fatalf("convert help retained stale AI contract %q: %q", stale, help)
+		}
+	}
+}
+
 func TestValidateConvertConfigRejectsInvalidEffectIntent(t *testing.T) {
 	oldCfg := cfg
 	oldMode, oldTheme, oldAPIKey := convertMode, convertTheme, convertAPIKey

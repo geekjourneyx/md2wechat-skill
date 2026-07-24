@@ -52,7 +52,8 @@ var convertCmd = &cobra.Command{
 
 Supports two conversion modes:
   - api: Use md2wechat API (stable, requires API key)
-  - ai:  Use Claude AI to generate HTML (flexible, requires AI)
+  - ai:  Prepare an action_required prompt for a host Agent or external model.
+         md2wechat does not call a model, generate HTML, upload assets, or create a draft in this mode.
 
 Theme availability is resolved at runtime. Discover the current catalog with:
   md2wechat themes list --json
