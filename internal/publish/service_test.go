@@ -316,7 +316,7 @@ func TestServiceConvertRejectsInvalidLocalSinksBeforeEffects(t *testing.T) {
 	}
 }
 
-func TestServiceConvertRejectsBrokenDraftSymlinkBeforeEffects(t *testing.T) {
+func TestServiceConvertRejectsInvalidDraftDestinationBeforeEffects(t *testing.T) {
 	dir := t.TempDir()
 	bodyPath := filepath.Join(dir, "body.png")
 	if err := os.WriteFile(bodyPath, []byte("body"), 0600); err != nil {
@@ -326,57 +326,175 @@ func TestServiceConvertRejectsBrokenDraftSymlinkBeforeEffects(t *testing.T) {
 	if err := os.WriteFile(coverPath, []byte("cover"), 0600); err != nil {
 		t.Fatalf("write cover: %v", err)
 	}
-	saveDraftPath := filepath.Join(dir, "draft.json")
-	brokenTarget := filepath.Join(dir, "missing-target", "draft.json")
-	if err := os.Symlink(brokenTarget, saveDraftPath); err != nil {
-		t.Fatalf("create broken draft symlink: %v", err)
+
+	tests := []struct {
+		name      string
+		draftPath func(t *testing.T) string
+	}{
+		{
+			name: "symlink target parent missing",
+			draftPath: func(t *testing.T) string {
+				t.Helper()
+				path := filepath.Join(dir, "missing-parent-link.json")
+				if err := os.Symlink("missing-target/draft.json", path); err != nil {
+					t.Fatalf("create broken draft symlink: %v", err)
+				}
+				return path
+			},
+		},
+		{
+			name: "symlink target contains missing component before dot dot",
+			draftPath: func(t *testing.T) string {
+				t.Helper()
+				path := filepath.Join(dir, "missing-component-link.json")
+				if err := os.Symlink("missing/../draft.json", path); err != nil {
+					t.Fatalf("create draft symlink: %v", err)
+				}
+				return path
+			},
+		},
+		{
+			name: "symlink target traverses regular file before dot dot",
+			draftPath: func(t *testing.T) string {
+				t.Helper()
+				regularFile := filepath.Join(dir, "regular-file")
+				if err := os.WriteFile(regularFile, []byte("not a directory"), 0600); err != nil {
+					t.Fatalf("write regular file: %v", err)
+				}
+				path := filepath.Join(dir, "regular-file-link.json")
+				if err := os.Symlink("regular-file/../draft.json", path); err != nil {
+					t.Fatalf("create draft symlink: %v", err)
+				}
+				return path
+			},
+		},
+		{
+			name: "direct destination contains missing component before dot dot",
+			draftPath: func(t *testing.T) string {
+				t.Helper()
+				return dir + string(os.PathSeparator) + "missing-direct/../draft.json"
+			},
+		},
+		{
+			name: "destination has trailing separator",
+			draftPath: func(t *testing.T) string {
+				t.Helper()
+				return filepath.Join(dir, "draft-with-trailing-separator.json") + string(os.PathSeparator)
+			},
+		},
 	}
 
-	imageRef := converter.ImageRef{
-		Index:    0,
-		Type:     converter.ImageTypeLocal,
-		Original: "body.png",
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			imageRef := converter.ImageRef{
+				Index:    0,
+				Type:     converter.ImageTypeLocal,
+				Original: "body.png",
+			}
+			converterFake := &fakeMarkdownConverter{
+				result: &converter.ConvertResult{
+					Mode:    converter.ModeAPI,
+					Success: true,
+					HTML:    "<p>body</p>",
+					Images:  []converter.ImageRef{imageRef},
+				},
+				images: []converter.ImageRef{imageRef},
+			}
+			processor := &fakeAssetProcessor{
+				localResults: map[string]*image.UploadResult{
+					bodyPath: {MediaID: "body-id", WechatURL: "https://wechat.local/body"},
+				},
+			}
+			cover := &fakeCoverUploader{}
+			drafts := &fakeDraftCreator{}
+			svc := NewService(zap.NewNop(), converterFake, processor, drafts, cover.upload)
+
+			_, err := svc.Convert(&ConvertInput{
+				Intent: PublishIntent{
+					Upload:      true,
+					CreateDraft: true,
+					SaveDraft:   true,
+				},
+				ConvertRequest: &converter.ConvertRequest{
+					Mode:     converter.ModeAPI,
+					Markdown: "![body](body.png)",
+				},
+				MarkdownDir:    dir,
+				SaveDraftPath:  tt.draftPath(t),
+				CoverImagePath: coverPath,
+			})
+			if err == nil || !strings.Contains(err.Error(), "prepare draft file") {
+				t.Errorf("Convert() error = %v, want prepare draft file", err)
+			}
+			if converterFake.calls != 0 ||
+				converterFake.extractCalls != 0 ||
+				processor.totalCalls() != 0 ||
+				cover.calls != 0 ||
+				drafts.calls != 0 {
+				t.Fatalf(
+					"effects: convert=%d extract=%d assets=%d cover=%d draft=%d",
+					converterFake.calls,
+					converterFake.extractCalls,
+					processor.totalCalls(),
+					cover.calls,
+					drafts.calls,
+				)
+			}
+		})
 	}
+}
+
+func TestServiceConvertAllowsRelativeDraftSymlinkToMissingFileWithExistingParent(t *testing.T) {
+	dir := t.TempDir()
+	targetDir := filepath.Join(dir, "drafts")
+	if err := os.Mkdir(targetDir, 0700); err != nil {
+		t.Fatalf("create target directory: %v", err)
+	}
+	targetPath := filepath.Join(targetDir, "draft.json")
+	saveDraftPath := filepath.Join(dir, "draft.json")
+	if err := os.Symlink("drafts/draft.json", saveDraftPath); err != nil {
+		t.Fatalf("create draft symlink: %v", err)
+	}
+	coverPath := filepath.Join(dir, "cover.jpg")
+	if err := os.WriteFile(coverPath, []byte("cover"), 0600); err != nil {
+		t.Fatalf("write cover: %v", err)
+	}
+
 	converterFake := &fakeMarkdownConverter{
 		result: &converter.ConvertResult{
 			Mode:    converter.ModeAPI,
 			Success: true,
 			HTML:    "<p>body</p>",
-			Images:  []converter.ImageRef{imageRef},
-		},
-		images: []converter.ImageRef{imageRef},
-	}
-	processor := &fakeAssetProcessor{
-		localResults: map[string]*image.UploadResult{
-			bodyPath: {MediaID: "body-id", WechatURL: "https://wechat.local/body"},
 		},
 	}
+	processor := &fakeAssetProcessor{}
 	cover := &fakeCoverUploader{}
 	drafts := &fakeDraftCreator{}
 	svc := NewService(zap.NewNop(), converterFake, processor, drafts, cover.upload)
 
-	_, err := svc.Convert(&ConvertInput{
+	output, err := svc.Convert(&ConvertInput{
 		Intent: PublishIntent{
-			Upload:      true,
 			CreateDraft: true,
 			SaveDraft:   true,
 		},
 		ConvertRequest: &converter.ConvertRequest{
 			Mode:     converter.ModeAPI,
-			Markdown: "![body](body.png)",
+			Markdown: "# Draft",
 		},
-		MarkdownDir:    dir,
 		SaveDraftPath:  saveDraftPath,
 		CoverImagePath: coverPath,
 	})
-	if err == nil || !strings.Contains(err.Error(), "prepare draft file") {
-		t.Errorf("Convert() error = %v, want prepare draft file", err)
+	if err != nil {
+		t.Fatalf("Convert() error = %v, want nil", err)
 	}
-	if converterFake.calls != 0 ||
-		converterFake.extractCalls != 0 ||
+	if output.DraftSaved != saveDraftPath {
+		t.Fatalf("DraftSaved = %q, want %q", output.DraftSaved, saveDraftPath)
+	}
+	if converterFake.calls != 1 ||
+		converterFake.extractCalls != 1 ||
 		processor.totalCalls() != 0 ||
-		cover.calls != 0 ||
-		drafts.calls != 0 {
+		cover.calls != 1 ||
+		drafts.calls != 1 {
 		t.Fatalf(
 			"effects: convert=%d extract=%d assets=%d cover=%d draft=%d",
 			converterFake.calls,
@@ -385,6 +503,20 @@ func TestServiceConvertRejectsBrokenDraftSymlinkBeforeEffects(t *testing.T) {
 			cover.calls,
 			drafts.calls,
 		)
+	}
+	got, err := os.ReadFile(targetPath)
+	if err != nil {
+		t.Fatalf("read symlink target: %v", err)
+	}
+	if !strings.Contains(string(got), `"articles"`) {
+		t.Fatalf("target content = %q, want saved draft payload", got)
+	}
+	info, err := os.Lstat(saveDraftPath)
+	if err != nil {
+		t.Fatalf("lstat draft symlink: %v", err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("draft output mode = %v, want symlink preserved", info.Mode())
 	}
 }
 

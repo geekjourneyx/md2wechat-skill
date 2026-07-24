@@ -217,27 +217,74 @@ func probeDraftSaveDestination(destination string) error {
 	if destination == "" {
 		return nil
 	}
+	if os.IsPathSeparator(destination[len(destination)-1]) {
+		return fmt.Errorf("destination must not end with a path separator: %s", destination)
+	}
 
-	if _, err := os.Lstat(destination); err != nil {
-		if os.IsNotExist(err) {
-			return atomicfile.Probe(destination)
+	resolved := destination
+	const maxSymlinkHops = 40
+	for hop := 0; ; hop++ {
+		info, err := os.Lstat(resolved)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return probeMissingDraftDestination(resolved)
+			}
+			return err
 		}
-		return err
+
+		if info.Mode()&os.ModeSymlink != 0 {
+			if hop >= maxSymlinkHops {
+				return fmt.Errorf("too many symbolic links: %s", destination)
+			}
+
+			target, err := os.Readlink(resolved)
+			if err != nil {
+				return err
+			}
+			if !filepath.IsAbs(target) {
+				parent, _ := filepath.Split(resolved)
+				target = parent + target
+			}
+			resolved = target
+			continue
+		}
+
+		if !info.Mode().IsRegular() {
+			return fmt.Errorf("destination is not a regular file: %s", destination)
+		}
+
+		file, err := os.OpenFile(destination, os.O_WRONLY, 0)
+		if err != nil {
+			return err
+		}
+		return file.Close()
+	}
+}
+
+func probeMissingDraftDestination(destination string) error {
+	if destination == "" || os.IsPathSeparator(destination[len(destination)-1]) {
+		return fmt.Errorf("destination must name a file: %s", destination)
 	}
 
-	info, err := os.Stat(destination)
+	parent, base := filepath.Split(destination)
+	if base == "" {
+		return fmt.Errorf("destination must name a file: %s", destination)
+	}
+	if parent == "" {
+		parent = "."
+	}
+	info, err := os.Stat(parent)
 	if err != nil {
 		return err
 	}
-	if !info.Mode().IsRegular() {
-		return fmt.Errorf("destination is not a regular file: %s", destination)
+	if !info.IsDir() {
+		return fmt.Errorf("destination parent is not a directory: %s", parent)
 	}
-
-	file, err := os.OpenFile(destination, os.O_WRONLY, 0)
+	canonicalParent, err := filepath.EvalSymlinks(parent)
 	if err != nil {
 		return err
 	}
-	return file.Close()
+	return atomicfile.Probe(filepath.Join(canonicalParent, base))
 }
 
 func validateConvertInput(input *ConvertInput) error {
