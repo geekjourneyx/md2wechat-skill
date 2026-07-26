@@ -71,6 +71,19 @@ var providerRegistry = []ProviderMeta{
 		SupportsSize: true,
 	},
 	{
+		Name:           "atlascloud",
+		Aliases:        []string{"atlas-cloud", "atlas"},
+		Description:    "Atlas Cloud asynchronous image generation provider",
+		RequiredConfig: []string{"IMAGE_API_KEY"},
+		OptionalConfig: []string{"IMAGE_API_BASE", "IMAGE_MODEL", "IMAGE_SIZE"},
+		DefaultBaseURL: "https://api.atlascloud.ai/api/v1/model",
+		DefaultModel:   "openai/gpt-image-2/text-to-image",
+		SupportedModels: []ProviderModelMeta{
+			{Name: "openai/gpt-image-2/text-to-image", Description: "GPT Image 2 text-to-image via Atlas Cloud", Default: true},
+		},
+		SupportsSize: true,
+	},
+	{
 		Name:           "openrouter",
 		Aliases:        []string{"or"},
 		Description:    "OpenRouter image generation provider",
@@ -238,6 +251,11 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 	}
 
 	switch providerName {
+	case "atlascloud", "atlas-cloud", "atlas":
+		if err := validateAtlasCloudConfig(cfg); err != nil {
+			return nil, err
+		}
+		return NewAtlasCloudProvider(cfg)
 	case "tuzi":
 		if err := validateTuZiConfig(cfg); err != nil {
 			return nil, err
@@ -272,9 +290,20 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 		return nil, &config.ConfigError{
 			Field:   "ImageProvider",
 			Message: fmt.Sprintf("未知的图片服务提供者: %s", cfg.ImageProvider),
-			Hint:    "支持的提供者: openai, tuzi, modelscope (或 ms), openrouter (或 or), gemini (或 google), volcengine (或 volc)",
+			Hint:    "支持的提供者: openai, atlascloud (或 atlas-cloud/atlas), tuzi, modelscope (或 ms), openrouter (或 or), gemini (或 google), volcengine (或 volc)",
 		}
 	}
+}
+
+func validateAtlasCloudConfig(cfg *config.Config) error {
+	if cfg.ImageAPIKey == "" {
+		return &config.ConfigError{
+			Field:   "ImageAPIKey",
+			Message: "使用 Atlas Cloud 图片服务需要配置 API Key",
+			Hint:    "在配置文件中设置 api.image_key 或环境变量 IMAGE_API_KEY",
+		}
+	}
+	return nil
 }
 
 // validateOpenAIConfig 验证 OpenAI 配置

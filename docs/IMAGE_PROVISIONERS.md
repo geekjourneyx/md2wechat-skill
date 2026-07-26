@@ -18,7 +18,7 @@ md2wechat 支持多种图片生成服务，可以在 Markdown 中使用 AI 生�
 
 ```yaml
 api:
-  # 图片服务提供者: openai, tuzi, modelscope, openrouter, gemini, volcengine
+  # 图片服务提供者: openai, atlascloud, tuzi, modelscope, openrouter, gemini, volcengine
   image_provider: "tuzi"
 
   # API 配置
@@ -35,6 +35,35 @@ image:
 ```
 
 ## 支持的图片服务
+
+### Atlas Cloud
+
+Atlas Cloud 使用异步 Media API 生成图片。md2wechat 会提交任务并按 API 返回的轮询地址等待结果，支持 `atlascloud`、`atlas-cloud` 和 `atlas` 三个 provider 名称。
+
+#### 配置示例
+
+```yaml
+api:
+  image_provider: "atlascloud"
+  image_key: "your-atlascloud-api-key"
+  image_base_url: "https://api.atlascloud.ai/api/v1/model"
+  image_model: "openai/gpt-image-2/text-to-image"
+  image_size: "1024x1024"
+```
+
+或使用项目现有的通用图片环境变量：
+
+```bash
+export IMAGE_PROVIDER="atlascloud"
+export IMAGE_API_KEY="your-atlascloud-api-key"
+export IMAGE_API_BASE="https://api.atlascloud.ai/api/v1/model"
+export IMAGE_MODEL="openai/gpt-image-2/text-to-image"
+export IMAGE_SIZE="1024x1024"
+```
+
+当前内置并验证的默认模型是 `openai/gpt-image-2/text-to-image`。可用模型和输入参数会随服务更新，切换模型前请查看 Atlas Cloud 实时模型目录及对应 schema。
+
+---
 
 ### TuZi
 
