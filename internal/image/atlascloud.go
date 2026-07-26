@@ -231,7 +231,7 @@ func decodeAtlasCloudResponse(body io.Reader) (atlasCloudPrediction, error) {
 		return atlasCloudPrediction{}, err
 	}
 	if response.Code != 0 && response.Code != http.StatusOK {
-		return atlasCloudPrediction{}, fmt.Errorf("Atlas Cloud API code %d: %s", response.Code, response.Message)
+		return atlasCloudPrediction{}, fmt.Errorf("atlas cloud API code %d: %s", response.Code, response.Message)
 	}
 	return response.Data, nil
 }
