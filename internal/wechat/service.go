@@ -2,12 +2,12 @@ package wechat
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
-	"net"
 	"net/http"
 	neturl "net/url"
 	"os"
@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
+	"github.com/geekjourneyx/md2wechat-skill/internal/remotefile"
 	"github.com/silenceper/wechat/v2"
 	wechatcache "github.com/silenceper/wechat/v2/cache"
 	"github.com/silenceper/wechat/v2/officialaccount"
@@ -27,21 +28,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	downloadLookupIP      = net.LookupIP
-	wechatSDKHTTPClientMu sync.Mutex
-	newDownloadHTTPClient = func() *http.Client {
-		return &http.Client{
-			Timeout: 60 * time.Second,
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				if len(via) >= 5 {
-					return errors.New("stopped after 5 redirects")
-				}
-				return validateRemoteDownloadURL(req.URL)
-			},
-		}
-	}
-)
+var wechatSDKHTTPClientMu sync.Mutex
 
 // Service 微信服务
 type Service struct {
@@ -272,124 +259,19 @@ func DownloadFile(urlOrPath string) (string, error) {
 		return "", fmt.Errorf("local file not found: %s", urlOrPath)
 	}
 
-	// HTTP URL - 下载文件
-	url := urlOrPath
-	parsedURL, err := neturl.Parse(url)
+	result, err := remotefile.DownloadUnbounded(context.Background(), urlOrPath, 60*time.Second)
 	if err != nil {
-		return "", fmt.Errorf("parse download url: %w", err)
+		return "", downloadFileError(err)
 	}
-	if err := validateRemoteDownloadURL(parsedURL); err != nil {
-		return "", err
-	}
-
-	// 创建 HTTP 客户端
-	client := newDownloadHTTPClient()
-
-	// 发起请求
-	resp, err := client.Get(url)
-	if err != nil {
-		return "", fmt.Errorf("download file: %w", err)
-	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("download failed with status: %d", resp.StatusCode)
-	}
-
-	// 从 URL 路径中提取扩展名，排除查询参数
-	ext := ".jpg" // 默认扩展名
-	if pathExt := filepath.Ext(parsedURL.Path); pathExt != "" {
-		ext = pathExt
-	}
-	tmpFile, err := os.CreateTemp("", "md2wechat-download-*"+ext)
-	if err != nil {
-		return "", fmt.Errorf("create temp file: %w", err)
-	}
-	tmpPath := tmpFile.Name()
-
-	// 写入文件
-	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
-		_ = tmpFile.Close()
-		_ = os.Remove(tmpPath)
-		return "", fmt.Errorf("write file: %w", err)
-	}
-	if err := tmpFile.Close(); err != nil {
-		_ = os.Remove(tmpPath)
-		return "", fmt.Errorf("close temp file: %w", err)
-	}
-
-	return tmpPath, nil
+	return result.Path, nil
 }
 
-func validateRemoteDownloadURL(parsedURL *neturl.URL) error {
-	if parsedURL == nil {
-		return fmt.Errorf("invalid download url")
+func downloadFileError(err error) error {
+	var remoteErr *remotefile.Error
+	if errors.As(err, &remoteErr) && remoteErr.Kind == remotefile.ErrorHTTPStatus {
+		return fmt.Errorf("download failed with status: %d", remoteErr.StatusCode)
 	}
-	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
-		return fmt.Errorf("unsupported download scheme: %s", parsedURL.Scheme)
-	}
-
-	host := parsedURL.Hostname()
-	if host == "" {
-		return fmt.Errorf("download url missing host")
-	}
-	if err := validateDownloadPort(parsedURL.Port()); err != nil {
-		return err
-	}
-	if err := validateDownloadHost(host); err != nil {
-		return err
-	}
-	return nil
-}
-
-func validateDownloadPort(port string) error {
-	if port == "" || port == "80" || port == "443" {
-		return nil
-	}
-	return fmt.Errorf("download url uses disallowed port: %s", port)
-}
-
-func validateDownloadHost(host string) error {
-	lowerHost := strings.ToLower(strings.TrimSpace(host))
-	if lowerHost == "" {
-		return fmt.Errorf("download url missing host")
-	}
-	if lowerHost == "localhost" || strings.HasSuffix(lowerHost, ".localhost") {
-		return fmt.Errorf("download host is not allowed: %s", host)
-	}
-
-	if ip := net.ParseIP(lowerHost); ip != nil {
-		if err := validateDownloadIP(ip); err != nil {
-			return fmt.Errorf("download host is not allowed: %w", err)
-		}
-		return nil
-	}
-
-	ips, err := downloadLookupIP(host)
-	if err != nil {
-		return fmt.Errorf("resolve download host %s: %w", host, err)
-	}
-	if len(ips) == 0 {
-		return fmt.Errorf("resolve download host %s: no addresses found", host)
-	}
-	for _, ip := range ips {
-		if err := validateDownloadIP(ip); err != nil {
-			return fmt.Errorf("download host is not allowed: %w", err)
-		}
-	}
-	return nil
-}
-
-func validateDownloadIP(ip net.IP) error {
-	if ip == nil {
-		return fmt.Errorf("invalid ip")
-	}
-	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() {
-		return fmt.Errorf("ip %s is private or local", ip.String())
-	}
-	return nil
+	return fmt.Errorf("download file: %w", err)
 }
 
 // CreateMultipartFormData 创建 multipart 表单数据

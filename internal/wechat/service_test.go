@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	neturl "net/url"
 	"os"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
+	"github.com/geekjourneyx/md2wechat-skill/internal/remotefile"
 	"github.com/silenceper/wechat/v2/officialaccount/draft"
 	"github.com/silenceper/wechat/v2/util"
 	"go.uber.org/zap"
@@ -276,83 +276,14 @@ func TestDownloadFileReturnsLocalPathForExistingFiles(t *testing.T) {
 	}
 }
 
-func TestValidateRemoteDownloadURLRejectsLocalTargets(t *testing.T) {
-	oldLookup := downloadLookupIP
-	downloadLookupIP = func(host string) ([]net.IP, error) {
-		if host != "internal.example" {
-			t.Fatalf("unexpected host lookup: %s", host)
-		}
-		return []net.IP{net.ParseIP("10.0.0.5")}, nil
-	}
-	t.Cleanup(func() {
-		downloadLookupIP = oldLookup
+func TestDownloadFileKeepsHTTPStatusPresentation(t *testing.T) {
+	err := downloadFileError(&remotefile.Error{
+		Kind:       remotefile.ErrorHTTPStatus,
+		StatusCode: http.StatusTooManyRequests,
+		Err:        fmt.Errorf("upstream status"),
 	})
-
-	cases := []string{
-		"http://localhost/image.png",
-		"http://127.0.0.1/image.png",
-		"http://169.254.169.254/image.png",
-		"http://internal.example/image.png",
-		"http://example.com:8080/image.png",
-	}
-
-	for _, rawURL := range cases {
-		parsed, err := neturl.Parse(rawURL)
-		if err != nil {
-			t.Fatalf("Parse(%q): %v", rawURL, err)
-		}
-		if err := validateRemoteDownloadURL(parsed); err == nil {
-			t.Fatalf("validateRemoteDownloadURL(%q) expected error", rawURL)
-		}
-	}
-}
-
-func TestDownloadFileDownloadsPublicRemoteImages(t *testing.T) {
-	oldLookup := downloadLookupIP
-	oldFactory := newDownloadHTTPClient
-	downloadLookupIP = func(host string) ([]net.IP, error) {
-		if host != "example.com" {
-			t.Fatalf("unexpected host lookup: %s", host)
-		}
-		return []net.IP{net.ParseIP("93.184.216.34")}, nil
-	}
-	newDownloadHTTPClient = func() *http.Client {
-		return &http.Client{
-			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-				if req.URL.String() != "https://example.com/path/image.png?size=large" {
-					t.Fatalf("unexpected request url: %s", req.URL.String())
-				}
-				return &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       io.NopCloser(strings.NewReader("image-bytes")),
-					Header:     make(http.Header),
-					Request:    req,
-				}, nil
-			}),
-		}
-	}
-	t.Cleanup(func() {
-		downloadLookupIP = oldLookup
-		newDownloadHTTPClient = oldFactory
-	})
-
-	path, err := DownloadFile("https://example.com/path/image.png?size=large")
-	if err != nil {
-		t.Fatalf("DownloadFile() error = %v", err)
-	}
-	defer func() {
-		_ = os.Remove(path)
-	}()
-
-	if filepath.Ext(path) != ".png" {
-		t.Fatalf("download path ext = %q, want .png", filepath.Ext(path))
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("ReadFile(%q): %v", path, err)
-	}
-	if string(data) != "image-bytes" {
-		t.Fatalf("downloaded body = %q", string(data))
+	if err.Error() != "download failed with status: 429" {
+		t.Fatalf("download error = %q", err)
 	}
 }
 
