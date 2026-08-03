@@ -204,6 +204,11 @@ func TestDownloadPreservesHTTPStatusAndCleansUp(t *testing.T) {
 			w.WriteHeader(http.StatusTooManyRequests)
 		case "/500":
 			w.WriteHeader(http.StatusInternalServerError)
+		case "/201":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte("created"))
+		case "/204":
+			w.WriteHeader(http.StatusNoContent)
 		}
 	}))
 	defer server.Close()
@@ -242,12 +247,59 @@ func TestDownloadPreservesHTTPStatusAndCleansUp(t *testing.T) {
 		t.Fatalf("temporary file remains after cleanup: %v", err)
 	}
 
+	boundedCreated, err := Download(context.Background(), "http://public.example/201", Options{MaxBytes: 10})
+	if err != nil {
+		t.Fatalf("bounded Download() 201 error = %v", err)
+	}
+	defer func() { _ = boundedCreated.Cleanup() }()
+	assertFileContents(t, boundedCreated.Path, "created")
+
 	legacyResult, err := DownloadUnbounded(context.Background(), "http://public.example/ok", 0)
 	if err != nil {
 		t.Fatalf("DownloadUnbounded() error = %v", err)
 	}
 	defer func() { _ = legacyResult.Cleanup() }()
 	assertFileContents(t, legacyResult.Path, "ok")
+
+	for _, tc := range []struct {
+		path   string
+		status int
+	}{
+		{"201", http.StatusCreated},
+		{"204", http.StatusNoContent},
+	} {
+		t.Run("legacy requires 200/"+tc.path, func(t *testing.T) {
+			_, err := DownloadUnbounded(context.Background(), "http://public.example/"+tc.path, 0)
+			assertDownloadError(t, err, ErrorHTTPStatus, tc.status)
+		})
+	}
+}
+
+func TestResolvePublicIPsBlocksIANAAdditionalSpecialUseRanges(t *testing.T) {
+	cases := []struct {
+		name string
+		ip   string
+	}{
+		{"IPv4 6to4 relay anycast", "192.88.99.1"},
+		{"IPv4 AS112-v4", "192.31.196.1"},
+		{"IPv4 AMT", "192.52.193.1"},
+		{"IPv4 direct delegation", "192.175.48.1"},
+		{"IPv6 discard-only", "100::1"},
+		{"IPv6 locally assigned translation", "64:ff9b:1::1"},
+		{"IPv6 benchmarking", "2001:2::1"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			withDownloadSeams(t, func(host string) ([]net.IP, error) {
+				if host != "special.example" {
+					t.Fatalf("resolved host = %q", host)
+				}
+				return []net.IP{net.ParseIP(tc.ip)}, nil
+			}, nil, nil)
+			_, err := resolvePublicIPs("special.example")
+			assertDownloadError(t, err, ErrorBlockedAddress, 0)
+		})
+	}
 }
 
 func TestDownloadClassifiesCancellationAndPartialWriteFailure(t *testing.T) {
