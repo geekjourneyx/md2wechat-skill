@@ -258,6 +258,16 @@ func applyImageProviderDefaults(cfg *Config) {
 		if cfg.ImageSize == "" {
 			cfg.ImageSize = "2K"
 		}
+	case "minimax":
+		if cfg.ImageAPIBase == "" {
+			cfg.ImageAPIBase = "https://api.minimax.io"
+		}
+		if cfg.ImageModel == "" {
+			cfg.ImageModel = "image-01"
+		}
+		if cfg.ImageSize == "" {
+			cfg.ImageSize = "1:1"
+		}
 	}
 }
 

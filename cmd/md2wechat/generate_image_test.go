@@ -12,6 +12,47 @@ import (
 	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
 )
 
+type fakeSubjectReferenceProcessor struct {
+	*fakeImageProcessor
+	prompt    string
+	reference string
+	result    *image.GenerateAndUploadResult
+}
+
+func (f *fakeSubjectReferenceProcessor) GenerateAndUploadWithSubject(prompt, subjectReference string) (*image.GenerateAndUploadResult, error) {
+	f.prompt = prompt
+	f.reference = subjectReference
+	return f.result, nil
+}
+
+func TestRunGenerateImageWithSubjectReference(t *testing.T) {
+	oldCfg := cfg
+	oldNewImageProcessor := newImageProcessor
+	t.Cleanup(func() {
+		cfg = oldCfg
+		newImageProcessor = oldNewImageProcessor
+	})
+	cfg = &config.Config{WechatAppID: "appid", WechatSecret: "secret", ImageAPIKey: "image-key"}
+	processor := &fakeSubjectReferenceProcessor{
+		fakeImageProcessor: &fakeImageProcessor{},
+		result:             &image.GenerateAndUploadResult{MediaID: "media-subject"},
+	}
+	newImageProcessor = func() imageProcessor { return processor }
+
+	if err := runGenerateImageWithInput(generateImageInput{
+		RawPrompt:        "Keep the portrait identity",
+		SubjectReference: "https://cdn.example/portrait.png",
+	}); err != nil {
+		t.Fatalf("runGenerateImageWithInput() error = %v", err)
+	}
+	if processor.prompt != "Keep the portrait identity" {
+		t.Fatalf("prompt = %q", processor.prompt)
+	}
+	if processor.reference != "https://cdn.example/portrait.png" {
+		t.Fatalf("reference = %q", processor.reference)
+	}
+}
+
 func TestResolveGenerateImagePromptRendersPlanVisualAssetPresets(t *testing.T) {
 	promptcatalog.ResetDefaultCatalogForTests()
 	t.Cleanup(promptcatalog.ResetDefaultCatalogForTests)

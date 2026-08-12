@@ -10,15 +10,16 @@ import (
 )
 
 type ProviderMeta struct {
-	Name            string              `json:"name"`
-	Aliases         []string            `json:"aliases,omitempty"`
-	Description     string              `json:"description"`
-	RequiredConfig  []string            `json:"required_config,omitempty"`
-	OptionalConfig  []string            `json:"optional_config,omitempty"`
-	DefaultBaseURL  string              `json:"default_base_url,omitempty"`
-	DefaultModel    string              `json:"default_model,omitempty"`
-	SupportedModels []ProviderModelMeta `json:"supported_models,omitempty"`
-	SupportsSize    bool                `json:"supports_size"`
+	Name                     string              `json:"name"`
+	Aliases                  []string            `json:"aliases,omitempty"`
+	Description              string              `json:"description"`
+	RequiredConfig           []string            `json:"required_config,omitempty"`
+	OptionalConfig           []string            `json:"optional_config,omitempty"`
+	DefaultBaseURL           string              `json:"default_base_url,omitempty"`
+	DefaultModel             string              `json:"default_model,omitempty"`
+	SupportedModels          []ProviderModelMeta `json:"supported_models,omitempty"`
+	SupportsSize             bool                `json:"supports_size"`
+	SupportsSubjectReference bool                `json:"supports_subject_reference,omitempty"`
 }
 
 type ProviderModelMeta struct {
@@ -28,6 +29,20 @@ type ProviderModelMeta struct {
 }
 
 var providerRegistry = []ProviderMeta{
+	{
+		Name:           "minimax",
+		Description:    "MiniMax image generation provider",
+		RequiredConfig: []string{"IMAGE_API_KEY"},
+		OptionalConfig: []string{"IMAGE_API_BASE", "IMAGE_MODEL", "IMAGE_SIZE"},
+		DefaultBaseURL: "https://api.minimax.io",
+		DefaultModel:   "image-01",
+		SupportedModels: []ProviderModelMeta{
+			{Name: "image-01", Description: "MiniMax image model", Default: true},
+			{Name: "image-01-live", Description: "MiniMax live image model"},
+		},
+		SupportsSize:             true,
+		SupportsSubjectReference: true,
+	},
 	{
 		Name:           "openai",
 		Description:    "OpenAI-compatible image generation provider",
@@ -198,6 +213,12 @@ type Provider interface {
 	Generate(ctx context.Context, prompt string) (*GenerateResult, error)
 }
 
+// SubjectReferenceProvider supports image generation guided by a portrait reference.
+type SubjectReferenceProvider interface {
+	Provider
+	GenerateWithSubject(ctx context.Context, prompt, subjectReference string) (*GenerateResult, error)
+}
+
 // GenerateResult 图片生成结果
 type GenerateResult struct {
 	URL           string // 生成的图片 URL
@@ -238,6 +259,11 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 	}
 
 	switch providerName {
+	case "minimax":
+		if err := validateMiniMaxConfig(cfg); err != nil {
+			return nil, err
+		}
+		return NewMiniMaxProvider(cfg)
 	case "tuzi":
 		if err := validateTuZiConfig(cfg); err != nil {
 			return nil, err
@@ -275,6 +301,17 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 			Hint:    "支持的提供者: openai, tuzi, modelscope (或 ms), openrouter (或 or), gemini (或 google), volcengine (或 volc)",
 		}
 	}
+}
+
+func validateMiniMaxConfig(cfg *config.Config) error {
+	if cfg.ImageAPIKey == "" {
+		return &config.ConfigError{
+			Field:   "ImageAPIKey",
+			Message: "MiniMax image generation requires an API key",
+			Hint:    "Set api.image_key in the config file or use IMAGE_API_KEY",
+		}
+	}
+	return nil
 }
 
 // validateOpenAIConfig 验证 OpenAI 配置

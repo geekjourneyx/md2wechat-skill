@@ -20,6 +20,7 @@ var (
 	generateImageCmdKeywords string
 	generateImageCmdStyle    string
 	generateImageCmdAspect   string
+	generateImageCmdSubject  string
 	generateImageCmdPlan     bool
 )
 
@@ -36,6 +37,7 @@ type generateImageInput struct {
 	Aspect            string
 	Size              string
 	Model             string
+	SubjectReference  string
 	RequiredArchetype string
 }
 
@@ -77,23 +79,25 @@ type generateImagePlan struct {
 	Aspect                  string   `json:"aspect"`
 	Size                    string   `json:"size"`
 	ModelHint               string   `json:"model_hint"`
+	SubjectReference        string   `json:"subject_reference,omitempty"`
 	SuggestedFilename       string   `json:"suggested_filename"`
 	AltText                 string   `json:"alt_text"`
 }
 
 func runGenerateImage(args []string) error {
 	input := generateImageInput{
-		Command:  "generate_image",
-		Plan:     generateImageCmdPlan,
-		Preset:   generateImageCmdPreset,
-		Article:  generateImageCmdArticle,
-		Title:    generateImageCmdTitle,
-		Summary:  generateImageCmdSummary,
-		Keywords: generateImageCmdKeywords,
-		Style:    generateImageCmdStyle,
-		Aspect:   generateImageCmdAspect,
-		Size:     generateImageCmdSize,
-		Model:    generateImageCmdModel,
+		Command:          "generate_image",
+		Plan:             generateImageCmdPlan,
+		Preset:           generateImageCmdPreset,
+		Article:          generateImageCmdArticle,
+		Title:            generateImageCmdTitle,
+		Summary:          generateImageCmdSummary,
+		Keywords:         generateImageCmdKeywords,
+		Style:            generateImageCmdStyle,
+		Aspect:           generateImageCmdAspect,
+		Size:             generateImageCmdSize,
+		Model:            generateImageCmdModel,
+		SubjectReference: generateImageCmdSubject,
 	}
 	if len(args) > 0 {
 		input.RawPrompt = args[0]
@@ -131,6 +135,26 @@ func runGenerateImageWithInput(input generateImageInput) error {
 	}
 
 	processor := resolveImageProcessor(input.Model)
+	if strings.TrimSpace(input.SubjectReference) != "" {
+		if strings.TrimSpace(input.Size) != "" {
+			cfgCopy := *cfg
+			cfgCopy.ImageSize = strings.TrimSpace(input.Size)
+			if strings.TrimSpace(input.Model) != "" {
+				cfgCopy.ImageModel = strings.TrimSpace(input.Model)
+			}
+			processor = newImageProcessorWithConfig(&cfgCopy)
+		}
+		subjectProcessor, ok := processor.(subjectReferenceImageProcessor)
+		if !ok {
+			return newCLIError(codeConfigInvalid, "configured image provider does not support --subject-reference")
+		}
+		result, err := subjectProcessor.GenerateAndUploadWithSubject(prompt, strings.TrimSpace(input.SubjectReference))
+		if err != nil {
+			return wrapCLIError(codeImageGenerateFailed, err, err.Error())
+		}
+		responseSuccess(result)
+		return nil
+	}
 	if input.Size != "" {
 		result, err := processor.GenerateAndUploadWithSize(prompt, input.Size)
 		if err != nil {
@@ -252,6 +276,7 @@ func buildGenerateImagePlan(input generateImageInput, resolved *generateImagePro
 		Aspect:                  strings.TrimSpace(resolved.Aspect),
 		Size:                    strings.TrimSpace(input.Size),
 		ModelHint:               strings.TrimSpace(input.Model),
+		SubjectReference:        strings.TrimSpace(input.SubjectReference),
 		CompatibleUseCases:      []string{},
 		RecommendedAspectRatios: []string{},
 	}
