@@ -142,6 +142,7 @@ md2wechat advise article.md --json
 ```bash
 md2wechat providers list --json
 md2wechat providers show openai --json
+md2wechat providers show atlascloud --json
 md2wechat providers show openrouter --json
 md2wechat providers show volcengine --json
 ```
@@ -168,6 +169,7 @@ md2wechat providers show volcengine --json
 当前内置支持的图片 provider：
 
 - `openai`
+- `atlascloud` / `atlas-cloud` / `atlas`
 - `tuzi`
 - `modelscope` / `ms`
 - `openrouter` / `or`
