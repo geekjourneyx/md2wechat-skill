@@ -3,6 +3,7 @@ package image
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -23,9 +24,10 @@ type ProviderMeta struct {
 }
 
 type ProviderModelMeta struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	Default     bool   `json:"default,omitempty"`
+	Name                     string `json:"name"`
+	Description              string `json:"description,omitempty"`
+	Default                  bool   `json:"default,omitempty"`
+	SupportsSubjectReference bool   `json:"supports_subject_reference,omitempty"`
 }
 
 var providerRegistry = []ProviderMeta{
@@ -37,7 +39,7 @@ var providerRegistry = []ProviderMeta{
 		DefaultBaseURL: "https://api.minimax.io",
 		DefaultModel:   "image-01",
 		SupportedModels: []ProviderModelMeta{
-			{Name: "image-01", Description: "MiniMax image model", Default: true},
+			{Name: "image-01", Description: "MiniMax image model", Default: true, SupportsSubjectReference: true},
 			{Name: "image-01-live", Description: "MiniMax live image model"},
 		},
 		SupportsSize:             true,
@@ -194,6 +196,90 @@ func ProviderSupportedModelNames(name string) []string {
 	return result
 }
 
+// ProviderSupportsSubjectReference reports whether the provider accepts a
+// subject reference for image-to-image generation.
+func ProviderSupportsSubjectReference(name string) bool {
+	meta, ok := LookupProviderMeta(name)
+	if !ok {
+		return false
+	}
+	return meta.SupportsSubjectReference
+}
+
+// SubjectReferenceProviderNames lists the providers that accept a subject
+// reference for image-to-image generation.
+func SubjectReferenceProviderNames() []string {
+	result := make([]string, 0, len(providerRegistry))
+	for _, meta := range SupportedProviders() {
+		if meta.SupportsSubjectReference {
+			result = append(result, meta.Name)
+		}
+	}
+	return result
+}
+
+// SubjectReferenceModelNames lists the provider models that accept a subject
+// reference.
+func SubjectReferenceModelNames(provider string) []string {
+	meta, ok := LookupProviderMeta(provider)
+	if !ok || !meta.SupportsSubjectReference {
+		return nil
+	}
+	result := make([]string, 0, len(meta.SupportedModels))
+	for _, model := range meta.SupportedModels {
+		if model.SupportsSubjectReference {
+			result = append(result, model.Name)
+		}
+	}
+	return result
+}
+
+// ModelSupportsSubjectReference reports whether the provider and model pair
+// accepts a subject reference. An empty model resolves to the provider default.
+func ModelSupportsSubjectReference(provider, model string) bool {
+	meta, ok := LookupProviderMeta(provider)
+	if !ok || !meta.SupportsSubjectReference {
+		return false
+	}
+	model = strings.TrimSpace(model)
+	if model == "" {
+		model = meta.DefaultModel
+	}
+	for _, candidate := range meta.SupportedModels {
+		if strings.EqualFold(candidate.Name, model) {
+			return candidate.SupportsSubjectReference
+		}
+	}
+	return false
+}
+
+// ValidateSubjectReferenceURL checks that a subject reference is a public
+// HTTP(S) image URL, which is the only form the current contract supports.
+func ValidateSubjectReferenceURL(reference string) error {
+	trimmed := strings.TrimSpace(reference)
+	if trimmed == "" {
+		return fmt.Errorf("subject reference is required")
+	}
+	parsed, err := url.Parse(trimmed)
+	if err != nil {
+		return fmt.Errorf("subject reference must be a valid URL: %w", err)
+	}
+	scheme := strings.ToLower(parsed.Scheme)
+	if (scheme != "http" && scheme != "https") || parsed.Host == "" {
+		return fmt.Errorf("subject reference must be a public http:// or https:// image URL; inline data URLs and local paths are not supported")
+	}
+	return nil
+}
+
+// SubjectReferenceModelsHint describes which models accept a subject reference.
+func SubjectReferenceModelsHint(provider string) string {
+	models := SubjectReferenceModelNames(provider)
+	if len(models) == 0 {
+		return ""
+	}
+	return "models supporting subject references: " + strings.Join(models, ", ")
+}
+
 func ProviderSupportedModelsHint(name string) string {
 	models := ProviderSupportedModelNames(name)
 	if len(models) == 0 {
@@ -298,7 +384,7 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 		return nil, &config.ConfigError{
 			Field:   "ImageProvider",
 			Message: fmt.Sprintf("未知的图片服务提供者: %s", cfg.ImageProvider),
-			Hint:    "支持的提供者: openai, tuzi, modelscope (或 ms), openrouter (或 or), gemini (或 google), volcengine (或 volc)",
+			Hint:    "支持的提供者: openai, minimax, tuzi, modelscope (或 ms), openrouter (或 or), gemini (或 google), volcengine (或 volc)",
 		}
 	}
 }

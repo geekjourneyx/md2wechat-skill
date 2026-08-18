@@ -1464,3 +1464,79 @@ func TestPromptsListIncludesVictorianBannerByTag(t *testing.T) {
 		t.Fatalf("expected infographic-victorian-engraving-banner in response: %#v", prompts)
 	}
 }
+
+// TestProvidersExposeSubjectReferenceCapability asserts the subject reference
+// capability reaches both providers list --json and providers show --json.
+func TestProvidersExposeSubjectReferenceCapability(t *testing.T) {
+	oldCfg, oldJSON := cfg, jsonOutput
+	t.Cleanup(func() {
+		cfg, jsonOutput = oldCfg, oldJSON
+	})
+
+	cfg = &config.Config{ImageProvider: "minimax", ImageAPIKey: "configured-key"}
+	jsonOutput = true
+
+	listOutput := captureStdout(t, func() {
+		if err := providersListCmd.RunE(providersListCmd, nil); err != nil {
+			t.Fatalf("providers list: %v", err)
+		}
+	})
+	var listResponse struct {
+		Data struct {
+			Providers []providerListItem `json:"providers"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(listOutput, &listResponse); err != nil {
+		t.Fatalf("decode providers list: %v\n%s", err, listOutput)
+	}
+	if !bytes.Contains(listOutput, []byte(`"supports_subject_reference"`)) {
+		t.Fatalf("providers list must expose supports_subject_reference\n%s", listOutput)
+	}
+	var seenMiniMax bool
+	for _, provider := range listResponse.Data.Providers {
+		switch provider.Name {
+		case "minimax":
+			seenMiniMax = true
+			if !provider.SupportsSubjectReference {
+				t.Fatalf("minimax list item = %#v, want supports_subject_reference true", provider)
+			}
+		default:
+			if provider.SupportsSubjectReference {
+				t.Fatalf("provider %q must not advertise subject reference support", provider.Name)
+			}
+		}
+	}
+	if !seenMiniMax {
+		t.Fatal("providers list is missing minimax")
+	}
+
+	showOutput := captureStdout(t, func() {
+		if err := providersShowCmd.RunE(providersShowCmd, []string{"minimax"}); err != nil {
+			t.Fatalf("providers show: %v", err)
+		}
+	})
+	var showResponse struct {
+		Data struct {
+			Provider providerView `json:"provider"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(showOutput, &showResponse); err != nil {
+		t.Fatalf("decode provider show: %v\n%s", err, showOutput)
+	}
+	provider := showResponse.Data.Provider
+	if !provider.SupportsSubjectReference {
+		t.Fatalf("shown provider = %#v, want supports_subject_reference true", provider)
+	}
+	if provider.DefaultBaseURL != "https://api.minimax.io" || provider.DefaultModel != "image-01" {
+		t.Fatalf("shown provider defaults = %q / %q", provider.DefaultBaseURL, provider.DefaultModel)
+	}
+	var subjectModels []string
+	for _, model := range provider.SupportedModels {
+		if model.SupportsSubjectReference {
+			subjectModels = append(subjectModels, model.Name)
+		}
+	}
+	if len(subjectModels) != 1 || subjectModels[0] != "image-01" {
+		t.Fatalf("models advertising subject reference support = %#v", subjectModels)
+	}
+}

@@ -381,9 +381,11 @@ image:
 | `api.image_provider` | 否 | 图片服务提供方 | `openai` |
 | `api.image_base_url` | 否 | 图片服务地址 | `https://api.openai.com/v1` |
 | `api.image_model` | 否 | 图片模型 | `gpt-image-2` |
-| `api.image_size` | 否 | 默认图片执行尺寸/宽高比 | 跟随当前 provider，例如 `openai=auto`、`volcengine=2K` |
+| `api.image_size` | 否 | 默认图片执行尺寸/宽高比 | 跟随当前 provider，例如 `openai=auto`、`volcengine=2K`、`minimax=1:1` |
 
-当前内置 provider：`openai`、`tuzi`、`modelscope` (`ms`)、`openrouter` (`or`)、`gemini` (`google`)、`volcengine` (`volc`)。
+当前内置 provider：`openai`、`minimax`、`tuzi`、`modelscope` (`ms`)、`openrouter` (`or`)、`gemini` (`google`)、`volcengine` (`volc`)。
+
+`minimax` 的默认值为 `image_base_url=https://api.minimax.io`（国内站为 `https://api.minimaxi.com`）、`image_model=image-01`、`image_size=1:1`。它也是当前唯一支持 `--subject-reference` 主体参考的 provider，且只有 `image-01` 支持该参数。详见 [图片生成服务配置](IMAGE_PROVISIONERS.md)。
 
 ### 图片处理配置
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 	"github.com/geekjourneyx/md2wechat-skill/internal/converter"
+	"github.com/geekjourneyx/md2wechat-skill/internal/image"
 	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
 )
 
@@ -134,8 +135,15 @@ func runGenerateImageWithInput(input generateImageInput) error {
 		return newCLIError(codeConfigInvalid, err.Error())
 	}
 
+	subjectReference := strings.TrimSpace(input.SubjectReference)
+	if subjectReference != "" {
+		if err := ensureSubjectReferenceSupported(input.Model, subjectReference); err != nil {
+			return err
+		}
+	}
+
 	processor := resolveImageProcessor(input.Model)
-	if strings.TrimSpace(input.SubjectReference) != "" {
+	if subjectReference != "" {
 		if strings.TrimSpace(input.Size) != "" {
 			cfgCopy := *cfg
 			cfgCopy.ImageSize = strings.TrimSpace(input.Size)
@@ -146,9 +154,9 @@ func runGenerateImageWithInput(input generateImageInput) error {
 		}
 		subjectProcessor, ok := processor.(subjectReferenceImageProcessor)
 		if !ok {
-			return newCLIError(codeConfigInvalid, "configured image provider does not support --subject-reference")
+			return newCLIError(codeConfigInvalid, "configured image processor does not support --subject-reference")
 		}
-		result, err := subjectProcessor.GenerateAndUploadWithSubject(prompt, strings.TrimSpace(input.SubjectReference))
+		result, err := subjectProcessor.GenerateAndUploadWithSubject(prompt, subjectReference)
 		if err != nil {
 			return wrapCLIError(codeImageGenerateFailed, err, err.Error())
 		}
@@ -181,6 +189,57 @@ func resolveImageProcessor(model string) imageProcessor {
 	cfgCopy := *cfg
 	cfgCopy.ImageModel = model
 	return newImageProcessorWithConfig(&cfgCopy)
+}
+
+// resolveImageProviderName returns the configured image provider, falling back
+// to the same default the provider factory uses.
+func resolveImageProviderName() string {
+	provider := strings.TrimSpace(cfg.ImageProvider)
+	if provider == "" {
+		provider = "openai"
+	}
+	return provider
+}
+
+// resolveImageModelName returns the model this command will actually use,
+// honouring --model first, then the config, then the provider default.
+func resolveImageModelName(provider, override string) string {
+	if model := strings.TrimSpace(override); model != "" {
+		return model
+	}
+	if model := strings.TrimSpace(cfg.ImageModel); model != "" {
+		return model
+	}
+	return image.DefaultProviderModel(provider)
+}
+
+// ensureSubjectReferenceSupported rejects --subject-reference from provider
+// metadata. A runtime interface assertion cannot do this because the concrete
+// processor always implements the subject-reference method regardless of the
+// configured provider, which would defer the failure to the generate call.
+func ensureSubjectReferenceSupported(modelOverride, subjectReference string) error {
+	if err := image.ValidateSubjectReferenceURL(subjectReference); err != nil {
+		return newCLIError(codeConfigInvalid, err.Error())
+	}
+
+	provider := resolveImageProviderName()
+	if !image.ProviderSupportsSubjectReference(provider) {
+		message := fmt.Sprintf("image provider %s does not support --subject-reference", provider)
+		if supported := image.SubjectReferenceProviderNames(); len(supported) > 0 {
+			message += "; supported providers: " + strings.Join(supported, ", ")
+		}
+		return newCLIError(codeConfigInvalid, message)
+	}
+
+	model := resolveImageModelName(provider, modelOverride)
+	if !image.ModelSupportsSubjectReference(provider, model) {
+		message := fmt.Sprintf("image model %s does not support --subject-reference", model)
+		if hint := image.SubjectReferenceModelsHint(provider); hint != "" {
+			message += "; " + hint
+		}
+		return newCLIError(codeConfigInvalid, message)
+	}
+	return nil
 }
 
 func resolveGenerateImagePrompt(input generateImageInput) (string, error) {
