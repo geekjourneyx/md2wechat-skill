@@ -50,7 +50,7 @@ md2wechat config init --json
 md2wechat config validate --json
 ```
 
-API 模式预览和转换需要 md2wechat API Key。专业 API 统一版 ¥199/永久；可直接[查看价格与获取方式](https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=api)，也可以先[申请试用 Key](https://www.md2wechat.cn/blog/how-to-get-md2wechat-api-key?utm_source=github&utm_medium=readme&utm_campaign=api-trial)。完成凭证配置后，先检查文章，再把 HTML 明确写入本地文件：
+API 模式预览和转换需要 md2wechat API Key。专业 API 统一版 ¥199/永久；可直接[查看价格与获取方式](https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=api)。完成凭证配置后，先检查文章，再把 HTML 明确写入本地文件：
 
 ```bash
 md2wechat inspect article.md --json
@@ -81,7 +81,7 @@ API 模式适合需要稳定输出、多人协作、批量发布或 Agent 自动
 
 **统一版 ¥199/永久，一次购买。** 包含稳定转换接口、定期更新和专属创作交流群。
 
-[查看价格与获取 API Key](https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=api) · [先申请试用 Key](https://www.md2wechat.cn/blog/how-to-get-md2wechat-api-key?utm_source=github&utm_medium=readme&utm_campaign=api-trial)
+[查看价格与获取 API Key](https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=api)
 
 | 能力 | 免费 AI 模式 | 专业 API 模式 |
 |---|---|---|
@@ -103,7 +103,6 @@ API 模式适合需要稳定输出、多人协作、批量发布或 Agent 自动
 获取 API Key：
 
 - 正式使用：[查看价格与获取方式](https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=api)
-- 先跑通流程：[申请试用 Key](https://www.md2wechat.cn/blog/how-to-get-md2wechat-api-key?utm_source=github&utm_medium=readme&utm_campaign=api-trial)
 - 微信咨询：关注公众号「极客杰尼」，备注「API咨询」
 
 <p align="center">
