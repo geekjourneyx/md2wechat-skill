@@ -19,12 +19,7 @@
 [![Agent Ready](https://img.shields.io/badge/Agent-Ready-00b0aa)](#agent-工作流)
 [![API](https://img.shields.io/badge/API-Professional-blue)](#专业-api)
 
-<p>
-  <a href="https://trendshift.io/repositories/26638?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-26638" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/26638/daily?language=Go" alt="geekjourneyx%2Fmd2wechat-skill | Trendshift" width="250" height="55"/></a>
-  <a href="https://trendshift.io/repositories/26638?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-26638" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/26638/weekly?language=Go" alt="geekjourneyx%2Fmd2wechat-skill | Trendshift" width="250" height="55"/></a>
-</p>
-
-[快速开始](#快速开始) · [专业 API](#专业-api) · [Agent 工作流](#agent-工作流) · [高级排版](#高级排版) · [文档](#文档)
+[快速开始](#快速开始) · [专业 API ¥199/永久](#专业-api) · [获取 API Key](https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=api) · [Agent 工作流](#agent-工作流) · [文档](#文档)
 
 </div>
 
@@ -55,7 +50,7 @@ md2wechat config init --json
 md2wechat config validate --json
 ```
 
-API 模式预览和转换需要 md2wechat API Key；完成详细凭证配置后，先检查文章，再把 HTML 明确写入本地文件：
+API 模式预览和转换需要 md2wechat API Key。专业 API 统一版 ¥199/永久；可直接[查看价格与获取方式](https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=api)，也可以先[申请试用 Key](https://www.md2wechat.cn/blog/how-to-get-md2wechat-api-key?utm_source=github&utm_medium=readme&utm_campaign=api-trial)。完成凭证配置后，先检查文章，再把 HTML 明确写入本地文件：
 
 ```bash
 md2wechat inspect article.md --json
@@ -84,6 +79,10 @@ md2wechat convert article.md --draft --cover cover.jpg
 
 API 模式适合需要稳定输出、多人协作、批量发布或 Agent 自动化的场景。
 
+**统一版 ¥199/永久，一次购买。** 包含稳定转换接口、定期更新和专属创作交流群。
+
+[查看价格与获取 API Key](https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=api) · [先申请试用 Key](https://www.md2wechat.cn/blog/how-to-get-md2wechat-api-key?utm_source=github&utm_medium=readme&utm_campaign=api-trial)
+
 | 能力 | 免费 AI 模式 | 专业 API 模式 |
 |---|---|---|
 | 输出方式 | 生成 prompt，由外部 LLM 继续处理 | 直接返回微信 HTML |
@@ -101,7 +100,11 @@ API 模式适合需要稳定输出、多人协作、批量发布或 Agent 自动
 - 微信接口固定出口：[docs/WECHAT-CREDENTIALS.md](docs/WECHAT-CREDENTIALS.md)
 - 发布前 readiness 检查：[docs/DISCOVERY.md](docs/DISCOVERY.md)
 
-申请 API 服务：关注公众号「极客杰尼」，备注「API咨询」。
+获取 API Key：
+
+- 正式使用：[查看价格与获取方式](https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=api)
+- 先跑通流程：[申请试用 Key](https://www.md2wechat.cn/blog/how-to-get-md2wechat-api-key?utm_source=github&utm_medium=readme&utm_campaign=api-trial)
+- 微信咨询：关注公众号「极客杰尼」，备注「API咨询」
 
 <p align="center">
 <img src="assets/wechat.png" alt="公众号：极客杰尼" width="160" />
@@ -254,7 +257,7 @@ md2wechat layout validate --file article.md --json
 
 本项目采用 Source Available License。个人使用、学习、评估、非营利使用免费。商业使用、SaaS、客户交付、白标、再分发和训练数据用途需要商业授权。
 
-商业授权和 API 服务：关注公众号「极客杰尼」备注「API咨询」，或联系 `skrphper@gmail.com`。
+专业 API：[查看价格与获取 API Key](https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=api)。商业授权（SaaS、客户交付、白标、再分发和训练数据）请联系 `skrphper@gmail.com`。
 
 ---
 
