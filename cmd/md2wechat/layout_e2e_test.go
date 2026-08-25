@@ -32,10 +32,12 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
 
 type e2eSettings struct {
-	BaseURL         string
-	APIKey          string
-	CLICommit       string
-	ExpectedBuildID string
+	BaseURL             string
+	APIKey              string
+	CLICommit           string
+	ExpectedBuildID     string
+	FieldContractSHA    string
+	FieldContractResult string
 }
 
 const layoutConformanceRequestTimeout = 30 * time.Second
@@ -71,16 +73,27 @@ func loadE2ESettings() (e2eSettings, error) {
 		return e2eSettings{}, fmt.Errorf("load E2E configuration: %w", err)
 	}
 	settings := e2eSettings{
-		BaseURL:         converter.ResolveAPIConvertURL(cfg.MD2WechatBaseURL),
-		APIKey:          strings.TrimSpace(cfg.MD2WechatAPIKey),
-		CLICommit:       strings.TrimSpace(os.Getenv("MD2WECHAT_CLI_COMMIT")),
-		ExpectedBuildID: strings.TrimSpace(os.Getenv("MD2WECHAT_API_BUILD_ID")),
+		BaseURL:             converter.ResolveAPIConvertURL(cfg.MD2WechatBaseURL),
+		APIKey:              strings.TrimSpace(cfg.MD2WechatAPIKey),
+		CLICommit:           strings.TrimSpace(os.Getenv("MD2WECHAT_CLI_COMMIT")),
+		ExpectedBuildID:     strings.TrimSpace(os.Getenv("MD2WECHAT_API_BUILD_ID")),
+		FieldContractSHA:    strings.TrimSpace(os.Getenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_SHA")),
+		FieldContractResult: strings.TrimSpace(os.Getenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_RESULT")),
 	}
 	if settings.APIKey == "" {
 		return e2eSettings{}, fmt.Errorf("authentication failure: MD2WECHAT_API_KEY is not configured")
 	}
 	if settings.CLICommit == "" {
 		return e2eSettings{}, fmt.Errorf("MD2WECHAT_CLI_COMMIT is required for conformance evidence")
+	}
+	if (settings.FieldContractSHA == "") != (settings.FieldContractResult == "") {
+		return e2eSettings{}, fmt.Errorf("upstream field-contract evidence requires both SHA and result")
+	}
+	if settings.FieldContractResult != "" && settings.FieldContractResult != "passed" && settings.FieldContractResult != "failed" {
+		return e2eSettings{}, fmt.Errorf("invalid upstream field-contract result %q", settings.FieldContractResult)
+	}
+	if settings.FieldContractResult == "failed" {
+		return e2eSettings{}, fmt.Errorf("upstream field-contract fixture failed at %s", settings.FieldContractSHA)
 	}
 	return settings, nil
 }
@@ -220,7 +233,11 @@ func TestVariantConformanceRequiresExactRendererBranch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.module+"/"+tt.variant, func(t *testing.T) {
 			witness := e2eWitness{Module: tt.module, Variant: tt.variant, Probe: "Probe"}
-			valid := fmt.Sprintf(`<section data-mpa-action-id="%s" %s="%s">Probe</section>`, tt.module, tt.attribute, tt.value)
+			valid := fmt.Sprintf(`<section data-mpa-action-id="%s" %s="%s">Probe`, tt.module, tt.attribute, tt.value)
+			if tt.module == "cta" {
+				valid += `<span data-module-part="cta-title"></span><span data-module-part="cta-primary"></span><span data-module-part="cta-secondary"></span>`
+			}
+			valid += `</section>`
 			if err := checkConformanceHTML(witness, valid); err != nil {
 				t.Fatal(err)
 			}
@@ -243,6 +260,89 @@ func TestSemanticConformanceRules(t *testing.T) {
 	}
 	if err := checkSemanticConformance(witness, `<section><img alt="Before"><img alt="After"></section>`); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSemanticConformanceEnforcesHeroMastheadAndCTAThreeParts(t *testing.T) {
+	if err := checkSemanticConformance(e2eWitness{Module: "hero", Variant: "masthead"}, `<section></section>`); err == nil {
+		t.Fatal("masthead without its structural part must fail")
+	}
+	if err := checkSemanticConformance(e2eWitness{Module: "hero", Variant: "masthead"}, `<section data-module-part="hero-masthead"></section>`); err != nil {
+		t.Fatal(err)
+	}
+	if err := checkSemanticConformance(e2eWitness{Module: "cta", Variant: "trial"}, `<section data-module-part="cta-title"></section>`); err == nil {
+		t.Fatal("CTA without all structural parts must fail")
+	}
+	if err := checkSemanticConformance(e2eWitness{Module: "cta", Variant: "trial"}, `<section data-module-part="cta-title"><span data-module-part="cta-primary"></span><span data-module-part="cta-secondary"></span></section>`); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCompactPR1BoundaryAndThemeProbeConstructionIsCatalogBacked(t *testing.T) {
+	c, err := layoutConformanceCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertValid := func(markdown string) {
+		t.Helper()
+		if report := c.Validate(markdown); len(report.Errors) != 0 {
+			t.Fatalf("validate %q: %+v", markdown, report.Errors)
+		}
+	}
+	assertInvalid := func(markdown string) {
+		t.Helper()
+		if report := c.Validate(markdown); len(report.Errors) == 0 {
+			t.Fatalf("expected invalid: %q", markdown)
+		}
+	}
+
+	hero, ok := c.Get("hero")
+	if !ok {
+		t.Fatal("hero not found")
+	}
+	symbols := []string(nil)
+	for _, field := range hero.Fields.Optional {
+		if field.Name == "symbol" {
+			symbols = field.Enum
+		}
+	}
+	if len(symbols) != 12 {
+		t.Fatalf("symbol enum count = %d, want 12", len(symbols))
+	}
+	for _, symbol := range symbols {
+		assertValid(":::hero\nvariant: masthead\ntitle: Probe\nsymbol: " + symbol + "\n:::\n")
+	}
+	assertInvalid(":::hero\nvariant: masthead\ntitle: Probe\nsymbol: ✨\n:::\n")
+	assertInvalid(":::hero\nvariant: masthead\ntitle: Probe\nkicker: ignored\n:::\n")
+
+	assertValid(":::section-title\nvariant: numbered\nindex: 1\ntitle: Probe\n:::\n")
+	assertValid(":::section-title\nvariant: numbered\nindex: 1234\ntitle: Probe\n:::\n")
+	assertInvalid(":::section-title\nvariant: numbered\nindex: 12345\ntitle: Probe\n:::\n")
+	assertValid(":::cta\nvariant: trial\ntitle: Probe\npoints: one | two | three\n:::\n")
+	assertInvalid(":::cta\nvariant: trial\ntitle: Probe\npoints: one | two | three | four\n:::\n")
+	assertInvalid(":::cta\nvariant: consult\ntitle: Probe\npoints: ignored\n:::\n")
+	assertValid(":::faq\nQ: Question?\nA: Answer.\nQ: Another?\nA: Another answer.\n:::\n")
+	assertInvalid(":::faq\nq: Question?\na: Answer.\n:::\n")
+	for _, tone := range []string{"fit", "avoid", "risk", "require", "note"} {
+		assertValid(":::notice\n" + tone + " | Label | Body\n:::\n")
+	}
+	for _, markdown := range []string{
+		":::summary\nhighlight: One line\n:::\n",
+		":::summary\nvariant: three\nitems: one | two | three\n:::\n",
+		":::summary\nvariant: decision\nrecommendation: Decide\n:::\n",
+		":::summary\nvariant: save\nitems: one | two | three\n:::\n",
+	} {
+		assertValid(markdown)
+	}
+
+	themes := converter.NewThemeManager()
+	if err := themes.LoadThemes(); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"default", "apple", "cyber", "bytedance", "sports", "chinese"} {
+		if _, err := themes.ResolveThemeForMode(converter.ModeAPI, name); err != nil {
+			t.Fatalf("representative API theme %q is not selectable: %v", name, err)
+		}
 	}
 }
 
@@ -319,6 +419,8 @@ func TestE2ESettingsUseProductionTargetAndConfigCredential(t *testing.T) {
 	t.Setenv("MD2WECHAT_BASE_URL", "")
 	t.Setenv("MD2WECHAT_API_BUILD_ID", "expected-build")
 	t.Setenv("MD2WECHAT_CLI_COMMIT", "cli-commit")
+	t.Setenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_SHA", "")
+	t.Setenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_RESULT", "")
 	dir := filepath.Join(home, ".config", "md2wechat")
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		t.Fatal(err)
@@ -343,12 +445,29 @@ func TestE2ESettingsAllowExplicitTargetOverride(t *testing.T) {
 	t.Setenv("MD2WECHAT_API_KEY", "environment-key")
 	t.Setenv("MD2WECHAT_BASE_URL", "http://localhost:3000/")
 	t.Setenv("MD2WECHAT_CLI_COMMIT", "cli-commit")
+	t.Setenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_SHA", "")
+	t.Setenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_RESULT", "")
 	settings, err := loadE2ESettings()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if settings.BaseURL != "http://localhost:3000/api/convert" {
 		t.Fatalf("BaseURL = %q", settings.BaseURL)
+	}
+}
+
+func TestE2ESettingsValidateOptionalUpstreamFieldContractEvidence(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MD2WECHAT_API_KEY", "environment-key")
+	t.Setenv("MD2WECHAT_CLI_COMMIT", "cli-commit")
+	t.Setenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_SHA", "abc123")
+	t.Setenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_RESULT", "passed")
+	if settings, err := loadE2ESettings(); err != nil || settings.FieldContractSHA != "abc123" || settings.FieldContractResult != "passed" {
+		t.Fatalf("loadE2ESettings() = %+v, %v", settings, err)
+	}
+	t.Setenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_RESULT", "failed")
+	if _, err := loadE2ESettings(); err == nil || !strings.Contains(err.Error(), "fixture failed") {
+		t.Fatalf("failed field contract error = %v", err)
 	}
 }
 
@@ -702,6 +821,9 @@ func TestE2ELayoutConformance(t *testing.T) {
 		})
 	}
 	t.Logf("conformance target=%s cli_commit=%s", settings.BaseURL, settings.CLICommit)
+	if settings.FieldContractSHA != "" {
+		t.Logf("upstream_field_contract_sha=%s result=%s", settings.FieldContractSHA, settings.FieldContractResult)
+	}
 	if remoteIdentity != "" {
 		t.Logf("remote_build_id=%s source=response_header", remoteIdentity)
 	} else {
@@ -738,8 +860,27 @@ func TestE2EValidatorVsAPIConsistency(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := decodeE2EResponse(resp); err == nil {
-		t.Fatal("API drift: validator rejected input that the API accepted")
+	html, err := decodeE2EResponse(resp)
+	if err != nil {
+		t.Fatalf("transport/API response failed for directive-level invalidity: %v", err)
+	}
+	if err := checkRejectedDirectiveHTML("hero", bad, html); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRejectedDirectiveHTMLAllowsSuccessfulArticleWithoutModuleReadiness(t *testing.T) {
+	bad := ":::hero\neyebrow: only\n:::\n"
+	if err := checkRejectedDirectiveHTML("hero", bad, `<p>fallback article</p>`); err != nil {
+		t.Fatal(err)
+	}
+	for _, html := range []string{
+		`<section data-mpa-action-id="hero">fallback article</section>`,
+		`<p>:::hero</p>`,
+	} {
+		if err := checkRejectedDirectiveHTML("hero", bad, html); err == nil {
+			t.Fatalf("rejected directive unexpectedly became ready for HTML %q", html)
+		}
 	}
 }
 
@@ -761,6 +902,23 @@ func decodeE2EResponse(resp *http.Response) (string, error) {
 		return "", fmt.Errorf("API drift: %w", err)
 	}
 	return data.HTML, nil
+}
+
+// checkRejectedDirectiveHTML keeps local catalog rejection aligned with the
+// remote article fallback contract: an invalid known directive is never a
+// ready module, even when the overall article response succeeds.
+func checkRejectedDirectiveHTML(module, rawDirective, html string) error {
+	if strings.Contains(html, ":::"+module) || strings.Contains(html, rawDirective) {
+		return fmt.Errorf("%s response retained rejected raw fence", module)
+	}
+	doc, err := htmlpkgParse(html)
+	if err != nil {
+		return fmt.Errorf("%s fallback response is not parseable HTML: %w", module, err)
+	}
+	if markers := findDOMAttributeValueNodes(doc, "data-mpa-action-id", module); len(markers) != 0 {
+		return fmt.Errorf("%s response marked a locally rejected directive ready", module)
+	}
+	return nil
 }
 
 func checkConformanceHTML(witness e2eWitness, html string) error {
@@ -899,6 +1057,12 @@ func checkSemanticConformance(witness e2eWitness, rendered string) error {
 }
 
 func checkSemanticConformanceNode(witness e2eWitness, node *html.Node) error {
+	if witness.Module == "hero" && witness.Variant == "masthead" && !hasDOMAttributeValue(node, "data-module-part", "hero-masthead") {
+		return fmt.Errorf("hero/masthead response missing data-module-part=%q", "hero-masthead")
+	}
+	if witness.Module == "cta" && countDOMAttributes(node, "data-module-part") < 3 {
+		return fmt.Errorf("cta/%s response has fewer than three structural parts", witness.Variant)
+	}
 	minimumImages := 0
 	imageElement := "img"
 	switch witness.Module {
@@ -916,6 +1080,22 @@ func checkSemanticConformanceNode(witness e2eWitness, node *html.Node) error {
 		return fmt.Errorf("%s response has %d %s element(s), want at least %d", witness.Module, count, imageElement, minimumImages)
 	}
 	return nil
+}
+
+func countDOMAttributes(node *html.Node, name string) int {
+	count := 0
+	if node.Type == html.ElementNode {
+		for _, attr := range node.Attr {
+			if attr.Key == name {
+				count++
+				break
+			}
+		}
+	}
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		count += countDOMAttributes(child, name)
+	}
+	return count
 }
 
 func countDOMElements(node *html.Node, element string) int {

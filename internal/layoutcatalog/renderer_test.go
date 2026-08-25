@@ -136,6 +136,36 @@ func TestRenderBlockPreservesLegacyHeroRender(t *testing.T) {
 	}
 }
 
+func TestRenderBlockKeepsCanonicalSummarySyntaxSeparateFromExplicitCompatibilityInput(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	canonical, err := c.RenderBlock("summary", RenderInput{Fields: map[string]any{
+		"variant": "three",
+		"title":   "Three conclusions",
+		"items":   "one | two | three",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(canonical, "variant: three") || strings.Contains(canonical, "variant: points") {
+		t.Fatalf("canonical summary render = %q", canonical)
+	}
+
+	legacy := ":::summary\nvariant: points\ntitle: Legacy\nitems: one | two | three\n:::\n"
+	if report := c.Validate(legacy); len(report.Errors) != 0 {
+		t.Fatalf("explicit compatibility input must validate: %+v", report.Errors)
+	}
+	raw, err := c.RenderBlock("summary", RenderInput{Body: "variant: points\ntitle: Legacy\nitems: one | two | three"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(raw, "variant: points") {
+		t.Fatalf("explicit legacy raw input was not preserved: %q", raw)
+	}
+}
+
 func TestRenderPreservesDeclaredOpenerOrderWhileRenderBlockSortsParams(t *testing.T) {
 	c := NewCatalog()
 	c.modules["ordered"] = &LayoutSpec{

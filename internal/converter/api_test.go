@@ -1,6 +1,8 @@
 package converter
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -8,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 	"go.uber.org/zap"
 )
 
@@ -24,6 +27,15 @@ func TestResolveAPIConvertURLUsesOneNormalizedEndpoint(t *testing.T) {
 	} {
 		if got := ResolveAPIConvertURL(tt.base); got != tt.want {
 			t.Fatalf("ResolveAPIConvertURL(%q) = %q, want %q", tt.base, got, tt.want)
+		}
+	}
+}
+
+func TestAPIRequestRejectsMissingAndWhitespaceMarkdownBeforeTransport(t *testing.T) {
+	for _, markdown := range []string{"", " ", "\n\t"} {
+		conv := &converter{cfg: &config.Config{}}
+		if err := conv.validateRequest(&ConvertRequest{Markdown: markdown, Mode: ModeAPI}); err == nil || !strings.Contains(err.Error(), "markdown") {
+			t.Fatalf("validateRequest(%q) error = %v, want markdown rejection", markdown, err)
 		}
 	}
 }
@@ -92,6 +104,100 @@ func TestPostAPIConvertReturnsContractFailuresWithoutRetry(t *testing.T) {
 	}
 }
 
+func TestAPILocalParameterMatrixUsesDiscoveryThemeAndExactSharedFields(t *testing.T) {
+	themes := NewThemeManager()
+	if err := themes.LoadThemes(); err != nil {
+		t.Fatal(err)
+	}
+	apiThemes := themes.ListAPIThemes()
+	if len(apiThemes) == 0 {
+		t.Fatal("theme discovery returned no API-selectable theme")
+	}
+	selected, err := themes.ResolveThemeForMode(ModeAPI, apiThemes[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := themes.ResolveThemeForMode(ModeAPI, "not-a-theme"); err == nil {
+		t.Fatal("unknown API theme must be rejected before transport")
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var request APIRequest
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Fatal(err)
+		}
+		if strings.TrimSpace(request.Markdown) == "" || request.Theme != selected.APITheme {
+			_, _ = w.Write([]byte(`{"code":422,"msg":"invalid request"}`))
+			return
+		}
+		if request.FontSize == "huge" {
+			_, _ = w.Write([]byte(`{"code":422,"msg":"invalid font size"}`))
+			return
+		}
+		font := request.FontSize
+		if font == "" {
+			font = "medium"
+		}
+		background := request.BackgroundType
+		switch background {
+		case "", "default":
+			background = "default"
+		case "grid", "none":
+		default:
+			background = "default"
+		}
+		_, _ = w.Write([]byte(fmt.Sprintf(`{"code":0,"data":{"html":"<p>ok</p>","theme":%q,"fontSize":%q,"backgroundType":%q,"wordCount":2,"estimatedReadTime":1}}`, request.Theme, font, background)))
+	}))
+	defer server.Close()
+
+	for _, tt := range []struct {
+		name, font, background, wantFont, wantBackground string
+		wantErr                                          bool
+	}{
+		{"server defaults", "", "", "medium", "default", false},
+		{"small grid", "small", "grid", "small", "grid", false},
+		{"medium none", "medium", "none", "medium", "none", false},
+		{"large invalid background defaults", "large", "unexpected", "large", "default", false},
+		{"huge rejected", "huge", "none", "", "", true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := PostAPIConvert(server.Client(), server.URL, "secret", APIRequest{Markdown: "# title", Theme: selected.APITheme, FontSize: tt.font, BackgroundType: tt.background})
+			if err != nil {
+				t.Fatal(err)
+			}
+			data, err := DecodeAPIResponse(resp)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("invalid parameter response must be rejected")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if data.Theme != selected.APITheme || data.FontSize != tt.wantFont || data.BackgroundType != tt.wantBackground {
+				t.Fatalf("response = %+v", data)
+			}
+		})
+	}
+}
+
+func TestAPIConverterDoesNotRetryNonzeroContractResponse(t *testing.T) {
+	attempts := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		attempts++
+		_, _ = w.Write([]byte(`{"code":422,"msg":"invalid request"}`))
+	}))
+	defer server.Close()
+	_, err := NewAPIConverterWithURL(zap.NewNop(), server.URL).Convert(&APIRequest{Markdown: "# title", Theme: "default"}, "secret")
+	if err == nil || !strings.Contains(err.Error(), "API_ERROR") {
+		t.Fatalf("error = %v", err)
+	}
+	if attempts != 1 {
+		t.Fatalf("attempts = %d, want 1", attempts)
+	}
+}
+
 func TestDecodeAPIResponseRejectsIncompleteOrMalformedSuccessData(t *testing.T) {
 	tests := []struct{ name, body, want string }{
 		{"missing required field", `{"code":0,"data":{"html":"<p>ok</p>","theme":"default","fontSize":"medium","backgroundType":"none","wordCount":1}}`, "estimatedReadTime"},
@@ -104,6 +210,35 @@ func TestDecodeAPIResponseRejectsIncompleteOrMalformedSuccessData(t *testing.T) 
 			_, err := DecodeAPIResponse(resp)
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("DecodeAPIResponse() error = %v, want %q", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestDecodeAPIResponseRejectsNullAndWrongTypeForEveryRequiredField(t *testing.T) {
+	valid := `{"code":0,"data":{"html":"<p>ok</p>","theme":"default","fontSize":"medium","backgroundType":"none","wordCount":1,"estimatedReadTime":1}}`
+	tests := []struct {
+		name, before, after, want string
+	}{
+		{"html null", `"html":"<p>ok</p>"`, `"html":null`, "html"},
+		{"html number", `"html":"<p>ok</p>"`, `"html":1`, "html"},
+		{"theme null", `"theme":"default"`, `"theme":null`, "theme"},
+		{"theme number", `"theme":"default"`, `"theme":1`, "theme"},
+		{"fontSize null", `"fontSize":"medium"`, `"fontSize":null`, "fontSize"},
+		{"fontSize number", `"fontSize":"medium"`, `"fontSize":1`, "fontSize"},
+		{"backgroundType null", `"backgroundType":"none"`, `"backgroundType":null`, "backgroundType"},
+		{"backgroundType number", `"backgroundType":"none"`, `"backgroundType":1`, "backgroundType"},
+		{"wordCount null", `"wordCount":1`, `"wordCount":null`, "wordCount"},
+		{"wordCount string", `"wordCount":1`, `"wordCount":"1"`, "wordCount"},
+		{"estimatedReadTime null", `"estimatedReadTime":1`, `"estimatedReadTime":null`, "estimatedReadTime"},
+		{"estimatedReadTime string", `"estimatedReadTime":1`, `"estimatedReadTime":"1"`, "estimatedReadTime"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := strings.Replace(valid, tt.before, tt.after, 1)
+			resp := &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(body))}
+			if _, err := DecodeAPIResponse(resp); err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("DecodeAPIResponse() error = %v, want field %q", err, tt.want)
 			}
 		})
 	}

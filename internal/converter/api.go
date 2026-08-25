@@ -217,10 +217,8 @@ func DecodeAPIResponse(resp *http.Response) (APIResponseData, error) {
 	if err := json.Unmarshal(raw.Data, &fields); err != nil {
 		return APIResponseData{}, fmt.Errorf("parse response data: %w", err)
 	}
-	for _, name := range []string{"html", "theme", "fontSize", "backgroundType", "wordCount", "estimatedReadTime"} {
-		if _, ok := fields[name]; !ok {
-			return APIResponseData{}, fmt.Errorf("parse response data: missing required field %s", name)
-		}
+	if err := validateAPIResponseFields(fields); err != nil {
+		return APIResponseData{}, err
 	}
 	var data APIResponseData
 	if err := json.Unmarshal(raw.Data, &data); err != nil {
@@ -230,6 +228,30 @@ func DecodeAPIResponse(resp *http.Response) (APIResponseData, error) {
 		return APIResponseData{}, fmt.Errorf("API returned empty HTML")
 	}
 	return data, nil
+}
+
+func validateAPIResponseFields(fields map[string]json.RawMessage) error {
+	for _, name := range []string{"html", "theme", "fontSize", "backgroundType"} {
+		raw, ok := fields[name]
+		if !ok {
+			return fmt.Errorf("parse response data: missing required field %s", name)
+		}
+		var value *string
+		if err := json.Unmarshal(raw, &value); err != nil || value == nil {
+			return fmt.Errorf("parse response data: required string field %s is null or invalid", name)
+		}
+	}
+	for _, name := range []string{"wordCount", "estimatedReadTime"} {
+		raw, ok := fields[name]
+		if !ok {
+			return fmt.Errorf("parse response data: missing required field %s", name)
+		}
+		var value *int
+		if err := json.Unmarshal(raw, &value); err != nil || value == nil {
+			return fmt.Errorf("parse response data: required integer field %s is null or invalid", name)
+		}
+	}
+	return nil
 }
 
 // SetBaseURL 设置 API 基础 URL（用于测试）
