@@ -33,7 +33,63 @@ type upstreamAgentContract struct {
 	Legacy   []string            `yaml:"legacy"`
 }
 
+type upstreamAgentContractProjectionOracle struct {
+	SourceCommit string                            `yaml:"source_commit"`
+	SourceFiles  []string                          `yaml:"source_files"`
+	Projections  []upstreamAgentContractProjection `yaml:"projections"`
+}
+
+type upstreamAgentContractProjection struct {
+	Syntax        string              `yaml:"syntax"`
+	BodyFormat    string              `yaml:"body_format"`
+	Applicability map[string][]string `yaml:"applicability"`
+}
+
 const upstreamAgentContractContentSHA256 = "c6ca6d8a26b1bc694a8cef72ff6c7d517366f4331bb7ee978dbdae5556636fbd"
+const upstreamAgentContractProjectionSHA256 = "65db776313af832ede1b2fee087ea38ed55a264cec4ee5a1051d310b9fbd29f4"
+
+func TestUpstreamAgentContractProjectionOracle(t *testing.T) {
+	data, err := os.ReadFile("testdata/upstream_agent_contract_projections.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var oracle upstreamAgentContractProjectionOracle
+	if err := yaml.Unmarshal(data, &oracle); err != nil {
+		t.Fatal(err)
+	}
+	if got := fmt.Sprintf("%x", sha256.Sum256(data)); got != upstreamAgentContractProjectionSHA256 {
+		t.Fatalf("projection fixture digest = %q, want %q", got, upstreamAgentContractProjectionSHA256)
+	}
+	if oracle.SourceCommit != "edcde64ae1be56f1a08a0617bb1862471e7e00b1" {
+		t.Fatalf("upstream source commit = %q", oracle.SourceCommit)
+	}
+	if want := []string{"__tests__/fixtures/advanced-layout-agent-contract.ts", "advanced-layout-modules-guide.md"}; !slices.Equal(oracle.SourceFiles, want) {
+		t.Fatalf("projection source files = %v, want %v", oracle.SourceFiles, want)
+	}
+	if len(oracle.Projections) != 56 {
+		t.Fatalf("projection count = %d, want 56", len(oracle.Projections))
+	}
+	seen := make(map[string]bool, len(oracle.Projections))
+	for _, projection := range oracle.Projections {
+		if projection.Syntax == "" || seen[projection.Syntax] {
+			t.Fatalf("invalid duplicate projection syntax %q", projection.Syntax)
+		}
+		seen[projection.Syntax] = true
+		if !ValidBodyFormats[projection.BodyFormat] || projection.Applicability == nil {
+			t.Fatalf("projection %q has invalid body format/applicability", projection.Syntax)
+		}
+	}
+	want := slices.Clone(recommendedModuleNames)
+	slices.Sort(want)
+	got := make([]string, 0, len(seen))
+	for syntax := range seen {
+		got = append(got, syntax)
+	}
+	slices.Sort(got)
+	if !slices.Equal(got, want) {
+		t.Fatalf("projection syntax names = %v, want %v", got, want)
+	}
+}
 
 func TestUpstreamAgentContractOracle(t *testing.T) {
 	oracle := readUpstreamAgentContracts(t)
@@ -120,6 +176,7 @@ func TestBuiltinCatalogMatchesUpstreamAgentContracts(t *testing.T) {
 	if err := c.Load(); err != nil {
 		t.Fatal(err)
 	}
+	projections := pinnedAgentContractProjectionsBySyntax(t)
 	for _, want := range readUpstreamAgentContracts(t).Contracts {
 		want := want
 		t.Run(want.Syntax, func(t *testing.T) {
@@ -128,9 +185,58 @@ func TestBuiltinCatalogMatchesUpstreamAgentContracts(t *testing.T) {
 				t.Fatal("missing recommended catalog entry")
 			}
 			got := projectAgentContract(spec)
-			expected := expectedAgentContract(want, spec.BodyFormat, declaredAgentApplicability(spec))
+			projection, ok := projections[want.Syntax]
+			if !ok {
+				t.Fatal("missing pinned body-format/applicability projection")
+			}
+			expected := expectedAgentContract(want, projection.BodyFormat, projection.Applicability)
 			if diff := compareAgentContracts(got, expected); len(diff) != 0 {
 				t.Errorf("agent contract differs in %v\n got: %#v\nwant: %#v", diff, got, expected)
+			}
+		})
+	}
+}
+
+func TestPinnedProjectionRejectsCoordinatedRuntimeAndAgentContractDrift(t *testing.T) {
+	base := func() *LayoutSpec {
+		return &LayoutSpec{
+			Name:       "cta",
+			BodyFormat: BodyFormatFields,
+			Fields:     &FieldsSpec{Optional: []FieldSpec{{Name: "points", AppliesTo: []string{"trial"}}}},
+			AgentContract: &AgentContractSpec{
+				BodyFormat:    BodyFormatFields,
+				Applicability: map[string][]string{"points": {"trial"}},
+			},
+		}
+	}
+	projection := pinnedAgentContractProjectionsBySyntax(t)["cta"]
+	for _, tt := range []struct {
+		name, dimension string
+		mutate          func(*LayoutSpec)
+	}{
+		{
+			name: "body format", dimension: "body_format",
+			mutate: func(spec *LayoutSpec) {
+				spec.BodyFormat = BodyFormatRows
+				spec.AgentContract.BodyFormat = BodyFormatRows
+			},
+		},
+		{
+			name: "applicability", dimension: "applicability",
+			mutate: func(spec *LayoutSpec) {
+				spec.Fields.Optional[0].AppliesTo = []string{"consult"}
+				spec.AgentContract.Applicability["points"] = []string{"consult"}
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := base()
+			tt.mutate(spec)
+			expected := projectAgentContract(base())
+			expected.BodyFormat = projection.BodyFormat
+			expected.Applicability = projection.Applicability
+			if diff := compareAgentContracts(projectAgentContract(spec), expected); !slices.Equal(diff, []string{tt.dimension}) {
+				t.Fatalf("coordinated drift dimensions = %v, want [%s]", diff, tt.dimension)
 			}
 		})
 	}
@@ -273,6 +379,29 @@ func readUpstreamAgentContracts(t *testing.T) upstreamAgentContractOracle {
 		t.Fatal(err)
 	}
 	return oracle
+}
+
+func readUpstreamAgentContractProjections(t *testing.T) upstreamAgentContractProjectionOracle {
+	t.Helper()
+	data, err := os.ReadFile("testdata/upstream_agent_contract_projections.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var oracle upstreamAgentContractProjectionOracle
+	if err := yaml.Unmarshal(data, &oracle); err != nil {
+		t.Fatal(err)
+	}
+	return oracle
+}
+
+func pinnedAgentContractProjectionsBySyntax(t *testing.T) map[string]upstreamAgentContractProjection {
+	t.Helper()
+	oracle := readUpstreamAgentContractProjections(t)
+	bySyntax := make(map[string]upstreamAgentContractProjection, len(oracle.Projections))
+	for _, projection := range oracle.Projections {
+		bySyntax[projection.Syntax] = projection
+	}
+	return bySyntax
 }
 
 func TestBuiltinYAMLExplicitlyDeclaresLifecycle(t *testing.T) {

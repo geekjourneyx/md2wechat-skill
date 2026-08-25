@@ -268,8 +268,12 @@ func validateAgentContractMatchesSpec(spec *LayoutSpec) error {
 	if spec.AgentContract.BodyFormat != spec.BodyFormat {
 		return fmt.Errorf("agent_contract body_format %q differs from canonical body_format %q", spec.AgentContract.BodyFormat, spec.BodyFormat)
 	}
-	for name, field := range declaredAgentContractFields(spec) {
-		if values, ok := spec.AgentContract.Enums[name]; ok && !slices.Equal(values, field.Enum) {
+	for name, values := range spec.AgentContract.Enums {
+		field, ok := declaredAgentContractFields(spec)[name]
+		if !ok {
+			return fmt.Errorf("agent_contract enum %q is not declared by the canonical schema", name)
+		}
+		if !slices.Equal(values, field.Enum) {
 			return fmt.Errorf("agent_contract enum %q %v differs from canonical field enum %v", name, values, field.Enum)
 		}
 	}

@@ -1,0 +1,78 @@
+# This is intentionally separate from upstream_agent_contracts.yaml. The
+# normalized agent-contract fixture is kept byte-for-byte pinned to the
+# upstream test source; this projection pins the PR1 guide's canonical body
+# representation and variant-only field applicability independently.
+source_commit: edcde64ae1be56f1a08a0617bb1862471e7e00b1
+source_files:
+  - __tests__/fixtures/advanced-layout-agent-contract.ts
+  - advanced-layout-modules-guide.md
+projections:
+  - {syntax: audience-fit, body_format: fields, applicability: {}}
+  - {syntax: author-card, body_format: fields, applicability: {}}
+  - {syntax: bridge, body_format: fields, applicability: {}}
+  - {syntax: callout, body_format: markdown_fields, applicability: {}}
+  - {syntax: cards, body_format: rows, applicability: {}}
+  - {syntax: cases, body_format: rows, applicability: {}}
+  - {syntax: changelog, body_format: json_object, applicability: {}}
+  - {syntax: checklist, body_format: rows, applicability: {}}
+  - {syntax: closing, body_format: fields, applicability: {}}
+  - {syntax: compare, body_format: rows, applicability: {}}
+  - {syntax: comparison-table, body_format: json_object, applicability: {}}
+  - syntax: cta
+    body_format: fields
+    applicability: {points: [trial]}
+  - {syntax: definition, body_format: json_object, applicability: {}}
+  - {syntax: dialogue-pair, body_format: dialogue, applicability: {}}
+  - {syntax: epilogue, body_format: fields, applicability: {}}
+  - {syntax: faq, body_format: dialogue, applicability: {}}
+  - {syntax: figure-caption, body_format: markdown_fields, applicability: {}}
+  - {syntax: flow, body_format: lines, applicability: {}}
+  - {syntax: gallery-grid, body_format: markdown_images, applicability: {}}
+  - {syntax: gallery-story, body_format: markdown_images, applicability: {}}
+  - syntax: hero
+    body_format: fields
+    applicability:
+      image: [editorial, briefing, story]
+      kicker: [editorial, briefing, story]
+      points: [editorial, briefing, story]
+      symbol: [masthead]
+      tags: [editorial, briefing, story]
+  - {syntax: image-annotate, body_format: fields, applicability: {}}
+  - {syntax: image-compare, body_format: fields, applicability: {}}
+  - {syntax: image-phone-shot, body_format: markdown_images, applicability: {}}
+  - {syntax: image-steps, body_format: markdown_fields, applicability: {}}
+  - {syntax: image-text, body_format: fields, applicability: {}}
+  - {syntax: infographic, body_format: fields, applicability: {}}
+  - {syntax: label-title, body_format: fields, applicability: {}}
+  - {syntax: logos, body_format: rows, applicability: {}}
+  - {syntax: manifesto, body_format: fields, applicability: {}}
+  - {syntax: matrix, body_format: rows, applicability: {}}
+  - {syntax: metrics, body_format: rows, applicability: {}}
+  - {syntax: myth-fact, body_format: rows, applicability: {}}
+  - {syntax: notice, body_format: rows, applicability: {}}
+  - {syntax: part, body_format: fields, applicability: {}}
+  - {syntax: people, body_format: rows, applicability: {}}
+  - {syntax: pricing, body_format: rows, applicability: {}}
+  - {syntax: question, body_format: dialogue, applicability: {}}
+  - {syntax: quote, body_format: fields, applicability: {}}
+  - {syntax: quote-card, body_format: json_object, applicability: {}}
+  - {syntax: resource-list, body_format: json_array, applicability: {}}
+  - syntax: section-title
+    body_format: fields
+    applicability:
+      index: [numbered]
+      symbol: [marker, divider, focus, vertical]
+  - {syntax: series, body_format: fields, applicability: {}}
+  - {syntax: specs, body_format: rows, applicability: {}}
+  - {syntax: split, body_format: split, applicability: {}}
+  - {syntax: stat-row, body_format: json_array, applicability: {}}
+  - {syntax: steps, body_format: rows, applicability: {}}
+  - {syntax: subscribe, body_format: fields, applicability: {}}
+  - {syntax: summary, body_format: fields, applicability: {}}
+  - {syntax: svg-reveal, body_format: fields, applicability: {}}
+  - {syntax: svg-swipe-gallery, body_format: markdown_images, applicability: {}}
+  - {syntax: timeline, body_format: rows, applicability: {}}
+  - {syntax: toc, body_format: rows, applicability: {}}
+  - {syntax: toolbox, body_format: rows, applicability: {}}
+  - {syntax: tweet, body_format: json_object, applicability: {}}
+  - {syntax: verdict, body_format: fields, applicability: {}}

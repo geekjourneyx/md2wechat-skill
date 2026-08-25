@@ -375,6 +375,12 @@ func TestValidateAgentContractRejectsDeclarativeDrift(t *testing.T) {
 				spec.Fields.Optional[0].Enum = []string{"other", "card"}
 			},
 		},
+		{
+			name: "catalog-only enum key",
+			mutate: func(spec *LayoutSpec) {
+				spec.AgentContract.Enums["catalog-only"] = []string{"drift"}
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			spec := valid()
