@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: infographic
+input_positions: [row-dsl]
 serves: [readability]
 content_types: [tutorial, report]
 industry: [general]
@@ -26,11 +27,11 @@ rows:
   delimiter: "|"
   min_columns: 3
   schema:
-    - name: number
+    - name: index
       description: 步骤序号（如 01、02、03）
     - name: title
       description: 步骤标题，动词开头
-    - name: description
+    - name: body
       description: 步骤说明，解释具体怎么做
 example: |
   :::steps[落地步骤]

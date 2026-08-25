@@ -5,6 +5,7 @@ body_format: markdown_images
 version: "1.0.0"
 since: "1.5.0"
 category: evidence
+input_positions: [header-attrs, markdown-body]
 serves: [attention, readability]
 content_types: [tutorial, report, announcement]
 industry: [general]
@@ -26,8 +27,20 @@ opener:
   params:
     - name: variant
       description: 故事流外观
-      enum: [card, plain]
+      enum: [clean, card]
       default: card
+    - name: density
+      enum: [compact, normal, airy]
+      default: normal
+    - name: caption_style
+      enum: [none, minimal, numbered, label]
+      default: minimal
+    - name: accent
+      enum: [brand, muted, contrast]
+      default: brand
+    - name: wechat_safe_level
+      enum: [strict, normal]
+      default: normal
 body:
   min_images: 1
 example: |

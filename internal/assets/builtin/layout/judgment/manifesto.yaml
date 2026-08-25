@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: judgment
+input_positions: [body-kv]
 serves: [attention, memorability]
 content_types: [opinion, announcement, manifesto]
 industry: [general]

@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: conversion
+input_positions: [row-dsl]
 serves: [conversion]
 content_types: [announcement, product-launch, brand]
 industry: [general]
@@ -32,9 +33,10 @@ rows:
       description: 价格（如"￥199"、"免费"）
     - name: features
       description: 功能列表，用 / 分隔（自动渲染为列表）
-    - name: style
-      description: "风格：accent 或 default（可省略）"
-      enum: [accent, default]
+    - name: tone
+      description: "风格：default 或 accent（可省略）"
+      enum: [default, accent]
+      default: default
 example: |
   :::pricing[方案组合]
   轻量版 | ￥199 | 主题排版 / 基础模块 / 日常内容 | default

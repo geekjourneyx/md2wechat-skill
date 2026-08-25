@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: opening
+input_positions: [row-dsl]
 serves: [attention, readability]
 content_types: [opinion, tutorial, report, announcement]
 industry: [general]
@@ -32,9 +33,10 @@ rows:
       description: 卡片标题，简短有力
     - name: description
       description: 卡片说明，一句话描述内容
-    - name: style
-      description: "风格：accent 或 default（可省略，默认 default）"
-      enum: [accent, default]
+    - name: tone
+      description: "风格：default 或 accent（可省略，默认 default）"
+      enum: [default, accent]
+      default: default
 example: |
   :::cards[模块速览]
   PART 01 | 开场模块 | 先交代判断和阅读入口 | accent

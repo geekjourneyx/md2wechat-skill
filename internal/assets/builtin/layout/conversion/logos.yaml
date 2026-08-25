@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: conversion
+input_positions: [row-dsl]
 serves: [conversion, memorability]
 content_types: [announcement, brand, product-launch]
 industry: [general]
@@ -28,7 +29,7 @@ rows:
   schema:
     - name: name
       description: 品牌或合作方名称
-    - name: description
+    - name: note
       description: 简短定位说明（可省略）
 example: |
   :::logos[合作品牌]

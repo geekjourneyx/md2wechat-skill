@@ -1,10 +1,12 @@
 schema_version: "1"
 name: faq
 lifecycle: recommended
-body_format: rows
+body_format: dialogue
+compatible_body_formats: [rows]
 version: "1.0.0"
 since: "1.5.0"
 category: conversion
+input_positions: [prefix-dsl]
 serves: [conversion, readability]
 content_types: [tutorial, announcement, product-launch]
 industry: [general]
@@ -22,18 +24,33 @@ anti_pattern: |
   没有任何满足 2 列的行导致渲染失败；
   问题列写成陈述句而非疑问句；
   回答写太长应该拆成正文段落。
+opener:
+  caption: true
+fields:
+  required:
+    - name: Q
+      description: 常见问题，以问句形式表达
+    - name: A
+      description: 简洁回答，直接解决疑虑
+body:
+  min_items: 2
+  allowed_prefixes: ["Q:", "A:"]
+  required_pairs:
+    - [Q, A]
 rows:
   delimiter: "|"
   min_columns: 2
   schema:
     - name: question
-      description: 常见问题，以问句形式表达
+      description: 旧版兼容问题列
     - name: answer
-      description: 简洁回答，直接解决疑虑
+      description: 旧版兼容回答列
 example: |
   :::faq[常见问题]
-  这些模块只能在某一个主题里用吗？ | 不是，所有主题都会生效。
-  为什么不用硬双列？ | 因为微信正文窄，单列模块更稳。
+  Q: 这些模块只能在某一个主题里用吗？
+  A: 不是，所有主题都会生效。
+  Q: 为什么不用硬双列？
+  A: 因为微信正文窄，单列模块更稳。
   :::
 metadata:
   author: md2wechat

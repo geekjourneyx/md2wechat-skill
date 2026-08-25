@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: infographic
+input_positions: [body-kv]
 serves: [attention, memorability]
 content_types: [opinion, tutorial, report, announcement, product-launch]
 industry: [general]
@@ -31,7 +32,8 @@ fields:
   optional:
     - name: type
       description: 信息卡结构类型
-      enum: [thesis, formula, pullquote, contrast, diagnosis, number, path, anatomy, tradeoff, evidence-chain, mini-case]
+      enum: [thesis, pullquote, number, path, contrast, formula, anatomy, diagnosis, tradeoff, evidence-chain, micro-case]
+      default: thesis
       example: thesis
     - name: eyebrow
       description: 标签词，定位信息图的角色
@@ -59,12 +61,13 @@ fields:
       example: "适合教程、方案和发布稿"
     - name: accent
       description: 强调色控制
-      example: "true"
+      enum: [green, emerald, blue, sky, orange, amber, red, rose, "#RGB", "#RRGGBB"]
+      default: theme-derived
     - name: variant
-      description: 视觉变体
+      description: 旧版视觉变体（兼容输入）
       example: "centered"
     - name: layout
-      description: 布局控制（旧格式兼容，不影响渲染主逻辑）
+      description: 旧版布局控制（兼容输入）
       example: "default"
     - name: items
       description: 列表项，用 | 分隔
@@ -189,8 +192,8 @@ variants:
       title: 读者相信的是顺畅证据
       items: 先给结论 | 再给数据 | 最后给案例
       :::
-  - name: mini-case
-    aliases: [micro-case, case]
+  - name: micro-case
+    aliases: [mini-case, case]
     use_when: 需要压缩一个微案例
     required: [title, items]
     shapes:

@@ -5,6 +5,7 @@ body_format: lines
 version: "1.0.0"
 since: "1.5.0"
 category: free-layout
+input_positions: [markdown-body]
 serves: [readability, memorability]
 content_types: [tutorial, report, announcement, product-launch]
 industry: [general]
@@ -23,6 +24,10 @@ anti_pattern: |
   节点写成长段解释会削弱流程的扫描效率。
 opener:
   caption: true
+fields:
+  optional:
+    - name: separator
+      enum: ["→"]
 body:
   min_items: 1
 example: |

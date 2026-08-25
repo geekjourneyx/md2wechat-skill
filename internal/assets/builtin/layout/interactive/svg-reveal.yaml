@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: interactive
+input_positions: [header-attrs, body-kv]
 serves: [attention, memorability]
 content_types: [tutorial, announcement]
 industry: [general]
@@ -24,13 +25,22 @@ anti_pattern: |
 opener:
   param_style: braces
   params:
+    - name: variant
+      enum: [clean, card]
+      default: card
     - name: accent
       description: 强调色
-      enum: [brand, muted]
+      enum: [brand, muted, contrast]
       default: brand
+    - name: density
+      enum: [compact, normal, airy]
+      default: normal
+    - name: wechat_safe_level
+      enum: [strict, normal]
+      default: normal
     - name: svg_fallback
       description: SVG 不可用时的回退策略
-      enum: [first-layer, static]
+      enum: [static, first-layer]
       default: first-layer
 fields:
   required:

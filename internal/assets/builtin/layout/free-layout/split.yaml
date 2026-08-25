@@ -5,6 +5,7 @@ body_format: split
 version: "1.0.0"
 since: "1.5.0"
 category: free-layout
+input_positions: [header-attrs, markdown-body]
 serves: [readability]
 content_types: [opinion, tutorial, report, announcement, product-launch]
 industry: [general]

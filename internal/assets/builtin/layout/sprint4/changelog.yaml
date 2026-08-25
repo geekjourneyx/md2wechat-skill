@@ -5,6 +5,7 @@ body_format: json_object
 version: "1.0.0"
 since: "1.5.0"
 category: sprint4
+input_positions: [json]
 serves: [readability, memorability]
 content_types: [announcement, report]
 industry: [general]
@@ -45,6 +46,8 @@ fields:
     - name: removed
       description: 移除内容列表（JSON key：removed，字符串数组）
       example: '["废弃旧版 API"]'
+  required_any:
+    - [added, changed, fixed, removed]
 example: |
   :::changelog
   {"version":"v2.0.0","date":"2026-01-01","added":["新增高级模块","支持主题切换"],"changed":["优化渲染性能"],"fixed":["修复移动端布局问题"],"removed":["废弃旧版 API"]}

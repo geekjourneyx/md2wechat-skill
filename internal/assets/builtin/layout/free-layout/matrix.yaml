@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: free-layout
+input_positions: [header-attrs, row-dsl]
 serves: [readability]
 content_types: [tutorial, report, announcement, product-launch]
 industry: [general]

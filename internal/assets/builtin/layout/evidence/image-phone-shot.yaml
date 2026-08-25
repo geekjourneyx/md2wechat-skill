@@ -5,6 +5,7 @@ body_format: markdown_images
 version: "1.0.0"
 since: "1.5.0"
 category: evidence
+input_positions: [header-attrs, markdown-body]
 serves: [attention, readability]
 content_types: [tutorial, report, announcement, product-launch]
 industry: [general]
@@ -26,12 +27,20 @@ opener:
   params:
     - name: columns
       description: 截图列数
-      enum: ["1", "2", "3"]
+      enum: ["1", "2", "3", "4"]
       default: "2"
     - name: image_shape
       description: 移动端截图外观提示
-      enum: [phone]
+      enum: [square, rounded, phone, poster, original]
       default: phone
+    - name: variant
+      enum: [clean, card]
+      default: clean
+    - name: wechat_safe_level
+      enum: [strict, normal]
+      default: normal
+    - name: title
+      description: 截图组标题
 body:
   min_images: 1
 example: |

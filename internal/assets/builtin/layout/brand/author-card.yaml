@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: brand
+input_positions: [body-kv]
 serves: [memorability, conversion]
 content_types: [opinion, announcement, brand]
 industry: [general]
@@ -27,10 +28,10 @@ fields:
     - name: name
       description: 作者名称
       example: "极客旅程"
+  optional:
     - name: bio
       description: 作者简介，说明擅长领域和关注价值
       example: "长期写 AI 工具、内容系统和产品增长，关注怎么把复杂工作流做成可复用资产。"
-  optional:
     - name: role
       description: 作者身份标签
       example: "独立开发者 / 内容产品"

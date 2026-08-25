@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: infographic
+input_positions: [row-dsl]
 serves: [attention, memorability]
 content_types: [report, announcement, product-launch]
 industry: [general]
@@ -30,11 +31,12 @@ rows:
       description: 指标名称
     - name: value
       description: 核心数值（如 38 模块、-42%）
-    - name: suffix
+    - name: note
       description: 说明文字，解释数值的含义
-    - name: style
-      description: "风格：accent 或 default（可省略）"
-      enum: [accent, default]
+    - name: tone
+      description: "风格：default 或 accent（可省略）"
+      enum: [default, accent]
+      default: default
 example: |
   :::metrics[核心数据]
   结构复用 | 38 模块 | 同一篇内容可切到不同主题 | accent

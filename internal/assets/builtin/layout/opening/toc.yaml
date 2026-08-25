@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: opening
+input_positions: [row-dsl]
 serves: [readability]
 content_types: [opinion, tutorial, report, announcement]
 industry: [general]
@@ -26,7 +27,7 @@ rows:
   delimiter: "|"
   min_columns: 2
   schema:
-    - name: number
+    - name: index
       description: 序号（如 01、02、03）
     - name: title
       description: 章节标题

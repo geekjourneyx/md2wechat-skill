@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: conversion
+input_positions: [body-kv]
 serves: [memorability, readability]
 content_types: [opinion, tutorial, report]
 industry: [general]
@@ -19,7 +20,7 @@ when_not_to_use: |
 pairs_well_with: [verdict, cta, subscribe]
 avoid_combining_with: []
 anti_pattern: |
-  默认或 legacy 缺少 highlight 导致渲染失败；
+  默认缺少 highlight 导致渲染失败；
   highlight 写成描述性语句而非判断；
   body 写太长变成第二个正文段落。
 fields:
@@ -28,8 +29,8 @@ fields:
   optional:
     - name: variant
       description: 总结结构变体
-      enum: [legacy, three, decision, save]
-      example: legacy
+      enum: [three, decision, save]
+      example: three
     - name: eyebrow
       description: 标签词
       example: "一句话总结"
@@ -58,14 +59,6 @@ fields:
       description: 补充说明
       example: "收藏后按清单执行"
 variants:
-  - name: legacy
-    use_when: 只需一句话总结
-    required: [highlight]
-    example: |
-      :::summary
-      variant: legacy
-      highlight: 先把结构搭稳，再让主题接管气质
-      :::
   - name: three
     aliases: [points]
     use_when: 需要列出三点总结

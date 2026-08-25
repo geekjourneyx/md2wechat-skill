@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: evidence
+input_positions: [body-kv, row-dsl]
 serves: [readability, attention]
 content_types: [tutorial, report]
 industry: [general]
@@ -31,6 +32,8 @@ fields:
       description: 编号解读（可多次重复，最多渲染 3 条），格式：编号 | 标题 | 描述；描述可省略
       example: "01 | 主信息区 | 一进入页面先看到的核心判断和主标题"
   optional:
+    - name: point-description
+      description: 标注说明
     - name: eyebrow
       description: 标签词
       example: "图片解读"

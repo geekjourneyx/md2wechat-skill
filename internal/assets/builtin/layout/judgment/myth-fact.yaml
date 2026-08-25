@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: judgment
+input_positions: [row-dsl]
 serves: [attention, readability]
 content_types: [opinion, tutorial, announcement]
 industry: [general]
@@ -30,7 +31,7 @@ rows:
       description: 常见误区，读者可能持有的错误观点
     - name: fact
       description: 真实情况，对误区的正确纠正
-    - name: supplement
+    - name: note
       description: 补充说明，解释为什么事实是这样（可省略）
 example: |
   :::myth-fact[常见误区]

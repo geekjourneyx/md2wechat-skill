@@ -6,6 +6,7 @@ compatible_body_formats: [json_array]
 version: "1.0.0"
 since: "1.5.0"
 category: sprint4
+input_positions: [prefix-dsl]
 serves: [readability, conversion]
 content_types: [tutorial, report]
 industry: [general]

@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: brand
+input_positions: [body-kv]
 serves: [memorability, conversion]
 content_types: [opinion, tutorial, brand]
 industry: [general]

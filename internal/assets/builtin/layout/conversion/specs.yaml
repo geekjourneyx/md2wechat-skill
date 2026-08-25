@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: conversion
+input_positions: [row-dsl]
 serves: [readability, conversion]
 content_types: [report, announcement, product-launch]
 industry: [general]
@@ -26,7 +27,7 @@ rows:
   delimiter: "|"
   min_columns: 2
   schema:
-    - name: spec
+    - name: label
       description: 参数名称
     - name: value
       description: 参数值

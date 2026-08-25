@@ -5,6 +5,7 @@ body_format: markdown_fields
 version: "1.0.0"
 since: "1.5.0"
 category: evidence
+input_positions: [header-attrs, prefix-dsl, markdown-body]
 serves: [readability]
 content_types: [tutorial]
 industry: [general]
@@ -40,6 +41,9 @@ opener:
     - name: density
       description: 内容密度
       enum: [compact, normal, airy]
+      default: normal
+    - name: wechat_safe_level
+      enum: [strict, normal]
       default: normal
 fields:
   optional:

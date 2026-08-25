@@ -5,6 +5,7 @@ body_format: markdown_fields
 version: "1.0.0"
 since: "1.5.0"
 category: evidence
+input_positions: [header-attrs, body-kv, markdown-body]
 serves: [readability, memorability]
 content_types: [tutorial, report]
 industry: [general]
@@ -26,8 +27,8 @@ opener:
   params:
     - name: caption_style
       description: 图注样式
-      enum: [minimal, numbered]
-      default: minimal
+      enum: [none, minimal, numbered, label]
+      default: numbered
 fields:
   required:
     - name: caption

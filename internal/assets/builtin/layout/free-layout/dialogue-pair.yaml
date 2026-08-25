@@ -5,6 +5,7 @@ body_format: dialogue
 version: "1.0.0"
 since: "1.5.0"
 category: free-layout
+input_positions: [header-attrs, prefix-dsl]
 serves: [readability, memorability]
 content_types: [opinion, tutorial, report]
 industry: [general]

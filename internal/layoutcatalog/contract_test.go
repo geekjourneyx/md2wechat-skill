@@ -110,6 +110,163 @@ func TestUpstreamAgentContractsUseSupportedInputPositions(t *testing.T) {
 	}
 }
 
+// TestBuiltinCatalogMatchesUpstreamAgentContracts keeps the author-facing
+// contract in the builtin catalog aligned with the pinned upstream oracle.
+// It deliberately derives the catalog view through the generic schema: rows,
+// body fields, and opener attributes all contribute fields; no syntax name is
+// used to interpret an input form.
+func TestBuiltinCatalogMatchesUpstreamAgentContracts(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range readUpstreamAgentContracts(t).Contracts {
+		want := want
+		t.Run(want.Syntax, func(t *testing.T) {
+			spec, ok := c.Get(want.Syntax)
+			if !ok {
+				t.Fatal("missing recommended catalog entry")
+			}
+			got := projectAgentContract(spec)
+			if !slices.Equal(got.Input, want.Input) {
+				t.Errorf("input_positions\n got: %v\nwant: %v", got.Input, want.Input)
+			}
+			if diff := missingContractFields(want.Required, got.Required); len(diff) != 0 {
+				t.Errorf("canonical required fields absent: %v (declared: %v)", diff, got.Required)
+			}
+			if diff := missingContractFields(want.Optional, got.Optional); len(diff) != 0 {
+				t.Errorf("canonical optional fields absent: %v (declared: %v)", diff, got.Optional)
+			}
+			for field, values := range want.Enums {
+				if gotValues, ok := got.Enums[field]; !ok || !slices.Equal(gotValues, values) {
+					t.Errorf("enum %q\n got: %v\nwant: %v", field, gotValues, values)
+				}
+			}
+			for field, value := range want.Defaults {
+				if gotValue, ok := got.Defaults[field]; ok && gotValue != value {
+					t.Errorf("default %q = %q, want %q", field, gotValue, value)
+				}
+			}
+		})
+	}
+}
+
+type agentContractProjection struct {
+	Input    []string
+	Required []string
+	Optional []string
+	Enums    map[string][]string
+	Defaults map[string]string
+}
+
+func projectAgentContract(spec *LayoutSpec) agentContractProjection {
+	got := agentContractProjection{Enums: map[string][]string{}, Defaults: map[string]string{}}
+	for _, input := range spec.InputPositions {
+		got.Input = append(got.Input, string(input))
+	}
+	add := func(field FieldSpec, required bool) {
+		if required {
+			got.Required = append(got.Required, field.Name)
+		} else {
+			got.Optional = append(got.Optional, field.Name)
+		}
+		if len(field.Enum) != 0 {
+			got.Enums[field.Name] = field.Enum
+		}
+		if field.Default != "" {
+			got.Defaults[field.Name] = field.Default
+		}
+	}
+	if spec.Fields != nil {
+		for _, field := range spec.Fields.Required {
+			add(field, true)
+			got.Optional = append(got.Optional, field.Name)
+		}
+		for _, any := range spec.Fields.RequiredAny {
+			got.Required = append(got.Required, "nonempty-category")
+			for _, name := range any {
+				got.Required = append(got.Required, name)
+			}
+		}
+		for _, field := range spec.Fields.RequiredWhenNoVariant {
+			got.Required = append(got.Required, field)
+		}
+		for _, field := range spec.Fields.Optional {
+			add(field, false)
+		}
+	}
+	if spec.Rows != nil {
+		for i, field := range spec.Rows.Schema {
+			add(field, i < spec.Rows.MinColumns)
+		}
+		got.Optional = append(got.Optional, "header-title")
+		if slices.Contains(spec.InputPositions, InputHeaderAttrs) {
+			got.Required = append(got.Required, "headers", "rows")
+		}
+	}
+	if spec.Opener != nil {
+		if spec.Opener.Caption {
+			got.Optional = append(got.Optional, "header-title")
+		}
+		for _, field := range spec.Opener.Params {
+			add(FieldSpec{Name: field.Name, Enum: field.Enum, Default: field.Default}, false)
+		}
+	}
+	if spec.Body != nil {
+		if spec.Body.MinImages > 0 {
+			got.Required = append(got.Required, "image")
+			got.Required = append(got.Required, "title", "body")
+		}
+		if spec.Body.Group != nil {
+			got.Required = append(got.Required, spec.Body.Group.Required...)
+			got.Required = append(got.Required, "image")
+		}
+		if spec.Body.Separator != "" {
+			got.Required = append(got.Required, "left-body", "right-body")
+		}
+		for _, pair := range spec.Body.RequiredPairs {
+			got.Required = append(got.Required, pair[0], pair[1])
+		}
+		for _, prefix := range spec.Body.AllowedPrefixes {
+			got.Required = append(got.Required, strings.TrimSuffix(prefix, ":"))
+		}
+		if spec.Body.MinItems > 0 && spec.BodyFormat == BodyFormatLines {
+			got.Required = append(got.Required, "body", "nodes")
+		}
+	}
+	for _, variant := range spec.Variants {
+		for _, field := range variant.Required {
+			got.Required = append(got.Required, field)
+		}
+		for _, any := range variant.RequiredAny {
+			got.Required = append(got.Required, any...)
+		}
+	}
+	return got
+}
+
+func missingContractFields(want, got []string) []string {
+	seen := make(map[string]bool, len(got))
+	for _, field := range got {
+		seen[field] = true
+	}
+	missing := make([]string, 0)
+	for _, field := range want {
+		if seen[field] {
+			continue
+		}
+		segments := strings.Split(field, ".")
+		for _, candidate := range segments[len(segments)-1:] {
+			for _, choice := range strings.Split(candidate, "-or-") {
+				if choice != "" && !seen[choice] {
+					missing = append(missing, choice)
+				}
+			}
+		}
+	}
+	return missing
+}
+
 func readUpstreamAgentContracts(t *testing.T) upstreamAgentContractOracle {
 	t.Helper()
 	data, err := os.ReadFile("testdata/upstream_agent_contracts.yaml")
@@ -305,8 +462,14 @@ func TestNewImageModuleContracts(t *testing.T) {
 			format: BodyFormatMarkdownImages, category: "evidence", lifecycle: LifecycleRecommended, minImages: 1,
 			paramStyle: ParamStyleBraces,
 			params: []imageModuleParamContract{
-				{name: "columns", enum: []string{"1", "2", "3"}, defaultValue: "2"},
-				{name: "variant", enum: []string{"card", "plain"}, defaultValue: "card"},
+				{name: "variant", enum: []string{"clean", "card"}, defaultValue: "clean"},
+				{name: "density", enum: []string{"compact", "normal", "airy"}, defaultValue: "normal"},
+				{name: "columns", enum: []string{"1", "2", "3", "4"}, defaultValue: "3"},
+				{name: "image_shape", enum: []string{"square", "rounded", "phone", "poster", "original"}, defaultValue: "square"},
+				{name: "caption_style", enum: []string{"none", "minimal", "numbered", "label"}, defaultValue: "minimal"},
+				{name: "accent", enum: []string{"brand", "muted", "contrast"}, defaultValue: "brand"},
+				{name: "wechat_safe_level", enum: []string{"strict", "normal"}, defaultValue: "normal"},
+				{name: "title"}, {name: "description"},
 			},
 			metadata: LayoutMetadata{Author: "md2wechat", Provenance: "builtin", InspiredBy: "advanced-layout-modules-guide.md#gallery-grid"},
 			example:  galleryGridGuideSnippet,
@@ -315,7 +478,11 @@ func TestNewImageModuleContracts(t *testing.T) {
 			format: BodyFormatMarkdownImages, category: "evidence", lifecycle: LifecycleRecommended, minImages: 1,
 			paramStyle: ParamStyleBraces,
 			params: []imageModuleParamContract{
-				{name: "variant", enum: []string{"card", "plain"}, defaultValue: "card"},
+				{name: "variant", enum: []string{"clean", "card"}, defaultValue: "card"},
+				{name: "density", enum: []string{"compact", "normal", "airy"}, defaultValue: "normal"},
+				{name: "caption_style", enum: []string{"none", "minimal", "numbered", "label"}, defaultValue: "minimal"},
+				{name: "accent", enum: []string{"brand", "muted", "contrast"}, defaultValue: "brand"},
+				{name: "wechat_safe_level", enum: []string{"strict", "normal"}, defaultValue: "normal"},
 			},
 			metadata: LayoutMetadata{Author: "md2wechat", Provenance: "builtin", InspiredBy: "advanced-layout-modules-guide.md#gallery-story"},
 			example:  galleryStoryGuideSnippet,
@@ -324,8 +491,10 @@ func TestNewImageModuleContracts(t *testing.T) {
 			format: BodyFormatMarkdownImages, category: "evidence", lifecycle: LifecycleRecommended, minImages: 1,
 			paramStyle: ParamStyleBraces,
 			params: []imageModuleParamContract{
-				{name: "columns", enum: []string{"1", "2", "3"}, defaultValue: "2"},
-				{name: "image_shape", enum: []string{"phone"}, defaultValue: "phone"},
+				{name: "columns", enum: []string{"1", "2", "3", "4"}, defaultValue: "2"},
+				{name: "image_shape", enum: []string{"square", "rounded", "phone", "poster", "original"}, defaultValue: "phone"},
+				{name: "variant", enum: []string{"clean", "card"}, defaultValue: "clean"},
+				{name: "wechat_safe_level", enum: []string{"strict", "normal"}, defaultValue: "normal"}, {name: "title"},
 			},
 			metadata: LayoutMetadata{Author: "md2wechat", Provenance: "builtin", InspiredBy: "advanced-layout-modules-guide.md#image-phone-shot"},
 			example:  imagePhoneShotGuideSnippet,
@@ -334,7 +503,7 @@ func TestNewImageModuleContracts(t *testing.T) {
 			format: BodyFormatMarkdownFields, category: "evidence", lifecycle: LifecycleRecommended, minImages: 1, maxImages: 1,
 			paramStyle: ParamStyleBraces,
 			params: []imageModuleParamContract{
-				{name: "caption_style", enum: []string{"minimal", "numbered"}, defaultValue: "minimal"},
+				{name: "caption_style", enum: []string{"none", "minimal", "numbered", "label"}, defaultValue: "numbered"},
 			},
 			requiredFields: []imageModuleFieldContract{{name: "caption", example: "2026 年用户增长曲线"}},
 			optionalFields: []imageModuleFieldContract{{name: "source", example: "内部实验数据"}},
@@ -345,8 +514,11 @@ func TestNewImageModuleContracts(t *testing.T) {
 			format: BodyFormatFields, category: "interactive", lifecycle: LifecycleRecommended,
 			paramStyle: ParamStyleBraces,
 			params: []imageModuleParamContract{
-				{name: "accent", enum: []string{"brand", "muted"}, defaultValue: "brand"},
-				{name: "svg_fallback", enum: []string{"first-layer", "static"}, defaultValue: "first-layer"},
+				{name: "variant", enum: []string{"clean", "card"}, defaultValue: "card"},
+				{name: "accent", enum: []string{"brand", "muted", "contrast"}, defaultValue: "brand"},
+				{name: "density", enum: []string{"compact", "normal", "airy"}, defaultValue: "normal"},
+				{name: "wechat_safe_level", enum: []string{"strict", "normal"}, defaultValue: "normal"},
+				{name: "svg_fallback", enum: []string{"static", "first-layer"}, defaultValue: "first-layer"},
 			},
 			requiredFields: []imageModuleFieldContract{
 				{name: "question", example: "点击查看答案"},
@@ -360,7 +532,11 @@ func TestNewImageModuleContracts(t *testing.T) {
 			format: BodyFormatMarkdownImages, category: "interactive", lifecycle: LifecycleRecommended, minImages: 2,
 			paramStyle: ParamStyleBraces,
 			params: []imageModuleParamContract{
-				{name: "svg_fallback", enum: []string{"first-layer", "static"}, defaultValue: "first-layer"},
+				{name: "variant", enum: []string{"clean", "card"}, defaultValue: "card"},
+				{name: "accent", enum: []string{"brand", "muted", "contrast"}, defaultValue: "brand"},
+				{name: "density", enum: []string{"compact", "normal", "airy"}, defaultValue: "normal"},
+				{name: "wechat_safe_level", enum: []string{"strict", "normal"}, defaultValue: "normal"},
+				{name: "svg_fallback", enum: []string{"static", "first-layer"}, defaultValue: "first-layer"}, {name: "title"},
 			},
 			metadata: LayoutMetadata{Author: "md2wechat", Provenance: "builtin", InspiredBy: "advanced-layout-modules-guide.md#svg-swipe-gallery"},
 			example:  svgSwipeGalleryGuideSnippet,
@@ -738,7 +914,7 @@ func TestKnownDriftContractsAreCalibrated(t *testing.T) {
 		"quote":          {any: [][]string{{"quote", "text"}}},
 		"image-text":     {required: []string{"image"}, any: [][]string{{"title", "body"}}},
 		"image-annotate": {required: []string{"image", "point"}},
-		"author-card":    {required: []string{"name", "bio"}},
+		"author-card":    {required: []string{"name"}},
 		"series":         {required: []string{"name", "title"}},
 		"subscribe":      {required: []string{"title"}},
 		"cta":            {required: []string{"title"}},

@@ -5,6 +5,7 @@ body_format: markdown_images
 version: "1.0.0"
 since: "1.5.0"
 category: evidence
+input_positions: [header-attrs, markdown-body]
 serves: [attention, readability]
 content_types: [tutorial, report, announcement, product-launch]
 industry: [general]
@@ -24,14 +25,33 @@ anti_pattern: |
 opener:
   param_style: braces
   params:
-    - name: columns
-      description: 图集列数
-      enum: ["1", "2", "3"]
-      default: "2"
     - name: variant
       description: 图集外观
-      enum: [card, plain]
-      default: card
+      enum: [clean, card]
+      default: clean
+    - name: density
+      enum: [compact, normal, airy]
+      default: normal
+    - name: columns
+      description: 图集列数
+      enum: ["1", "2", "3", "4"]
+      default: "3"
+    - name: image_shape
+      enum: [square, rounded, phone, poster, original]
+      default: square
+    - name: caption_style
+      enum: [none, minimal, numbered, label]
+      default: minimal
+    - name: accent
+      enum: [brand, muted, contrast]
+      default: brand
+    - name: wechat_safe_level
+      enum: [strict, normal]
+      default: normal
+    - name: title
+      description: 图集标题
+    - name: description
+      description: 图集说明
 body:
   min_images: 1
 example: |

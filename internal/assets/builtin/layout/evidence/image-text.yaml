@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: evidence
+input_positions: [body-kv]
 serves: [readability]
 content_types: [tutorial, report, announcement]
 industry: [general]
@@ -29,15 +30,14 @@ fields:
       description: 图片 URL（必填）
       example: "https://example.com/split.png"
   optional:
+    - name: layout
+      enum: [left, right]
     - name: title
       description: 图文标题（title 或 body 至少填一个）
       example: "图和说明绑在一起，读者更容易跟上重点"
     - name: body
       description: 图文说明正文（title 或 body 至少填一个）
       example: "左边先讲结论，右边再放真实界面，减少来回对照的成本。"
-    - name: layout
-      description: "布局：right 表示文字在前图片在后，其他值默认图片在前"
-      example: "right"
     - name: eyebrow
       description: 标签词
       example: "功能截图"

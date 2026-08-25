@@ -5,6 +5,7 @@ body_format: json_array
 version: "1.0.0"
 since: "1.5.0"
 category: sprint4
+input_positions: [json]
 serves: [attention, memorability]
 content_types: [report, announcement, product-launch]
 industry: [general]
