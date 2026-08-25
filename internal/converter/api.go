@@ -13,13 +13,29 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	// DefaultAPIConvertURL is the production endpoint used by API-mode convert
+	// and opt-in conformance checks.
+	DefaultAPIConvertURL = "https://www.md2wechat.cn/api/convert"
+	apiConvertMaxRetries = 2
+)
+
 // APIResponse md2wechat.cn API 响应
 type APIResponse struct {
-	Code int    `json:"code"` // 0 表示成功
-	Msg  string `json:"msg"`  // 错误信息
-	Data struct {
-		HTML string `json:"html"` // 转换后的 HTML
-	} `json:"data"`
+	Code int             `json:"code"` // 0 表示成功
+	Msg  string          `json:"msg"`  // 错误信息
+	Data APIResponseData `json:"data"`
+}
+
+// APIResponseData is the stable successful conversion result. Consumers that
+// only need HTML may ignore the remaining server-provided metadata.
+type APIResponseData struct {
+	HTML              string `json:"html"`
+	Theme             string `json:"theme"`
+	FontSize          string `json:"fontSize"`
+	BackgroundType    string `json:"backgroundType"`
+	WordCount         int    `json:"wordCount"`
+	EstimatedReadTime int    `json:"estimatedReadTime"`
 }
 
 // APIRequest md2wechat.cn API 请求
@@ -41,7 +57,7 @@ type apiConverter struct {
 func NewAPIConverter(log *zap.Logger) *apiConverter {
 	return &apiConverter{
 		log:     log,
-		baseURL: "https://www.md2wechat.cn/api/convert",
+		baseURL: DefaultAPIConvertURL,
 		timeout: 30 * time.Second,
 	}
 }
@@ -50,7 +66,7 @@ func NewAPIConverter(log *zap.Logger) *apiConverter {
 func NewAPIConverterWithURL(log *zap.Logger, baseURL string) *apiConverter {
 	return &apiConverter{
 		log:     log,
-		baseURL: baseURL,
+		baseURL: ResolveAPIConvertURL(baseURL),
 		timeout: 30 * time.Second,
 	}
 }
@@ -74,20 +90,7 @@ func (c *converter) convertViaAPI(req *ConvertRequest) *ConvertResult {
 	}
 
 	// 创建 API 转换器，传入配置中的 base URL
-	baseURL := c.cfg.MD2WechatBaseURL
-	if baseURL == "" {
-		baseURL = "https://www.md2wechat.cn/api/convert"
-	} else {
-		// 确保路径正确
-		if !strings.HasSuffix(baseURL, "/api/convert") {
-			if strings.HasSuffix(baseURL, "/") {
-				baseURL += "api/convert"
-			} else {
-				baseURL += "/api/convert"
-			}
-		}
-	}
-	apiConv := NewAPIConverterWithURL(c.log, baseURL)
+	apiConv := NewAPIConverterWithURL(c.log, ResolveAPIConvertURL(c.cfg.MD2WechatBaseURL))
 
 	// 调用 API
 	html, err := apiConv.Convert(&APIRequest{
@@ -123,66 +126,115 @@ func (c *converter) convertViaAPI(req *ConvertRequest) *ConvertResult {
 
 // Convert 调用 md2wechat.cn API 进行转换
 func (a *apiConverter) Convert(req *APIRequest, apiKey string) (string, error) {
-	// 序列化请求
-	jsonData, err := json.Marshal(req)
-	if err != nil {
-		return "", fmt.Errorf("marshal request: %w", err)
-	}
-
-	// 创建 HTTP 请求
-	httpReq, err := http.NewRequest("POST", a.baseURL, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return "", fmt.Errorf("create request: %w", err)
-	}
-
-	// 设置请求头
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("X-API-Key", apiKey)
-
-	// 创建客户端
 	client := &http.Client{
 		Timeout: a.timeout,
 	}
-
-	// 发送请求
-	resp, err := client.Do(httpReq)
+	resp, err := PostAPIConvert(client, a.baseURL, apiKey, *req)
 	if err != nil {
-		return "", fmt.Errorf("send request: %w", err)
+		return "", err
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+	data, err := DecodeAPIResponse(resp)
+	if err != nil {
+		return "", err
+	}
+	return data.HTML, nil
+}
 
-	// 读取响应
+// ResolveAPIConvertURL normalizes a configured base URL to the sole convert
+// endpoint. It deliberately accepts a full endpoint to preserve existing
+// config values.
+func ResolveAPIConvertURL(baseURL string) string {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if baseURL == "" {
+		return DefaultAPIConvertURL
+	}
+	if strings.HasSuffix(baseURL, "/api/convert") {
+		return baseURL
+	}
+	return baseURL + "/api/convert"
+}
+
+// PostAPIConvert sends the shared request envelope. Only transport failures
+// and 5xx responses are retried; contract and authorization responses are
+// returned directly for the caller to decode and categorize.
+func PostAPIConvert(client *http.Client, baseURL, apiKey string, payload APIRequest) (*http.Response, error) {
+	if client == nil {
+		return nil, fmt.Errorf("send request: nil HTTP client")
+	}
+	for attempt := 0; ; attempt++ {
+		body, err := json.Marshal(payload)
+		if err != nil {
+			return nil, fmt.Errorf("marshal request: %w", err)
+		}
+		req, err := http.NewRequest(http.MethodPost, ResolveAPIConvertURL(baseURL), bytes.NewReader(body))
+		if err != nil {
+			return nil, fmt.Errorf("create request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		if apiKey != "" {
+			req.Header.Set("X-API-Key", apiKey)
+		}
+		resp, err := client.Do(req)
+		if err == nil && (resp.StatusCode < http.StatusInternalServerError || attempt == apiConvertMaxRetries) {
+			return resp, nil
+		}
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
+		if attempt == apiConvertMaxRetries {
+			return nil, fmt.Errorf("send request: %w", err)
+		}
+		time.Sleep(time.Duration(attempt+1) * 50 * time.Millisecond)
+	}
+}
+
+// DecodeAPIResponse validates the successful conversion envelope while
+// accepting additive server fields. It always closes resp.Body.
+func DecodeAPIResponse(resp *http.Response) (APIResponseData, error) {
+	if resp == nil {
+		return APIResponseData{}, fmt.Errorf("nil response")
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return APIResponseData{}, fmt.Errorf("http status %d", resp.StatusCode)
+	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("read response: %w", err)
+		return APIResponseData{}, fmt.Errorf("read response: %w", err)
 	}
-
-	// 解析响应
-	var apiResp APIResponse
-	if err := json.Unmarshal(body, &apiResp); err != nil {
-		return "", fmt.Errorf("parse response: %w (body: %s)", err, string(body))
+	var raw struct {
+		Code int             `json:"code"`
+		Msg  string          `json:"msg"`
+		Data json.RawMessage `json:"data"`
 	}
-
-	// 检查响应状态
-	if apiResp.Code != 0 {
-		return "", &ConvertError{
-			Code:    "API_ERROR",
-			Message: fmt.Sprintf("API returned error code %d: %s", apiResp.Code, apiResp.Msg),
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return APIResponseData{}, fmt.Errorf("decode envelope: %w", err)
+	}
+	if raw.Code != 0 {
+		return APIResponseData{}, &ConvertError{Code: "API_ERROR", Message: fmt.Sprintf("API returned error code %d: %s", raw.Code, raw.Msg)}
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw.Data, &fields); err != nil {
+		return APIResponseData{}, fmt.Errorf("parse response data: %w", err)
+	}
+	for _, name := range []string{"html", "theme", "fontSize", "backgroundType", "wordCount", "estimatedReadTime"} {
+		if _, ok := fields[name]; !ok {
+			return APIResponseData{}, fmt.Errorf("parse response data: missing required field %s", name)
 		}
 	}
-	if strings.TrimSpace(apiResp.Data.HTML) == "" {
-		return "", fmt.Errorf("API returned empty HTML")
+	var data APIResponseData
+	if err := json.Unmarshal(raw.Data, &data); err != nil {
+		return APIResponseData{}, fmt.Errorf("parse response data: %w", err)
 	}
-
-	// 返回 HTML
-	return apiResp.Data.HTML, nil
+	if strings.TrimSpace(data.HTML) == "" {
+		return APIResponseData{}, fmt.Errorf("API returned empty HTML")
+	}
+	return data, nil
 }
 
 // SetBaseURL 设置 API 基础 URL（用于测试）
 func (a *apiConverter) SetBaseURL(url string) {
-	a.baseURL = url
+	a.baseURL = ResolveAPIConvertURL(url)
 }
 
 // SetTimeout 设置请求超时

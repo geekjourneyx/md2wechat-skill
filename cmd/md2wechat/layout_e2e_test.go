@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,17 +14,10 @@ import (
 	"time"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
+	"github.com/geekjourneyx/md2wechat-skill/internal/converter"
 	"github.com/geekjourneyx/md2wechat-skill/internal/layoutcatalog"
 	"golang.org/x/net/html"
 )
-
-type e2eAPIEnvelope struct {
-	Code int    `json:"code"`
-	Msg  string `json:"msg"`
-	Data struct {
-		HTML string `json:"html"`
-	} `json:"data"`
-}
 
 type e2eWitness struct {
 	Module          string
@@ -38,8 +30,6 @@ type e2eWitness struct {
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
-
-const layoutConformanceBaseURL = "https://md2wechat.app"
 
 type e2eSettings struct {
 	BaseURL         string
@@ -81,13 +71,10 @@ func loadE2ESettings() (e2eSettings, error) {
 		return e2eSettings{}, fmt.Errorf("load E2E configuration: %w", err)
 	}
 	settings := e2eSettings{
-		BaseURL:         layoutConformanceBaseURL,
+		BaseURL:         converter.ResolveAPIConvertURL(cfg.MD2WechatBaseURL),
 		APIKey:          strings.TrimSpace(cfg.MD2WechatAPIKey),
 		CLICommit:       strings.TrimSpace(os.Getenv("MD2WECHAT_CLI_COMMIT")),
 		ExpectedBuildID: strings.TrimSpace(os.Getenv("MD2WECHAT_API_BUILD_ID")),
-	}
-	if override := strings.TrimSpace(os.Getenv("MD2WECHAT_BASE_URL")); override != "" {
-		settings.BaseURL = strings.TrimRight(override, "/")
 	}
 	if settings.APIKey == "" {
 		return e2eSettings{}, fmt.Errorf("authentication failure: MD2WECHAT_API_KEY is not configured")
@@ -136,7 +123,7 @@ func TestDecodeE2EResponse(t *testing.T) {
 		{name: "non-200", status: http.StatusBadGateway, body: `{}`, want: "http status"},
 		{name: "invalid JSON", status: http.StatusOK, body: `{`, want: "decode envelope"},
 		{name: "non-zero API code", status: http.StatusOK, body: `{"code":42,"msg":"rejected","data":{"html":"x"}}`, want: "api code"},
-		{name: "empty HTML", status: http.StatusOK, body: `{"code":0,"data":{"html":""}}`, want: "empty html"},
+		{name: "empty HTML", status: http.StatusOK, body: `{"code":0,"data":{"html":"","theme":"default","fontSize":"medium","backgroundType":"none","wordCount":1,"estimatedReadTime":1}}`, want: "empty HTML"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -315,7 +302,7 @@ func TestConformanceRequestUsesLocalTransport(t *testing.T) {
 		return &http.Response{
 			StatusCode: http.StatusOK,
 			Header:     make(http.Header),
-			Body:       io.NopCloser(strings.NewReader(`{"code":0,"data":{"html":"<section data-mpa-action-id=\"demo\">Visible probe</section>"}}`)),
+			Body:       io.NopCloser(strings.NewReader(`{"code":0,"data":{"html":"<section data-mpa-action-id=\"demo\">Visible probe</section>","theme":"default","fontSize":"medium","backgroundType":"none","wordCount":2,"estimatedReadTime":1}}`)),
 			Request:    req,
 		}, nil
 	})}
@@ -343,7 +330,7 @@ func TestE2ESettingsUseProductionTargetAndConfigCredential(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if settings.BaseURL != "https://md2wechat.app" {
+	if settings.BaseURL != converter.DefaultAPIConvertURL {
 		t.Fatalf("BaseURL = %q", settings.BaseURL)
 	}
 	if settings.APIKey != "environment-key" || settings.CLICommit != "cli-commit" || settings.ExpectedBuildID != "expected-build" {
@@ -360,7 +347,7 @@ func TestE2ESettingsAllowExplicitTargetOverride(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if settings.BaseURL != "http://localhost:3000" {
+	if settings.BaseURL != "http://localhost:3000/api/convert" {
 		t.Fatalf("BaseURL = %q", settings.BaseURL)
 	}
 }
@@ -414,7 +401,7 @@ func TestE2EFailureCategories(t *testing.T) {
 	client := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 		return nil, io.ErrUnexpectedEOF
 	})}
-	if _, err := postConvert(client, "https://md2wechat.app", "secret", "body"); err == nil || !strings.Contains(err.Error(), "network failure") {
+	if _, err := postConvert(client, converter.DefaultAPIConvertURL, "secret", "body"); err == nil || !strings.Contains(err.Error(), "network failure") {
 		t.Fatalf("network error = %v", err)
 	}
 }
@@ -487,6 +474,37 @@ func TestCollectE2EWitnessesIncludesCanonicalAndVariants(t *testing.T) {
 	}
 	if len(witnesses) != 2 || witnesses[0].Variant != "" || witnesses[1].Variant != "editorial" {
 		t.Fatalf("witnesses = %+v", witnesses)
+	}
+}
+
+func TestWitnessCollectionRendersAndValidatesTheExactSubmittedBlock(t *testing.T) {
+	c, err := layoutConformanceCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	spec, ok := c.Get("hero")
+	if !ok {
+		t.Fatal("hero not found")
+	}
+	witnesses, err := witnessesForSpec(c, spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(witnesses) == 0 {
+		t.Fatal("hero has no witness")
+	}
+	rendered, err := renderWitnessFromExample(c, spec, spec.Example)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if witnesses[0].Markdown != rendered {
+		t.Fatalf("submitted markdown differs from catalog-rendered witness\ngot:  %q\nwant: %q", witnesses[0].Markdown, rendered)
+	}
+	if report := c.Validate(witnesses[0].Markdown); len(report.Errors) != 0 {
+		t.Fatalf("submitted witness did not validate: %+v", report.Errors)
+	}
+	if !strings.HasPrefix(witnesses[0].Markdown, ":::hero") {
+		t.Fatalf("submitted markdown = %q", witnesses[0].Markdown)
 	}
 }
 
@@ -578,8 +596,14 @@ func TestBuiltinExecutableWitnessProbesAreComplete(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(witnesses) != 1+len(spec.Variants) {
-				t.Fatalf("witness count = %d, want %d", len(witnesses), 1+len(spec.Variants))
+			want := 1
+			for _, variant := range spec.Variants {
+				if strings.TrimSpace(variant.Example) != "" && !(variant.Name == "default" && strings.TrimSpace(variant.Example) == strings.TrimSpace(spec.Example)) {
+					want++
+				}
+			}
+			if len(witnesses) != want {
+				t.Fatalf("witness count = %d, want %d", len(witnesses), want)
 			}
 			for _, witness := range witnesses {
 				if strings.TrimSpace(witness.Probe) == "" {
@@ -611,7 +635,7 @@ func collectAllE2EWitnesses(c *layoutcatalog.Catalog) ([]e2eWitnessGroup, error)
 	return groups, nil
 }
 
-func TestCollectAllE2EWitnessesHasStable80WitnessContract(t *testing.T) {
+func TestCollectAllE2EWitnessesHasStable84WitnessContract(t *testing.T) {
 	c, err := layoutConformanceCatalog()
 	if err != nil {
 		t.Fatal(err)
@@ -623,8 +647,8 @@ func TestCollectAllE2EWitnessesHasStable80WitnessContract(t *testing.T) {
 	if len(groups) != 2 || groups[0].Lifecycle != layoutcatalog.LifecycleRecommended || groups[1].Lifecycle != layoutcatalog.LifecycleCompatibility {
 		t.Fatalf("lifecycle groups = %+v", groups)
 	}
-	if got := len(groups[0].Witnesses) + len(groups[1].Witnesses); got != 80 {
-		t.Fatalf("witness count = %d, want 80", got)
+	if got := len(groups[0].Witnesses) + len(groups[1].Witnesses); got != 84 {
+		t.Fatalf("witness count = %d, want 84", got)
 	}
 }
 
@@ -725,29 +749,18 @@ func decodeE2EResponse(resp *http.Response) (string, error) {
 	if resp == nil {
 		return "", fmt.Errorf("nil response")
 	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-			return "", fmt.Errorf("authentication failure: http status %d", resp.StatusCode)
+	status := resp.StatusCode
+	data, err := converter.DecodeAPIResponse(resp)
+	if err != nil {
+		if status == http.StatusUnauthorized || status == http.StatusForbidden || strings.Contains(err.Error(), "API returned error code 401") || strings.Contains(err.Error(), "API returned error code 403") {
+			return "", fmt.Errorf("authentication failure: %w", err)
 		}
-		return "", fmt.Errorf("API drift: http status %d", resp.StatusCode)
-	}
-	var envelope e2eAPIEnvelope
-	dec := json.NewDecoder(resp.Body)
-	if err := dec.Decode(&envelope); err != nil {
-		return "", fmt.Errorf("API drift: decode envelope: %w", err)
-	}
-	if envelope.Code != 0 {
-		if envelope.Code == http.StatusUnauthorized || envelope.Code == http.StatusForbidden {
-			return "", fmt.Errorf("authentication failure: api code %d: %s", envelope.Code, envelope.Msg)
+		if strings.Contains(err.Error(), "API returned error code") {
+			return "", fmt.Errorf("API drift: api code: %w", err)
 		}
-		return "", fmt.Errorf("API drift: api code %d: %s", envelope.Code, envelope.Msg)
+		return "", fmt.Errorf("API drift: %w", err)
 	}
-	html := strings.TrimSpace(envelope.Data.HTML)
-	if html == "" {
-		return "", fmt.Errorf("API drift: empty html in successful response")
-	}
-	return html, nil
+	return data.HTML, nil
 }
 
 func checkConformanceHTML(witness e2eWitness, html string) error {
@@ -791,11 +804,12 @@ func checkConformanceSubtree(witness e2eWitness, marker *html.Node) error {
 }
 
 var variantBranchAttributes = map[string]string{
-	"hero":        "data-hero-variant",
-	"quote":       "data-quote-variant",
-	"summary":     "data-summary-variant",
-	"cta":         "data-cta-variant",
-	"infographic": "data-infographic-type",
+	"hero":          "data-hero-variant",
+	"quote":         "data-quote-variant",
+	"summary":       "data-summary-variant",
+	"cta":           "data-cta-variant",
+	"infographic":   "data-infographic-type",
+	"section-title": "data-section-title-variant",
 }
 
 func expectedVariantBranch(witness e2eWitness) (string, string, bool) {
@@ -941,19 +955,7 @@ func remoteBuildIdentity(header http.Header) (string, bool) {
 }
 
 func postConvert(client *http.Client, baseURL, apiKey, markdown string) (*http.Response, error) {
-	body, err := json.Marshal(map[string]string{"markdown": markdown})
-	if err != nil {
-		return nil, fmt.Errorf("encode request: %w", err)
-	}
-	req, err := http.NewRequest(http.MethodPost, strings.TrimRight(baseURL, "/")+"/api/convert", bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	if apiKey != "" {
-		req.Header.Set("X-API-Key", apiKey)
-	}
-	resp, err := client.Do(req)
+	resp, err := converter.PostAPIConvert(client, baseURL, apiKey, converter.APIRequest{Markdown: markdown, Theme: "default"})
 	if err != nil {
 		return nil, fmt.Errorf("network failure: send request: %w", err)
 	}
@@ -970,6 +972,11 @@ func witnessesForSpec(c *layoutcatalog.Catalog, spec *layoutcatalog.LayoutSpec) 
 		aliases                      []string
 	}{markdown: spec.Example, assertion: spec.ExampleAssertContains})
 	for _, variant := range spec.Variants {
+		// Only structural branches with executable examples receive separate
+		// remote requests; defaults remain covered by the canonical witness.
+		if strings.TrimSpace(variant.Example) == "" || (variant.Name == "default" && strings.TrimSpace(variant.Example) == strings.TrimSpace(spec.Example)) {
+			continue
+		}
 		declared = append(declared, struct {
 			variant, markdown, assertion string
 			aliases                      []string
@@ -983,6 +990,13 @@ func witnessesForSpec(c *layoutcatalog.Catalog, spec *layoutcatalog.LayoutSpec) 
 			Example: item.markdown, AssertContains: item.assertion,
 		}); err != nil {
 			return nil, err
+		}
+		rendered, err := renderWitnessFromExample(c, spec, item.markdown)
+		if err != nil {
+			return nil, fmt.Errorf("%s witness %q render: %w", spec.Name, item.variant, err)
+		}
+		if report := c.Validate(rendered); len(report.Errors) != 0 {
+			return nil, fmt.Errorf("%s witness %q emitted invalid block: %+v", spec.Name, item.variant, report.Errors)
 		}
 		probe := strings.TrimSpace(item.assertion)
 		probeInImageAlt := false
@@ -998,11 +1012,68 @@ func witnessesForSpec(c *layoutcatalog.Catalog, spec *layoutcatalog.LayoutSpec) 
 			return nil, fmt.Errorf("%s witness %q has no deterministic probe or explicit assertion", spec.Name, item.variant)
 		}
 		witnesses = append(witnesses, e2eWitness{
-			Module: spec.Name, Variant: item.variant, Markdown: item.markdown,
+			Module: spec.Name, Variant: item.variant, Markdown: rendered,
 			Probe: probe, ProbeInImageAlt: probeInImageAlt,
 		})
 	}
 	return witnesses, nil
+}
+
+// renderWitnessFromExample turns the catalog-owned executable example into the
+// exact block submitted to the remote renderer. The source example remains the
+// only hand-authored input: the conformance runner never keeps a second copy of
+// an opener or body for rendering, validation, and conversion.
+func renderWitnessFromExample(c *layoutcatalog.Catalog, spec *layoutcatalog.LayoutSpec, example string) (string, error) {
+	lines := strings.Split(strings.TrimSpace(example), "\n")
+	if len(lines) < 2 || !strings.HasPrefix(lines[0], ":::"+spec.Name) {
+		return "", fmt.Errorf("missing %s witness opener", spec.Name)
+	}
+	closeAt := -1
+	for i := 1; i < len(lines); i++ {
+		if strings.TrimSpace(strings.TrimRight(lines[i], "\r")) == ":::" {
+			closeAt = i
+			break
+		}
+	}
+	if closeAt < 0 {
+		return "", fmt.Errorf("missing %s witness closing fence", spec.Name)
+	}
+	input := layoutcatalog.RenderInput{Body: strings.Join(lines[1:closeAt], "\n")}
+	suffix := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(lines[0]), ":::"+spec.Name))
+	switch {
+	case suffix == "":
+	case strings.HasPrefix(suffix, "[") && strings.HasSuffix(suffix, "]"):
+		if spec.Opener == nil {
+			input.Fields = map[string]any{"caption": suffix[1 : len(suffix)-1]}
+		} else {
+			input.Caption = suffix[1 : len(suffix)-1]
+		}
+	case strings.HasPrefix(suffix, "{") && strings.HasSuffix(suffix, "}"):
+		params, err := witnessOpenerParams(suffix[1 : len(suffix)-1])
+		if err != nil {
+			return "", err
+		}
+		input.Params = params
+	default:
+		params, err := witnessOpenerParams(suffix)
+		if err != nil {
+			return "", err
+		}
+		input.Params = params
+	}
+	return c.RenderBlock(spec.Name, input)
+}
+
+func witnessOpenerParams(raw string) (map[string]string, error) {
+	params := map[string]string{}
+	for _, field := range strings.Fields(raw) {
+		key, value, ok := strings.Cut(field, "=")
+		if !ok || key == "" || value == "" {
+			return nil, fmt.Errorf("unsupported raw witness opener parameter %q", field)
+		}
+		params[key] = value
+	}
+	return params, nil
 }
 
 func deterministicWitnessProbe(format, markdown string) (string, error) {
