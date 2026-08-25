@@ -133,29 +133,6 @@ require | 前提 | 先把信息分层 | 不要把所有信息都塞进一个模�
 avoid | 不适合 | 特别短的快讯 | 这类内容通常一两个基础模块就够了
 :::
 
-:::cta
-title: 立即体验高级排版
-note: 56 个推荐语法覆盖九类内容结构，3 个 compatibility 模块仅用于迁移
-:::
-
-:::summary
-eyebrow: 一句话总结
-highlight: 先把结构搭稳，再让主题接管气质
-body: 同一篇内容切到不同主题时，重点和节奏仍然清楚。
-:::
-
-:::epilogue
-title: 当结构能被复用，表达才会拥有更大的自由。
-subtitle: 下面保留一条可选收束，供文章末尾按需使用。
-symbol: infinity
-:::
-
-:::closing
-title: 先让读者看懂，再让读者行动。
-subtitle: 每次发布前都用真实转换结果验证。
-symbol: asterism
-:::
-
 ## 六、图像与互动类（evidence / interactive）
 
 :::gallery-grid{columns=3 variant=card}
@@ -221,4 +198,27 @@ E: 高级模块把结构、层级和视觉节奏一起带进公众号正文。
 
 U: 我需要学多少个模块？
 E: 先学开场、信息卡、证据、总结和 CTA。
+:::
+
+:::epilogue
+title: 当结构能被复用，表达才会拥有更大的自由。
+subtitle: 现在把正文收束为读者能带走的判断。
+symbol: infinity
+:::
+
+:::summary
+eyebrow: 一句话总结
+highlight: 先把结构搭稳，再让主题接管气质
+body: 同一篇内容切到不同主题时，重点和节奏仍然清楚。
+:::
+
+:::cta
+title: 立即体验高级排版
+note: 56 个推荐语法覆盖九类内容结构，3 个 compatibility 模块仅用于迁移
+:::
+
+:::closing
+title: 先让读者看懂，再让读者行动。
+subtitle: 每次发布前都用真实转换结果验证。
+symbol: asterism
 :::

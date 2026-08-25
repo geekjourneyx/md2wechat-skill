@@ -189,6 +189,55 @@ func TestLayoutDocumentationE2EFixtureMatchesCurrentCatalog(t *testing.T) {
 	}
 }
 
+func TestLayoutDocumentationE2EFixtureComposition(t *testing.T) {
+	markdown := readDocumentationFile(t, "../../examples/layout-e2e-test.md")
+
+	hero := fixtureDirectiveBlocks(markdown, "hero")
+	if len(hero) != 1 || !strings.Contains(hero[0], "variant: masthead") {
+		t.Fatalf("fixture hero must use the masthead variant: %q", hero)
+	}
+
+	sectionTitles := fixtureDirectiveBlocks(markdown, "section-title")
+	wantSectionTitleVariants := []string{"numbered", "focus", "divider", "vertical"}
+	if len(sectionTitles) != len(wantSectionTitleVariants) {
+		t.Fatalf("fixture section-title blocks = %d, want %d", len(sectionTitles), len(wantSectionTitleVariants))
+	}
+	for _, variant := range wantSectionTitleVariants {
+		found := false
+		for _, block := range sectionTitles {
+			if strings.Contains(block, "variant: "+variant) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("fixture missing section-title variant %q", variant)
+		}
+	}
+
+	for _, directive := range []string{"epilogue", "summary", "cta", "closing"} {
+		if got := len(fixtureDirectiveBlocks(markdown, directive)); got != 1 {
+			t.Errorf("fixture %s blocks = %d, want exactly one", directive, got)
+		}
+	}
+
+	lastComposition := []string{":::hero", ":::epilogue", ":::summary", ":::cta", ":::closing"}
+	previous := -1
+	for _, marker := range lastComposition {
+		index := strings.Index(markdown, marker)
+		if index < 0 || index <= previous {
+			t.Errorf("fixture composition order must be %v", lastComposition)
+			break
+		}
+		previous = index
+	}
+}
+
+func fixtureDirectiveBlocks(markdown, directive string) []string {
+	pattern := regexp.MustCompile(`(?ms)^:::` + regexp.QuoteMeta(directive) + `[^\n]*\n.*?^:::\s*$`)
+	return pattern.FindAllString(markdown, -1)
+}
+
 func TestLayoutDocumentationConcreteExamplesMatchCatalog(t *testing.T) {
 	text := readDocumentationFile(t, "../../docs/LAYOUT.md")
 	catalog := layoutcatalog.NewCatalog()

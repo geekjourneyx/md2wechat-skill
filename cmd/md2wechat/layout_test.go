@@ -11,6 +11,16 @@ import (
 	"github.com/geekjourneyx/md2wechat-skill/internal/layoutcatalog"
 )
 
+func TestBaseLayoutEnhancementInventoryMatchesUpstreamGuide(t *testing.T) {
+	want := []string{"highlight-text", "katex", "mermaid", "gfm-alert"}
+	if got := baseLayoutEnhancements[:]; !slices.Equal(got, want) {
+		t.Fatalf("base layout enhancements = %v, want %v", got, want)
+	}
+	if got := len(baseLayoutEnhancements); got != 4 {
+		t.Fatalf("base layout enhancement count = %d, want 4", got)
+	}
+}
+
 func TestLayoutListJSONIncludesHero(t *testing.T) {
 	oldJSON := jsonOutput
 	t.Cleanup(func() {
