@@ -46,7 +46,7 @@ type upstreamAgentContractProjection struct {
 }
 
 const upstreamAgentContractContentSHA256 = "c6ca6d8a26b1bc694a8cef72ff6c7d517366f4331bb7ee978dbdae5556636fbd"
-const upstreamAgentContractProjectionSHA256 = "65db776313af832ede1b2fee087ea38ed55a264cec4ee5a1051d310b9fbd29f4"
+const upstreamAgentContractProjectionSHA256 = "f36e422df4e2f33beb9169079923cf6204ca8407204086f9f81f328a9ab15afe"
 
 func TestUpstreamAgentContractProjectionOracle(t *testing.T) {
 	data, err := os.ReadFile("testdata/upstream_agent_contract_projections.yaml")
@@ -60,7 +60,7 @@ func TestUpstreamAgentContractProjectionOracle(t *testing.T) {
 	if got := fmt.Sprintf("%x", sha256.Sum256(data)); got != upstreamAgentContractProjectionSHA256 {
 		t.Fatalf("projection fixture digest = %q, want %q", got, upstreamAgentContractProjectionSHA256)
 	}
-	if oracle.SourceCommit != "edcde64ae1be56f1a08a0617bb1862471e7e00b1" {
+	if oracle.SourceCommit != "052346a43deb83d211471bb7b423318f6f6ff6c1" {
 		t.Fatalf("upstream source commit = %q", oracle.SourceCommit)
 	}
 	if want := []string{"__tests__/fixtures/advanced-layout-agent-contract.ts", "advanced-layout-modules-guide.md"}; !slices.Equal(oracle.SourceFiles, want) {
@@ -93,7 +93,7 @@ func TestUpstreamAgentContractProjectionOracle(t *testing.T) {
 
 func TestUpstreamAgentContractOracle(t *testing.T) {
 	oracle := readUpstreamAgentContracts(t)
-	if oracle.SourceCommit != "edcde64ae1be56f1a08a0617bb1862471e7e00b1" {
+	if oracle.SourceCommit != "052346a43deb83d211471bb7b423318f6f6ff6c1" {
 		t.Fatalf("upstream source commit = %q", oracle.SourceCommit)
 	}
 	if oracle.SourceFile != "__tests__/fixtures/advanced-layout-agent-contract.ts" {

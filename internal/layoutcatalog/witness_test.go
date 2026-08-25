@@ -104,10 +104,10 @@ dialogue-pair|dialogue-pair|
 
 func TestRecommendedScenarioMappingMatchesPinnedSources(t *testing.T) {
 	m := readRecommendedScenarioMap(t)
-	if m.SourceCommit != "edcde64ae1be56f1a08a0617bb1862471e7e00b1" || m.SourceFile != "lib/advanced-module-groups.ts" {
+	if m.SourceCommit != "052346a43deb83d211471bb7b423318f6f6ff6c1" || m.SourceFile != "lib/advanced-module-groups.ts" {
 		t.Fatalf("source = %q:%q", m.SourceCommit, m.SourceFile)
 	}
-	if m.SourceSHA256 != "e5443d6c7298bf592ec556395622f55e49721a418f2aa7578d8867555470e050" {
+	if m.SourceSHA256 != "eafb8d4167a079a602b9a5fb4ac25c68bbfd9f3d1cb8115808136dada116b437" {
 		t.Fatalf("source digest = %q", m.SourceSHA256)
 	}
 	if len(m.Scenarios) != 77 {

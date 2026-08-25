@@ -202,7 +202,7 @@ func validateAgentContract(contract *AgentContractSpec, lifecycle string) error 
 		if strings.TrimSpace(field) == "" || strings.TrimSpace(field) != field {
 			return fmt.Errorf("agent_contract enum field %q is invalid", field)
 		}
-		if values == nil || len(values) == 0 {
+		if len(values) == 0 {
 			return fmt.Errorf("agent_contract enum %q requires values", field)
 		}
 		seen := make(map[string]bool, len(values))
@@ -225,7 +225,7 @@ func validateAgentContract(contract *AgentContractSpec, lifecycle string) error 
 		if strings.TrimSpace(field) == "" || strings.TrimSpace(field) != field {
 			return fmt.Errorf("agent_contract applicability field %q is invalid", field)
 		}
-		if variants == nil || len(variants) == 0 {
+		if len(variants) == 0 {
 			return fmt.Errorf("agent_contract applicability %q requires variants", field)
 		}
 		if _, err := validateAgentContractList("applicability "+field, variants); err != nil {

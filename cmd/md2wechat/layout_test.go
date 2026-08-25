@@ -400,7 +400,7 @@ func TestLayoutRenderBodyFileDashReadsStdin(t *testing.T) {
 	})
 
 	for _, want := range []string{
-		`:::gallery-grid{columns=2 variant=card}`,
+		`:::gallery-grid{accent=brand caption_style=minimal columns=2 density=normal image_shape=square variant=clean wechat_safe_level=normal}`,
 		`![移动端](https://example.com/mobile.jpg)`,
 	} {
 		if !strings.Contains(string(stdout), want) {

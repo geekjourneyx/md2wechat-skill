@@ -74,7 +74,7 @@ func TestPostAPIConvertSerializesSharedRequestAndRetriesOnlyTransientFailures(t 
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if attempts != 3 {
 		t.Fatalf("attempts = %d, want 3", attempts)
 	}
@@ -95,7 +95,7 @@ func TestPostAPIConvertReturnsContractFailuresWithoutRetry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("status = %d", resp.StatusCode)
 	}
@@ -161,7 +161,7 @@ func TestAPILocalParameterMatrixUsesDiscoveryThemeAndExactSharedFields(t *testin
 		default:
 			background = "default"
 		}
-		_, _ = w.Write([]byte(fmt.Sprintf(`{"code":0,"data":{"html":"<p>ok</p>","theme":%q,"fontSize":%q,"backgroundType":%q,"wordCount":2,"estimatedReadTime":1}}`, request.Theme, font, background)))
+		_, _ = fmt.Fprintf(w, `{"code":0,"data":{"html":"<p>ok</p>","theme":%q,"fontSize":%q,"backgroundType":%q,"wordCount":2,"estimatedReadTime":1}}`, request.Theme, font, background)
 	}))
 	defer server.Close()
 

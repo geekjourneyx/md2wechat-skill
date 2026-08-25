@@ -151,15 +151,6 @@ func (facts *bodyFacts) addField(name, value string) {
 	facts.fieldTypes[name] = append(facts.fieldTypes[name], "string")
 }
 
-func (facts *bodyFacts) addDeclaredFields(fields *FieldsSpec, body []string) {
-	for _, line := range body {
-		name, value, ok := parseDeclaredField(fields, line)
-		if ok {
-			facts.addField(name, value)
-		}
-	}
-}
-
 func parseDeclaredField(fields *FieldsSpec, line string) (string, string, bool) {
 	if fields == nil {
 		return "", "", false

@@ -725,7 +725,7 @@ func TestBuiltinExecutableWitnessProbesAreComplete(t *testing.T) {
 			}
 			want := 1
 			for _, variant := range spec.Variants {
-				if strings.TrimSpace(variant.Example) != "" && !(variant.Name == "default" && strings.TrimSpace(variant.Example) == strings.TrimSpace(spec.Example)) {
+				if strings.TrimSpace(variant.Example) != "" && (variant.Name != "default" || strings.TrimSpace(variant.Example) != strings.TrimSpace(spec.Example)) {
 					want++
 				}
 			}

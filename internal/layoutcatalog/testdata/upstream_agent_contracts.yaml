@@ -1,4 +1,4 @@
-source_commit: edcde64ae1be56f1a08a0617bb1862471e7e00b1
+source_commit: 052346a43deb83d211471bb7b423318f6f6ff6c1
 source_file: __tests__/fixtures/advanced-layout-agent-contract.ts
 source_sha256: 265b50ae88d3688614273423df1d5de7fddfb899fc7d496a6c88d37ec66ff1d3
 contracts:
