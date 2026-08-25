@@ -278,7 +278,9 @@ grep -q 'md2wechat skills read md2wechat --json' platforms/openclaw/md2wechat/SK
 for skill_path in skills/md2wechat/SKILL.md platforms/openclaw/md2wechat/SKILL.md; do
   grep -Fq 'API-mode preview and conversion require a valid `MD2WECHAT_API_KEY`' "$skill_path" || fail "$skill_path must retain API-key requirements"
   grep -Fq 'Discover with `capabilities`, `layout list`, and `layout show` before authoring' "$skill_path" || fail "$skill_path must require discovery before layout authoring"
-  grep -Fq 'Use at most one hero and one CTA' "$skill_path" || fail "$skill_path must preserve one-CTA semantics"
+  grep -Fq 'Use at most one hero and at most one CTA in an article.' "$skill_path" || fail "$skill_path must preserve unconditional hero/CTA limits"
+  ! grep -Fq 'unless the user explicitly asks for more' "$skill_path" || fail "$skill_path must not permit hero/CTA limit overrides"
+  ! grep -Fq 'unless the user asks for more' "$skill_path" || fail "$skill_path must not permit hero/CTA limit overrides"
   grep -Fq 'AI mode (`--mode ai`) does not parse `:::module` syntax' "$skill_path" || fail "$skill_path must preserve AI-mode non-rendering"
 done
 GOCACHE="${GOCACHE:-/tmp/md2wechat-go-build}" go test ./cmd/md2wechat -run '^TestLayoutDocumentation' -count=1 >/dev/null || fail "layout documentation contracts must pass"

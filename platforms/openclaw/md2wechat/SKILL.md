@@ -161,7 +161,7 @@ Default module discipline:
 
 - Do not pile on modules.
 - Use ordinary headings by default; use `section-title` only for important transitions.
-- Use at most one hero and one CTA unless the user explicitly asks for more.
+- Use at most one hero and at most one CTA in an article.
 - `epilogue` is an optional body-tail transition. `closing` is an optional quiet signature and never carries an action.
 - Skip modules when the article does not provide enough content to fill them honestly.
 

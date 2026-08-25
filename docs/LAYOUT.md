@@ -1195,19 +1195,6 @@ title: 想把公众号做成稳定可复用的结构？从这 3 个模块开始�
 note: 联系作者咨询 API 服务
 :::
 
-:::author-card
-name: 极客旅程
-bio: 研究 AI 工作流和内容创作工具，专注公众号效率提升。
-:::
-
-:::subscribe
-label: 持续更新
-title: 如果这篇对你有帮助，可以把这个系列收藏起来
-subtitle: 每周分享 AI 工具和内容创作方法论。
-primary: 关注公众号
-secondary: 转发给正在写长文的人
-:::
-
 :::closing
 title: 先让读者看懂，再让读者行动。
 symbol: asterism

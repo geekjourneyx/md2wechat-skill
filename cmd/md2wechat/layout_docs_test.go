@@ -201,7 +201,7 @@ func TestLayoutDocumentationKeepsPR1AuthoringBoundary(t *testing.T) {
 		for _, phrase := range []string{
 			"Discover with `capabilities`, `layout list`, and `layout show` before authoring",
 			"Use ordinary headings by default; use `section-title` only for important transitions",
-			"Use at most one hero and one CTA",
+			"Use at most one hero and at most one CTA in an article.",
 			"`epilogue` is an optional body-tail transition",
 			"`closing` is an optional quiet signature and never carries an action",
 			"Validate locally, then convert in API mode to prove rendering",
@@ -210,6 +210,35 @@ func TestLayoutDocumentationKeepsPR1AuthoringBoundary(t *testing.T) {
 				t.Errorf("%s must preserve Agent decision rule %q", path, phrase)
 			}
 		}
+		for _, forbidden := range []string{
+			"unless the user explicitly asks for more",
+			"unless the user asks for more",
+		} {
+			if strings.Contains(text, forbidden) {
+				t.Errorf("%s must not permit a hero/CTA limit override %q", path, forbidden)
+			}
+		}
+	}
+
+	start := strings.Index(layout, "## 四、一篇完整文章示例")
+	end := strings.Index(layout, "## 五、Agent 工作流")
+	if start < 0 || end < 0 || end <= start {
+		t.Fatal("docs/LAYOUT.md must retain the complete-example section")
+	}
+	completeExample := layout[start:end]
+	for _, directive := range []string{":::author-card", ":::subscribe"} {
+		if strings.Contains(completeExample, directive) {
+			t.Errorf("complete closing-tail example must not place %s after its CTA", directive)
+		}
+	}
+	for _, directive := range []string{":::epilogue", ":::summary", ":::cta", ":::closing"} {
+		if strings.Count(completeExample, directive) != 1 {
+			t.Errorf("complete closing-tail example must contain exactly one %s", directive)
+		}
+	}
+	closing := strings.LastIndex(completeExample, ":::closing")
+	if closing < 0 || strings.Count(completeExample[closing:], ":::") != 2 {
+		t.Error("complete closing-tail example must end with closing as its last directive")
 	}
 }
 
