@@ -236,6 +236,16 @@ func TestLayoutDocumentationKeepsPR1AuthoringBoundary(t *testing.T) {
 			t.Errorf("complete closing-tail example must contain exactly one %s", directive)
 		}
 	}
+	orderedTail := []string{":::epilogue", ":::summary", ":::cta", ":::closing"}
+	previous := -1
+	for _, marker := range orderedTail {
+		index := strings.Index(completeExample, marker)
+		if index < 0 || index <= previous {
+			t.Errorf("complete closing-tail markers must be ordered %v", orderedTail)
+			break
+		}
+		previous = index
+	}
 	closing := strings.LastIndex(completeExample, ":::closing")
 	if closing < 0 || strings.Count(completeExample[closing:], ":::") != 2 {
 		t.Error("complete closing-tail example must end with closing as its last directive")
