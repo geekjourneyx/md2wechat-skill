@@ -1,6 +1,9 @@
 package layoutcatalog
 
 import (
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
 	"os"
 	"reflect"
 	"slices"
@@ -29,6 +32,8 @@ type upstreamAgentContract struct {
 	Ignored  []string            `yaml:"ignored"`
 	Legacy   []string            `yaml:"legacy"`
 }
+
+const upstreamAgentContractContentSHA256 = "c6ca6d8a26b1bc694a8cef72ff6c7d517366f4331bb7ee978dbdae5556636fbd"
 
 func TestUpstreamAgentContractOracle(t *testing.T) {
 	oracle := readUpstreamAgentContracts(t)
@@ -59,6 +64,38 @@ func TestUpstreamAgentContractOracle(t *testing.T) {
 	slices.Sort(want)
 	if !slices.Equal(got, want) {
 		t.Fatalf("contract syntax names = %v, want %v", got, want)
+	}
+}
+
+func TestUpstreamAgentContractOracleContentIntegrity(t *testing.T) {
+	oracle := readUpstreamAgentContracts(t)
+	for i, contract := range oracle.Contracts {
+		if contract.Syntax == "" {
+			t.Fatalf("contract %d has no syntax", i)
+		}
+		if contract.Input == nil || contract.Required == nil || contract.Optional == nil {
+			t.Fatalf("contract %q omits an input/required/optional list", contract.Syntax)
+		}
+		if contract.Enums == nil || contract.Defaults == nil {
+			t.Fatalf("contract %q omits an enums/defaults map", contract.Syntax)
+		}
+		if contract.Invalid == nil || contract.Ignored == nil || contract.Legacy == nil {
+			t.Fatalf("contract %q omits an invalid/ignored/legacy list", contract.Syntax)
+		}
+		for field, values := range contract.Enums {
+			if values == nil {
+				t.Fatalf("contract %q enum %q omits its value list", contract.Syntax, field)
+			}
+		}
+	}
+
+	encoded, err := json.Marshal(oracle.Contracts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := fmt.Sprintf("%x", sha256.Sum256(encoded))
+	if got != upstreamAgentContractContentSHA256 {
+		t.Fatalf("normalized contract digest = %q, want %q", got, upstreamAgentContractContentSHA256)
 	}
 }
 
