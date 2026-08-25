@@ -2,6 +2,7 @@ package layoutcatalog
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -219,6 +220,45 @@ metadata:
 	}
 	if spec.BodyFormat != BodyFormatFields {
 		t.Fatalf("BodyFormat = %q, want %q", spec.BodyFormat, BodyFormatFields)
+	}
+}
+
+func TestParseLayoutSpecValidatesInputPositionsAndFieldSchemaBounds(t *testing.T) {
+	base := `schema_version: "1"
+name: schema-fixture
+body_format: fields
+version: "1.0.0"
+category: opening
+serves: [attention]
+%s
+variants:
+  - {name: marker}
+metadata:
+  author: test
+  provenance: test
+`
+	tests := []struct {
+		name, definition, want string
+	}{
+		{name: "valid positions", definition: "input_positions: [body-kv, row-dsl, json, markdown-body, header-attrs, prefix-dsl]\nfields:\n  optional:\n    - name: variant\n      default: marker\n    - name: index\n      min_runes: 1\n      max_runes: 4\n      applies_to: [marker]"},
+		{name: "unknown position", definition: "input_positions: [prose]\nfields:\n  optional:\n    - name: variant\n      default: marker", want: "input_positions"},
+		{name: "unknown applies to", definition: "fields:\n  optional:\n    - name: variant\n      default: marker\n    - name: index\n      applies_to: [missing]", want: "applies_to"},
+		{name: "inverted bounds", definition: "fields:\n  optional:\n    - name: variant\n      default: marker\n    - name: index\n      min_runes: 5\n      max_runes: 4", want: "min_runes"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := fmt.Sprintf(base, tt.definition)
+			spec, err := parseLayoutSpec([]byte(input))
+			if tt.want == "" && err != nil {
+				t.Fatal(err)
+			}
+			if tt.want == "" && tt.name == "valid positions" && spec.Fields.Optional[0].Default != "marker" {
+				t.Fatalf("decoded field default = %q, want marker", spec.Fields.Optional[0].Default)
+			}
+			if tt.want != "" && (err == nil || !strings.Contains(err.Error(), tt.want)) {
+				t.Fatalf("parseLayoutSpec() error = %v, want %q", err, tt.want)
+			}
+		})
 	}
 }
 

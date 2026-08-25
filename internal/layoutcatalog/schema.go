@@ -14,6 +14,26 @@ const (
 	BodyFormatDialogue       = "dialogue"
 )
 
+type AgentInputPosition string
+
+const (
+	InputBodyKV       AgentInputPosition = "body-kv"
+	InputRowDSL       AgentInputPosition = "row-dsl"
+	InputJSON         AgentInputPosition = "json"
+	InputMarkdownBody AgentInputPosition = "markdown-body"
+	InputHeaderAttrs  AgentInputPosition = "header-attrs"
+	InputPrefixDSL    AgentInputPosition = "prefix-dsl"
+)
+
+var ValidAgentInputPositions = map[AgentInputPosition]bool{
+	InputBodyKV:       true,
+	InputRowDSL:       true,
+	InputJSON:         true,
+	InputMarkdownBody: true,
+	InputHeaderAttrs:  true,
+	InputPrefixDSL:    true,
+}
+
 const (
 	LifecycleRecommended   = "recommended"
 	LifecycleCompatibility = "compatibility"
@@ -54,13 +74,18 @@ type FieldSpec struct {
 	Name        string   `yaml:"name"`
 	Description string   `yaml:"description,omitempty"`
 	Enum        []string `yaml:"enum,omitempty"`
+	Default     string   `yaml:"default,omitempty"`
 	Example     string   `yaml:"example,omitempty"`
 	ValueType   string   `yaml:"value_type,omitempty"`
+	MinRunes    int      `yaml:"min_runes,omitempty"`
+	MaxRunes    int      `yaml:"max_runes,omitempty"`
+	AppliesTo   []string `yaml:"applies_to,omitempty"`
 }
 
 type RowsSpec struct {
 	Delimiter   string      `yaml:"delimiter"`
 	MinColumns  int         `yaml:"min_columns"`
+	MaxColumns  int         `yaml:"max_columns,omitempty"`
 	Schema      []FieldSpec `yaml:"schema"`
 	Description string      `yaml:"description,omitempty"`
 }
@@ -83,6 +108,7 @@ type FieldShapeSpec struct {
 	PartRules      []FieldPartRuleSpec `yaml:"part_rules,omitempty" json:"-"`
 	ItemSeparator  string              `yaml:"item_separator,omitempty"`
 	ItemMinParts   int                 `yaml:"item_min_parts,omitempty"`
+	ItemMaxParts   int                 `yaml:"item_max_parts,omitempty" json:"ItemMaxParts,omitempty"`
 }
 
 // FieldPartRuleSpec requires specific 1-based positions to be non-empty for
@@ -151,32 +177,33 @@ type ParsedOpener struct {
 }
 
 type LayoutSpec struct {
-	SchemaVersion         string         `yaml:"schema_version"`
-	Name                  string         `yaml:"name"`
-	Lifecycle             string         `yaml:"lifecycle,omitempty"`
-	BodyFormat            string         `yaml:"body_format,omitempty" json:"body_format,omitempty"`
-	CompatibleBodyFormats []string       `yaml:"compatible_body_formats,omitempty" json:"compatible_body_formats,omitempty"`
-	Version               string         `yaml:"version"`
-	Since                 string         `yaml:"since,omitempty"`
-	Category              string         `yaml:"category"`
-	Serves                []string       `yaml:"serves"`
-	ContentTypes          []string       `yaml:"content_types,omitempty"`
-	Industry              []string       `yaml:"industry,omitempty"`
-	Tags                  []string       `yaml:"tags,omitempty"`
-	Position              string         `yaml:"position,omitempty"`
-	WhenToUse             string         `yaml:"when_to_use,omitempty"`
-	WhenNotToUse          string         `yaml:"when_not_to_use,omitempty"`
-	PairsWellWith         []string       `yaml:"pairs_well_with,omitempty"`
-	AvoidCombiningWith    []string       `yaml:"avoid_combining_with,omitempty"`
-	AntiPattern           string         `yaml:"anti_pattern,omitempty"`
-	Opener                *OpenerSpec    `yaml:"opener,omitempty"`
-	Fields                *FieldsSpec    `yaml:"fields,omitempty"`
-	Rows                  *RowsSpec      `yaml:"rows,omitempty"`
-	Body                  *BodySpec      `yaml:"body,omitempty"`
-	Example               string         `yaml:"example,omitempty"`
-	ExampleAssertContains string         `yaml:"example_assert_contains,omitempty"`
-	Variants              []VariantSpec  `yaml:"variants,omitempty"`
-	Metadata              LayoutMetadata `yaml:"metadata"`
+	SchemaVersion         string               `yaml:"schema_version"`
+	Name                  string               `yaml:"name"`
+	Lifecycle             string               `yaml:"lifecycle,omitempty"`
+	BodyFormat            string               `yaml:"body_format,omitempty" json:"body_format,omitempty"`
+	CompatibleBodyFormats []string             `yaml:"compatible_body_formats,omitempty" json:"compatible_body_formats,omitempty"`
+	Version               string               `yaml:"version"`
+	Since                 string               `yaml:"since,omitempty"`
+	Category              string               `yaml:"category"`
+	Serves                []string             `yaml:"serves"`
+	ContentTypes          []string             `yaml:"content_types,omitempty"`
+	Industry              []string             `yaml:"industry,omitempty"`
+	Tags                  []string             `yaml:"tags,omitempty"`
+	Position              string               `yaml:"position,omitempty"`
+	InputPositions        []AgentInputPosition `yaml:"input_positions,omitempty" json:"input_positions,omitempty"`
+	WhenToUse             string               `yaml:"when_to_use,omitempty"`
+	WhenNotToUse          string               `yaml:"when_not_to_use,omitempty"`
+	PairsWellWith         []string             `yaml:"pairs_well_with,omitempty"`
+	AvoidCombiningWith    []string             `yaml:"avoid_combining_with,omitempty"`
+	AntiPattern           string               `yaml:"anti_pattern,omitempty"`
+	Opener                *OpenerSpec          `yaml:"opener,omitempty"`
+	Fields                *FieldsSpec          `yaml:"fields,omitempty"`
+	Rows                  *RowsSpec            `yaml:"rows,omitempty"`
+	Body                  *BodySpec            `yaml:"body,omitempty"`
+	Example               string               `yaml:"example,omitempty"`
+	ExampleAssertContains string               `yaml:"example_assert_contains,omitempty"`
+	Variants              []VariantSpec        `yaml:"variants,omitempty"`
+	Metadata              LayoutMetadata       `yaml:"metadata"`
 }
 
 type ListFilter struct {

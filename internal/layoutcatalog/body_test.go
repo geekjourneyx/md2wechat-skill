@@ -390,6 +390,54 @@ func TestRowsBodyEnforcesDeclaredColumnSchema(t *testing.T) {
 	}
 }
 
+func TestFieldRuneBoundsAndAppliesToAreGeneric(t *testing.T) {
+	spec := &LayoutSpec{
+		Name: "schema-fixture", BodyFormat: BodyFormatFields,
+		Fields: &FieldsSpec{Optional: []FieldSpec{
+			{Name: "variant", Default: "numbered"},
+			{Name: "index", MinRunes: 1, MaxRunes: 4, AppliesTo: []string{"numbered"}},
+		}},
+		Variants: []VariantSpec{{Name: "numbered"}, {Name: "plain"}},
+	}
+	tests := []struct {
+		name, body string
+		accepted   bool
+	}{
+		{name: "one unicode rune", body: "index: 壹", accepted: true},
+		{name: "four unicode runes", body: "index: 一二三四", accepted: true},
+		{name: "blank index", body: "index:   "},
+		{name: "five unicode runes", body: "index: 一二三四五"},
+		{name: "field on another variant", body: "variant: plain\nindex: 1"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			issues := validateBlockBody(spec, strings.Split(tt.body, "\n"))
+			if got := len(issues) == 0; got != tt.accepted {
+				t.Fatalf("issues = %+v, accepted = %v, want %v", issues, got, tt.accepted)
+			}
+		})
+	}
+}
+
+func TestRowsBodyRejectsMaxColumns(t *testing.T) {
+	spec := &LayoutSpec{Name: "row-fixture", BodyFormat: BodyFormatRows, Rows: &RowsSpec{
+		Delimiter: "|", MinColumns: 2, MaxColumns: 2,
+	}}
+	if issues := validateBlockBody(spec, []string{"one|two|three"}); len(issues) == 0 {
+		t.Fatal("row with an extra cell was accepted")
+	}
+}
+
+func TestSeparatorListRejectsItemMaxParts(t *testing.T) {
+	spec := &LayoutSpec{Name: "list-fixture", BodyFormat: BodyFormatFields, Fields: &FieldsSpec{
+		Optional: []FieldSpec{{Name: "items"}},
+		Shapes:   []FieldShapeSpec{{Field: "items", Separator: ",", MinParts: 2, ItemSeparator: "|", ItemMinParts: 2, ItemMaxParts: 2}},
+	}}
+	if issues := validateBlockBody(spec, []string{"items: a|b|overflow,c|d"}); len(issues) == 0 {
+		t.Fatal("separator list with too many item parts was accepted")
+	}
+}
+
 func TestParseLayoutSpecFieldShapeAndOutputOrderSchema(t *testing.T) {
 	tests := []struct {
 		name, fields, want string

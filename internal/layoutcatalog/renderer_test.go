@@ -274,6 +274,28 @@ func TestRenderBlockMarkdownFieldsSupportsStructuredFields(t *testing.T) {
 	}
 }
 
+func TestRenderRejectsFieldOutsideEffectiveVariantWithoutInjectingDefault(t *testing.T) {
+	c := NewCatalog()
+	c.modules["schema-fixture"] = &LayoutSpec{
+		Name: "schema-fixture", BodyFormat: BodyFormatFields,
+		Fields: &FieldsSpec{Optional: []FieldSpec{
+			{Name: "variant", Default: "numbered"},
+			{Name: "index", AppliesTo: []string{"numbered"}},
+		}},
+		Variants: []VariantSpec{{Name: "numbered"}, {Name: "plain"}},
+	}
+	if _, err := c.Render("schema-fixture", map[string]any{"variant": "plain", "index": "1"}); !errors.Is(err, ErrInvalidFieldValue) {
+		t.Fatalf("Render() error = %v, want ErrInvalidFieldValue", err)
+	}
+	out, err := c.Render("schema-fixture", map[string]any{"index": "1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "variant:") {
+		t.Fatalf("Render() injected field default: %q", out)
+	}
+}
+
 func TestRenderBlockRejectsCaptionWithExplicitOrDefaultParams(t *testing.T) {
 	tests := []struct {
 		name   string

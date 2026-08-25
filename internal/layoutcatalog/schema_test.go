@@ -51,7 +51,7 @@ func TestFieldShapeSpecJSONOmitsUnsetExtensionConstraints(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, field := range []string{"MaxOccurrences", "PartRules"} {
+	for _, field := range []string{"MaxOccurrences", "PartRules", "ItemMaxParts"} {
 		if strings.Contains(string(encoded), field) {
 			t.Fatalf("unset extension constraint %s leaked into JSON: %s", field, encoded)
 		}
@@ -70,5 +70,24 @@ func TestFieldShapeSpecJSONKeepsPartRulesInternal(t *testing.T) {
 	}
 	if strings.Contains(string(encoded), "PartRules") || strings.Contains(string(encoded), "RequiredPositions") {
 		t.Fatalf("internal compatibility rules leaked into discovery JSON: %s", encoded)
+	}
+}
+
+func TestSchemaExtensionsExposeAgentInputAndFieldDefaults(t *testing.T) {
+	spec := LayoutSpec{
+		InputPositions: []AgentInputPosition{InputBodyKV, InputHeaderAttrs},
+		Fields: &FieldsSpec{Optional: []FieldSpec{{
+			Name: "variant", Default: "marker", MinRunes: 1, MaxRunes: 4, AppliesTo: []string{"marker"},
+		}}},
+	}
+	if got := spec.Fields.Optional[0].Default; got != "marker" {
+		t.Fatalf("field default = %q, want marker", got)
+	}
+	encoded, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"input_positions":["body-kv","header-attrs"]`) {
+		t.Fatalf("input positions missing from JSON: %s", encoded)
 	}
 }

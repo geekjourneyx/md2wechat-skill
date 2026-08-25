@@ -108,6 +108,9 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if !ValidLifecycles[spec.Lifecycle] {
 		return nil, fmt.Errorf("invalid lifecycle %q", spec.Lifecycle)
 	}
+	if err := validateInputPositions(spec.InputPositions); err != nil {
+		return nil, err
+	}
 	if err := validateOpenerSpec(spec.Opener); err != nil {
 		return nil, err
 	}
@@ -158,7 +161,24 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if err := validateWitnessSpecs(&spec, declaredFields); err != nil {
 		return nil, err
 	}
+	if err := validateFieldApplicability(&spec); err != nil {
+		return nil, err
+	}
 	return &spec, nil
+}
+
+func validateInputPositions(positions []AgentInputPosition) error {
+	seen := map[AgentInputPosition]bool{}
+	for _, position := range positions {
+		if !ValidAgentInputPositions[position] {
+			return fmt.Errorf("invalid input_positions value %q", position)
+		}
+		if seen[position] {
+			return fmt.Errorf("duplicate input_positions value %q", position)
+		}
+		seen[position] = true
+	}
+	return nil
 }
 
 func validateLoadedWitnesses(spec *LayoutSpec) error {
@@ -199,6 +219,12 @@ func validateRowsSpec(rows *RowsSpec) error {
 	if rows.MinColumns <= 0 {
 		return fmt.Errorf("rows.min_columns must be greater than zero")
 	}
+	if rows.MaxColumns < 0 {
+		return fmt.Errorf("rows.max_columns must be nonnegative")
+	}
+	if rows.MaxColumns != 0 && rows.MaxColumns < rows.MinColumns {
+		return fmt.Errorf("rows.max_columns must be at least rows.min_columns when nonzero")
+	}
 	if len(rows.Schema) == 0 {
 		return nil
 	}
@@ -216,6 +242,9 @@ func validateRowsSpec(rows *RowsSpec) error {
 		seen[field.Name] = true
 		if field.ValueType != "" && field.ValueType != "string" {
 			return fmt.Errorf("rows.schema field %q has invalid value_type %q", field.Name, field.ValueType)
+		}
+		if err := validateFieldBounds(field, "rows.schema"); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -289,6 +318,9 @@ func validateFieldsSpec(fields *FieldsSpec) (map[string]bool, error) {
 		if field.ValueType != "" && field.ValueType != "string" {
 			return nil, fmt.Errorf("field %q has invalid value_type %q", field.Name, field.ValueType)
 		}
+		if err := validateFieldBounds(field, "field"); err != nil {
+			return nil, err
+		}
 		declared[field.Name] = true
 	}
 	seenGroups := map[string]bool{}
@@ -358,6 +390,51 @@ func validateFieldsSpec(fields *FieldsSpec) (map[string]bool, error) {
 	return declared, nil
 }
 
+func validateFieldBounds(field FieldSpec, owner string) error {
+	if field.MinRunes < 0 || field.MaxRunes < 0 {
+		return fmt.Errorf("%s %q rune bounds must be nonnegative", owner, field.Name)
+	}
+	if field.MinRunes > 0 && field.MaxRunes > 0 && field.MinRunes > field.MaxRunes {
+		return fmt.Errorf("%s %q min_runes must not exceed max_runes", owner, field.Name)
+	}
+	return nil
+}
+
+func validateFieldApplicability(spec *LayoutSpec) error {
+	identities := make(map[string]bool, len(spec.Variants))
+	for _, variant := range spec.Variants {
+		identities[variant.Name] = true
+	}
+	for _, field := range declaredSpecFields(spec) {
+		seen := map[string]bool{}
+		for _, variant := range field.AppliesTo {
+			if !identities[variant] {
+				return fmt.Errorf("field %q applies_to variant %q is not declared", field.Name, variant)
+			}
+			if seen[variant] {
+				return fmt.Errorf("field %q has duplicate applies_to variant %q", field.Name, variant)
+			}
+			seen[variant] = true
+		}
+		if (field.Name == "variant" || field.Name == "type") && field.Default != "" && len(spec.Variants) > 0 && !identities[field.Default] {
+			return fmt.Errorf("field %q default variant %q is not declared", field.Name, field.Default)
+		}
+	}
+	return nil
+}
+
+func declaredSpecFields(spec *LayoutSpec) []FieldSpec {
+	var fields []FieldSpec
+	if spec.Fields != nil {
+		fields = append(fields, spec.Fields.Required...)
+		fields = append(fields, spec.Fields.Optional...)
+	}
+	if spec.Rows != nil {
+		fields = append(fields, spec.Rows.Schema...)
+	}
+	return fields
+}
+
 func validateFieldShapeSpecs(shapes []FieldShapeSpec, declared map[string]bool, owner string) error {
 	for _, shape := range shapes {
 		if !declared[shape.Field] {
@@ -399,11 +476,17 @@ func validateFieldShapeSpecs(shapes []FieldShapeSpec, declared map[string]bool, 
 				seenPositions[position] = true
 			}
 		}
-		if shape.ItemSeparator == "" && shape.ItemMinParts != 0 {
-			return fmt.Errorf("%s shape item_separator is required with item_min_parts", owner)
+		if shape.ItemSeparator == "" && (shape.ItemMinParts != 0 || shape.ItemMaxParts != 0) {
+			return fmt.Errorf("%s shape item_separator is required with item part bounds", owner)
 		}
 		if shape.ItemSeparator != "" && shape.ItemMinParts <= 1 {
 			return fmt.Errorf("%s shape item_min_parts must be greater than 1", owner)
+		}
+		if shape.ItemMaxParts < 0 {
+			return fmt.Errorf("%s shape item_max_parts must be nonnegative", owner)
+		}
+		if shape.ItemMaxParts > 0 && shape.ItemMaxParts < shape.ItemMinParts {
+			return fmt.Errorf("%s shape item_max_parts must be at least item_min_parts", owner)
 		}
 	}
 	return nil

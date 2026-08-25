@@ -99,6 +99,17 @@ func TestUpstreamAgentContractOracleContentIntegrity(t *testing.T) {
 	}
 }
 
+func TestUpstreamAgentContractsUseSupportedInputPositions(t *testing.T) {
+	oracle := readUpstreamAgentContracts(t)
+	for _, contract := range oracle.Contracts {
+		for _, input := range contract.Input {
+			if !ValidAgentInputPositions[AgentInputPosition(input)] {
+				t.Fatalf("contract %q input position %q is not supported by schema-v1", contract.Syntax, input)
+			}
+		}
+	}
+}
+
 func readUpstreamAgentContracts(t *testing.T) upstreamAgentContractOracle {
 	t.Helper()
 	data, err := os.ReadFile("testdata/upstream_agent_contracts.yaml")
