@@ -36,6 +36,23 @@ example: |
   Northstar | 增长团队
   MoriLab | 内容品牌
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - name
+  optional:
+    - header-title
+    - note
+  enums: {}
+  defaults:
+    header-title: 合作品牌
+  invalid:
+    - blank-name
+    - trailing-empty-cell
+  ignored:
+    - cells-after-note
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

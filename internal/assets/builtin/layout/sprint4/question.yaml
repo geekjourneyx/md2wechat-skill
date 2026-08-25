@@ -50,6 +50,23 @@ example: |
   A: 给一篇草稿或一个选题，先让 Agent 30 分钟内出一版高级稿。
   :::
 example_assert_contains: "md2wechat 是排版工具吗？"
+agent_contract:
+  body_format: dialogue
+  required:
+    - Q
+    - A
+  optional: []
+  enums: {}
+  defaults: {}
+  invalid:
+    - lowercase-prefix
+    - missing-Q-or-A
+    - blank-Q-or-A
+    - zero-pairs
+  ignored: []
+  legacy:
+    - json-array
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

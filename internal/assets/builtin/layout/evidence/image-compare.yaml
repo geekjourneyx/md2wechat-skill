@@ -63,6 +63,29 @@ example: |
   right_image: https://example.com/after.png
   note: 适合界面改版、海报优化和方案 A/B 对比
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - left_image
+    - right_image
+  optional:
+    - left_title
+    - right_title
+    - left_alt
+    - right_alt
+    - eyebrow
+    - title
+    - note
+  enums: {}
+  defaults:
+    eyebrow: 左右对比图
+  invalid:
+    - blank-required-image
+    - unsafe-required-image
+  ignored:
+    - unknown-fields
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

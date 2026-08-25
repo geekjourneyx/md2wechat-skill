@@ -42,6 +42,29 @@ example: |
   内容负责人 | 内容策略 | 负责把文章重点和节奏定下来 | accent
   设计负责人 | 视觉把关 | 负责保证气质和细节不掉价 | default
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - name
+    - role
+    - body
+  optional:
+    - header-title
+    - tone
+  enums:
+    tone:
+      - default
+      - accent
+  defaults:
+    header-title: 核心角色
+    tone: default
+  invalid:
+    - blank-required-cell
+    - image-leading-row
+  ignored:
+    - cells-after-tone
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

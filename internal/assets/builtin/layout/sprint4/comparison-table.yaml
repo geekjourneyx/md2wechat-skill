@@ -44,6 +44,26 @@ example: |
   :::comparison-table
   {"left":{"title":"优点","items":["快速部署","低成本","易上手"]},"right":{"title":"缺点","items":["扩展性差","依赖第三方"]}}
   :::
+agent_contract:
+  body_format: json_object
+  required:
+    - left.title
+    - left.items
+    - right.title
+    - right.items
+  optional: []
+  enums: {}
+  defaults: {}
+  invalid:
+    - malformed-json
+    - missing-side
+    - blank-title
+    - empty-items
+    - wrong-type
+  ignored:
+    - unknown-keys
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

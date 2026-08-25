@@ -35,6 +35,25 @@ example: |
   草稿输入 → 结构判断 → 模块选择 → 视觉校准 → 发布检查
   :::
 example_assert_contains: "草稿输入"
+agent_contract:
+  body_format: lines
+  required:
+    - nodes
+  optional:
+    - header-title
+  enums:
+    separator:
+      - →
+  defaults: {}
+  invalid:
+    - zero-nodes
+    - blank-node
+  ignored:
+    - extra-body-forms
+  legacy:
+    - arrow-ascii
+    - list-body
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

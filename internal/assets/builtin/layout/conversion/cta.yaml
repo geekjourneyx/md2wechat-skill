@@ -103,6 +103,40 @@ example: |
   tertiary: 转给同事
   note: 适合知识型文章
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - title
+  optional:
+    - variant
+    - subtitle
+    - primary
+    - secondary
+    - tertiary
+    - note
+    - points
+  enums:
+    variant:
+      - save-follow
+      - consult
+      - trial
+  defaults:
+    variant: save-follow
+    unknown-variant: save-follow
+    save-follow.actions: 收藏这篇/关注更新/转给同事
+    consult.actions: 回复「排版」/查看案例/收藏这篇
+    trial.actions: 试一版高级稿/查看工作流/获取 API Key
+    max-points: "3"
+  invalid:
+    - blank-title
+  ignored:
+    - non-trial.points
+    - points-after-3
+    - unknown-fields
+  legacy:
+    - case-folded-variant
+  applicability:
+    points: [trial]
 metadata:
   author: md2wechat
   provenance: builtin

@@ -80,6 +80,17 @@ func TestSchemaExtensionsExposeAgentInputAndFieldDefaults(t *testing.T) {
 			Name: "variant", Default: "marker", MinRunes: 1, MaxRunes: 4, AppliesTo: []string{"marker"},
 		}}},
 		Variants: []VariantSpec{{Name: "marker", Defaults: map[string]string{"symbol": "diamond-outline"}}},
+		AgentContract: &AgentContractSpec{
+			BodyFormat:    BodyFormatFields,
+			Required:      []string{"title"},
+			Optional:      []string{},
+			Enums:         map[string][]string{},
+			Defaults:      map[string]string{},
+			Applicability: map[string][]string{},
+			Invalid:       []string{"blank-title"},
+			Ignored:       []string{},
+			Legacy:        []string{},
+		},
 	}
 	if got := spec.Fields.Optional[0].Default; got != "marker" {
 		t.Fatalf("field default = %q, want marker", got)
@@ -93,5 +104,8 @@ func TestSchemaExtensionsExposeAgentInputAndFieldDefaults(t *testing.T) {
 	}
 	if !strings.Contains(string(encoded), `"defaults":{"symbol":"diamond-outline"}`) {
 		t.Fatalf("variant defaults missing from JSON: %s", encoded)
+	}
+	if !strings.Contains(string(encoded), `"agent_contract":{"body_format":"fields"`) || !strings.Contains(string(encoded), `"applicability":{}`) {
+		t.Fatalf("complete agent contract missing from layout-show JSON model: %s", encoded)
 	}
 }

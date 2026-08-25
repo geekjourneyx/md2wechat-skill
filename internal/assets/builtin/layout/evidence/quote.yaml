@@ -118,6 +118,48 @@ example: |
   source: 内容设计原则
   note: 适合金句、访谈摘录、文章结论
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - quote
+  optional:
+    - variant
+    - image
+    - image_alt
+    - eyebrow
+    - source
+    - brand
+    - role
+    - context
+    - source_type
+    - note
+  enums:
+    variant:
+      - light
+      - brand
+      - proof
+  defaults:
+    variant: light
+    eyebrow: 观点强调
+    proof-without-source: light
+  invalid:
+    - blank-quote
+  ignored:
+    - unsafe-image
+    - unknown-fields
+  legacy:
+    - text-to-quote
+    - author-to-source
+    - img-to-image
+    - cover-to-image
+    - alt-to-image_alt
+    - default-to-light
+    - plain-to-light
+    - accent-to-brand
+    - evidence-to-proof
+    - tone-accent-to-brand
+    - case-folded-variant
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

@@ -43,6 +43,26 @@ example: |
   :::resource-list
   [{"name":"md2wechat","desc":"公众号 Markdown 转换与发布引擎","icon":"M"},{"name":"md2wechat skill","desc":"给 CLI 和 Agent 使用的能力库","icon":"CLI"}]
   :::
+agent_contract:
+  body_format: json_array
+  required:
+    - name
+  optional:
+    - desc
+    - icon
+  enums: {}
+  defaults:
+    icon: uppercase-first-character
+  invalid:
+    - non-array
+    - empty-array
+    - blank-name
+    - wrong-type-known-field
+  ignored:
+    - unknown-keys
+  legacy:
+    - url-accepted-and-ignored
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

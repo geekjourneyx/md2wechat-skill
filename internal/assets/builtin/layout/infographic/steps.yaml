@@ -39,6 +39,23 @@ example: |
   02 | 再补数据和案例 | 让读者知道这套方法真的成立
   03 | 最后落到动作 | 结尾明确下一步该做什么
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - index
+    - title
+    - body
+  optional:
+    - header-title
+  enums: {}
+  defaults:
+    header-title: 使用步骤
+  invalid:
+    - blank-required-cell
+  ignored:
+    - cells-after-body
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

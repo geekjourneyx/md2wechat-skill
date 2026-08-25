@@ -40,6 +40,40 @@ example: |
   subtitle: 下一篇从一份真实草稿开始。
   symbol: asterism
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - title
+  optional:
+    - symbol
+    - subtitle
+  enums:
+    symbol:
+      - spark-solid
+      - spark-outline
+      - diamond-solid
+      - diamond-outline
+      - reference-mark
+      - asterism
+      - double-circle
+      - circle
+      - square-solid
+      - square-outline
+      - star
+      - infinity
+  defaults:
+    symbol: asterism
+    unknown-or-raw-symbol: asterism
+  invalid:
+    - blank-title
+  ignored:
+    - action
+    - link
+    - image
+    - variant
+    - unknown-fields
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

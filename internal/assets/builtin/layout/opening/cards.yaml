@@ -43,6 +43,29 @@ example: |
   PART 02 | 信息图模块 | 先把一句判断放大成视觉摘要 | default
   PART 03 | 证据模块 | 用数据、对比和步骤支撑结论 | default
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - label
+    - title
+    - description
+  optional:
+    - header-title
+    - tone
+  enums:
+    tone:
+      - default
+      - accent
+  defaults:
+    header-title: 模块列表
+    tone: default
+  invalid:
+    - fewer-than-3-cells
+    - agent-forbidden-blank-required-cell
+  ignored:
+    - cells-after-tone
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

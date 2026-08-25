@@ -41,6 +41,25 @@ example: |
   :::definition
   {"term":"OKR","def":"目标与关键结果","termLabel":"术语"}
   :::
+agent_contract:
+  body_format: json_object
+  required:
+    - term
+    - def
+  optional:
+    - termLabel
+  enums: {}
+  defaults:
+    termLabel: 术语
+  invalid:
+    - malformed-json
+    - blank-known-field
+    - wrong-type-known-field
+  ignored:
+    - defLabel
+    - unknown-keys
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

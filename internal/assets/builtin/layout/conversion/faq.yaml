@@ -52,6 +52,24 @@ example: |
   Q: 为什么不用硬双列？
   A: 因为微信正文窄，单列模块更稳。
   :::
+agent_contract:
+  body_format: dialogue
+  required:
+    - Q
+    - A
+  optional:
+    - header-title
+  enums: {}
+  defaults: {}
+  invalid:
+    - lowercase-prefix
+    - missing-Q-or-A
+    - blank-Q-or-A
+    - zero-pairs
+  ignored: []
+  legacy:
+    - pipe-row
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

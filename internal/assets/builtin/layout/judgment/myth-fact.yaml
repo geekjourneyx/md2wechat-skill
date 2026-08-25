@@ -38,6 +38,24 @@ example: |
   模块越多越高级 | 模块越准越高级 | 数量只是覆盖面，准确才决定阅读体验
   信息图必须像海报 | 信息图首先是一句话判断 | 图片和编号都不是必要内容
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - myth
+    - fact
+  optional:
+    - header-title
+    - note
+  enums: {}
+  defaults:
+    header-title: 误区纠正
+  invalid:
+    - blank-myth
+    - blank-fact
+  ignored:
+    - cells-after-note
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

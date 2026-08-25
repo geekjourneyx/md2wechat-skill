@@ -234,6 +234,13 @@ func TestLayoutShowJSONReturnsSpec(t *testing.T) {
 	if spec["body_format"] != layoutcatalog.BodyFormatFields {
 		t.Fatalf("expected hero body_format fields, got %#v", spec["body_format"])
 	}
+	contract, ok := spec["agent_contract"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected agent_contract in layout show response: %#v", spec)
+	}
+	if contract["body_format"] != layoutcatalog.BodyFormatFields || contract["defaults"] == nil || contract["applicability"] == nil {
+		t.Fatalf("incomplete agent_contract in layout show response: %#v", contract)
+	}
 }
 
 func TestLayoutListCompatibilityIsolation(t *testing.T) {

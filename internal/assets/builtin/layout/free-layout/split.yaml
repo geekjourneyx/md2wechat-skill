@@ -44,6 +44,26 @@ example: |
   左侧讲结论，右侧放证据、说明或下一步，让两块信息都能独立阅读。
   :::
 example_assert_contains: "主判断"
+agent_contract:
+  body_format: split
+  required:
+    - left-body
+    - right-body
+  optional:
+    - ratio
+  enums: {}
+  defaults:
+    ratio: 1:1
+  invalid:
+    - missing-divider
+    - multiple-dividers
+    - blank-side
+    - nonnumeric-ratio
+  ignored: []
+  legacy:
+    - space-separated-ratio
+    - out-of-range-ratio-clamped
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

@@ -112,9 +112,9 @@ func TestUpstreamAgentContractsUseSupportedInputPositions(t *testing.T) {
 
 // TestBuiltinCatalogMatchesUpstreamAgentContracts keeps the author-facing
 // contract in the builtin catalog aligned with the pinned upstream oracle.
-// It deliberately derives the catalog view through the generic schema: rows,
-// body fields, and opener attributes all contribute fields; no syntax name is
-// used to interpret an input form.
+// The upstream fields and ordered values are compared exactly. Canonical body
+// format and branch applicability are checked against their generic runtime
+// schema declarations; compatible parsing stays outside this authoring view.
 func TestBuiltinCatalogMatchesUpstreamAgentContracts(t *testing.T) {
 	c := NewCatalog()
 	if err := c.Load(); err != nil {
@@ -128,143 +128,138 @@ func TestBuiltinCatalogMatchesUpstreamAgentContracts(t *testing.T) {
 				t.Fatal("missing recommended catalog entry")
 			}
 			got := projectAgentContract(spec)
-			if !slices.Equal(got.Input, want.Input) {
-				t.Errorf("input_positions\n got: %v\nwant: %v", got.Input, want.Input)
-			}
-			if diff := missingContractFields(want.Required, got.Required); len(diff) != 0 {
-				t.Errorf("canonical required fields absent: %v (declared: %v)", diff, got.Required)
-			}
-			if diff := missingContractFields(want.Optional, got.Optional); len(diff) != 0 {
-				t.Errorf("canonical optional fields absent: %v (declared: %v)", diff, got.Optional)
-			}
-			for field, values := range want.Enums {
-				if gotValues, ok := got.Enums[field]; !ok || !slices.Equal(gotValues, values) {
-					t.Errorf("enum %q\n got: %v\nwant: %v", field, gotValues, values)
-				}
-			}
-			for field, value := range want.Defaults {
-				if gotValue, ok := got.Defaults[field]; ok && gotValue != value {
-					t.Errorf("default %q = %q, want %q", field, gotValue, value)
-				}
+			expected := expectedAgentContract(want, spec.BodyFormat, declaredAgentApplicability(spec))
+			if diff := compareAgentContracts(got, expected); len(diff) != 0 {
+				t.Errorf("agent contract differs in %v\n got: %#v\nwant: %#v", diff, got, expected)
 			}
 		})
 	}
 }
 
 type agentContractProjection struct {
-	Input    []string
-	Required []string
-	Optional []string
-	Enums    map[string][]string
-	Defaults map[string]string
+	Syntax         string
+	InputPositions []string
+	BodyFormat     string
+	Required       []string
+	Optional       []string
+	Enums          map[string][]string
+	Defaults       map[string]string
+	Applicability  map[string][]string
+	Invalid        []string
+	Ignored        []string
+	Legacy         []string
 }
 
 func projectAgentContract(spec *LayoutSpec) agentContractProjection {
-	got := agentContractProjection{Enums: map[string][]string{}, Defaults: map[string]string{}}
+	contract := spec.AgentContract
+	if contract == nil {
+		return agentContractProjection{Syntax: spec.Name}
+	}
+	got := agentContractProjection{
+		Syntax:        spec.Name,
+		BodyFormat:    contract.BodyFormat,
+		Required:      contract.Required,
+		Optional:      contract.Optional,
+		Enums:         contract.Enums,
+		Defaults:      contract.Defaults,
+		Applicability: contract.Applicability,
+		Invalid:       contract.Invalid,
+		Ignored:       contract.Ignored,
+		Legacy:        contract.Legacy,
+	}
 	for _, input := range spec.InputPositions {
-		got.Input = append(got.Input, string(input))
-	}
-	add := func(field FieldSpec, required bool) {
-		if required {
-			got.Required = append(got.Required, field.Name)
-		} else {
-			got.Optional = append(got.Optional, field.Name)
-		}
-		if len(field.Enum) != 0 {
-			got.Enums[field.Name] = field.Enum
-		}
-		if field.Default != "" {
-			got.Defaults[field.Name] = field.Default
-		}
-	}
-	if spec.Fields != nil {
-		for _, field := range spec.Fields.Required {
-			add(field, true)
-			got.Optional = append(got.Optional, field.Name)
-		}
-		for _, any := range spec.Fields.RequiredAny {
-			got.Required = append(got.Required, "nonempty-category")
-			for _, name := range any {
-				got.Required = append(got.Required, name)
-			}
-		}
-		for _, field := range spec.Fields.RequiredWhenNoVariant {
-			got.Required = append(got.Required, field)
-		}
-		for _, field := range spec.Fields.Optional {
-			add(field, false)
-		}
-	}
-	if spec.Rows != nil {
-		for i, field := range spec.Rows.Schema {
-			add(field, i < spec.Rows.MinColumns)
-		}
-		got.Optional = append(got.Optional, "header-title")
-		if slices.Contains(spec.InputPositions, InputHeaderAttrs) {
-			got.Required = append(got.Required, "headers", "rows")
-		}
-	}
-	if spec.Opener != nil {
-		if spec.Opener.Caption {
-			got.Optional = append(got.Optional, "header-title")
-		}
-		for _, field := range spec.Opener.Params {
-			add(FieldSpec{Name: field.Name, Enum: field.Enum, Default: field.Default}, false)
-		}
-	}
-	if spec.Body != nil {
-		if spec.Body.MinImages > 0 {
-			got.Required = append(got.Required, "image")
-			got.Required = append(got.Required, "title", "body")
-		}
-		if spec.Body.Group != nil {
-			got.Required = append(got.Required, spec.Body.Group.Required...)
-			got.Required = append(got.Required, "image")
-		}
-		if spec.Body.Separator != "" {
-			got.Required = append(got.Required, "left-body", "right-body")
-		}
-		for _, pair := range spec.Body.RequiredPairs {
-			got.Required = append(got.Required, pair[0], pair[1])
-		}
-		for _, prefix := range spec.Body.AllowedPrefixes {
-			got.Required = append(got.Required, strings.TrimSuffix(prefix, ":"))
-		}
-		if spec.Body.MinItems > 0 && spec.BodyFormat == BodyFormatLines {
-			got.Required = append(got.Required, "body", "nodes")
-		}
-	}
-	for _, variant := range spec.Variants {
-		for _, field := range variant.Required {
-			got.Required = append(got.Required, field)
-		}
-		for _, any := range variant.RequiredAny {
-			got.Required = append(got.Required, any...)
-		}
+		got.InputPositions = append(got.InputPositions, string(input))
 	}
 	return got
 }
 
-func missingContractFields(want, got []string) []string {
-	seen := make(map[string]bool, len(got))
-	for _, field := range got {
-		seen[field] = true
+func expectedAgentContract(want upstreamAgentContract, bodyFormat string, applicability map[string][]string) agentContractProjection {
+	return agentContractProjection{
+		Syntax:         want.Syntax,
+		InputPositions: want.Input,
+		BodyFormat:     bodyFormat,
+		Required:       want.Required,
+		Optional:       want.Optional,
+		Enums:          want.Enums,
+		Defaults:       want.Defaults,
+		Applicability:  applicability,
+		Invalid:        want.Invalid,
+		Ignored:        want.Ignored,
+		Legacy:         want.Legacy,
 	}
-	missing := make([]string, 0)
-	for _, field := range want {
-		if seen[field] {
-			continue
+}
+
+func compareAgentContracts(got, want agentContractProjection) []string {
+	var diff []string
+	checks := []struct {
+		name  string
+		equal bool
+	}{
+		{"syntax", got.Syntax == want.Syntax},
+		{"input_positions", slices.Equal(got.InputPositions, want.InputPositions)},
+		{"body_format", got.BodyFormat == want.BodyFormat},
+		{"required", slices.Equal(got.Required, want.Required)},
+		{"optional", slices.Equal(got.Optional, want.Optional)},
+		{"enums", reflect.DeepEqual(got.Enums, want.Enums)},
+		{"defaults", reflect.DeepEqual(got.Defaults, want.Defaults)},
+		{"applicability", reflect.DeepEqual(got.Applicability, want.Applicability)},
+		{"invalid", slices.Equal(got.Invalid, want.Invalid)},
+		{"ignored", slices.Equal(got.Ignored, want.Ignored)},
+		{"legacy", slices.Equal(got.Legacy, want.Legacy)},
+	}
+	for _, check := range checks {
+		if !check.equal {
+			diff = append(diff, check.name)
 		}
-		segments := strings.Split(field, ".")
-		for _, candidate := range segments[len(segments)-1:] {
-			for _, choice := range strings.Split(candidate, "-or-") {
-				if choice != "" && !seen[choice] {
-					missing = append(missing, choice)
-				}
+	}
+	return diff
+}
+
+func TestAgentContractProjectionDetectsEveryMetadataDimensionDrift(t *testing.T) {
+	projection := func() agentContractProjection {
+		return agentContractProjection{
+			Syntax:         "fixture",
+			InputPositions: []string{"body-kv"},
+			BodyFormat:     BodyFormatFields,
+			Required:       []string{"title"},
+			Optional:       []string{"variant"},
+			Enums:          map[string][]string{"variant": {"plain", "card"}},
+			Defaults:       map[string]string{"variant": "plain"},
+			Applicability:  map[string][]string{"detail": {"card"}},
+			Invalid:        []string{"blank-title"},
+			Ignored:        []string{"unknown-fields"},
+			Legacy:         []string{"case-folded-variant"},
+		}
+	}
+	tests := []struct {
+		name, dimension string
+		mutate          func(*agentContractProjection)
+	}{
+		{name: "syntax", dimension: "syntax", mutate: func(got *agentContractProjection) { got.Syntax = "other" }},
+		{name: "input positions", dimension: "input_positions", mutate: func(got *agentContractProjection) { got.InputPositions = append(got.InputPositions, "json") }},
+		{name: "body format", dimension: "body_format", mutate: func(got *agentContractProjection) { got.BodyFormat = BodyFormatRows }},
+		{name: "required", dimension: "required", mutate: func(got *agentContractProjection) { got.Required = nil }},
+		{name: "optional", dimension: "optional", mutate: func(got *agentContractProjection) { got.Optional = nil }},
+		{name: "required added to optional", dimension: "optional", mutate: func(got *agentContractProjection) { got.Optional = append(got.Optional, "title") }},
+		{name: "catalog-only enum", dimension: "enums", mutate: func(got *agentContractProjection) { got.Enums["catalog-only"] = []string{"drift"} }},
+		{name: "enum order", dimension: "enums", mutate: func(got *agentContractProjection) { got.Enums["variant"] = []string{"card", "plain"} }},
+		{name: "missing default", dimension: "defaults", mutate: func(got *agentContractProjection) { delete(got.Defaults, "variant") }},
+		{name: "default value", dimension: "defaults", mutate: func(got *agentContractProjection) { got.Defaults["variant"] = "card" }},
+		{name: "applicability", dimension: "applicability", mutate: func(got *agentContractProjection) { got.Applicability["detail"] = []string{"plain"} }},
+		{name: "invalid", dimension: "invalid", mutate: func(got *agentContractProjection) { got.Invalid = append(got.Invalid, "extra") }},
+		{name: "ignored", dimension: "ignored", mutate: func(got *agentContractProjection) { got.Ignored = append(got.Ignored, "extra") }},
+		{name: "legacy", dimension: "legacy", mutate: func(got *agentContractProjection) { got.Legacy = append(got.Legacy, "extra") }},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			want := projection()
+			got := projection()
+			tt.mutate(&got)
+			if diff := compareAgentContracts(got, want); !slices.Equal(diff, []string{tt.dimension}) {
+				t.Fatalf("drift dimensions = %v, want [%s]", diff, tt.dimension)
 			}
-		}
+		})
 	}
-	return missing
 }
 
 func readUpstreamAgentContracts(t *testing.T) upstreamAgentContractOracle {

@@ -43,6 +43,24 @@ example: |
   E: 先学开场、信息卡、证据、总结和 CTA，绝大多数文章就能明显升级。
   :::
 example_assert_contains: "高级模块和普通 Markdown 有什么区别？"
+agent_contract:
+  body_format: dialogue
+  required:
+    - U-or-E
+  optional:
+    - left
+    - right
+  enums: {}
+  defaults:
+    left: 用户
+    right: 助手
+  invalid:
+    - zero-valid-lines
+  ignored:
+    - unknown-opener-keys
+    - lowercase-prefix
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

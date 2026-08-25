@@ -62,6 +62,29 @@ example: |
   secondary: 转发给正在写长文的人
   note: 下一篇继续拆个人品牌模块
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - title
+  optional:
+    - label
+    - subtitle
+    - primary
+    - secondary
+    - note
+  enums: {}
+  defaults:
+    primary: 继续关注
+    secondary: 收藏这篇
+  invalid:
+    - blank-title
+  ignored:
+    - action-urls
+    - unknown-fields
+  legacy:
+    - json-object
+    - actions-fields
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

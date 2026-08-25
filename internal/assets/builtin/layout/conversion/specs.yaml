@@ -39,6 +39,25 @@ example: |
   交付方式 | 在线编辑器 + API | 既能手工写，也能接自动化
   更新频率 | 持续迭代 | 主题和模块会一起升级
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - label
+    - value
+  optional:
+    - header-title
+    - note
+  enums: {}
+  defaults:
+    header-title: 参数信息
+  invalid:
+    - blank-label
+    - blank-value
+    - trailing-empty-note
+  ignored:
+    - cells-after-note
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

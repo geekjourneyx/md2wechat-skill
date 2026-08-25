@@ -52,6 +52,28 @@ example: |
   :::changelog
   {"version":"v2.0.0","date":"2026-01-01","added":["新增高级模块","支持主题切换"],"changed":["优化渲染性能"],"fixed":["修复移动端布局问题"],"removed":["废弃旧版 API"]}
   :::
+agent_contract:
+  body_format: json_object
+  required:
+    - version
+    - nonempty-category
+  optional:
+    - date
+    - added
+    - changed
+    - fixed
+    - removed
+  enums: {}
+  defaults: {}
+  invalid:
+    - malformed-json
+    - blank-version
+    - wrong-known-type
+    - no-nonempty-category
+  ignored:
+    - unknown-keys
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

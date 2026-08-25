@@ -58,6 +58,27 @@ example: |
   against: 大字报式排版 | 随机堆模板 | 为装饰牺牲阅读
   note: 适合个人品牌、专栏开头或结尾
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - title
+  optional:
+    - label
+    - body
+    - believe
+    - against
+    - note
+  enums: {}
+  defaults: {}
+  invalid:
+    - blank-title
+    - against-only
+  ignored:
+    - unknown-fields
+  legacy:
+    - subtitle-to-body
+    - believe-to-title
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

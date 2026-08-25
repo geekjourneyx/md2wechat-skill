@@ -263,6 +263,129 @@ metadata:
 	}
 }
 
+func TestValidateAgentContractRejectsDeclarativeDrift(t *testing.T) {
+	valid := func() *LayoutSpec {
+		return &LayoutSpec{
+			Name:       "fixture",
+			Lifecycle:  LifecycleRecommended,
+			BodyFormat: BodyFormatFields,
+			Fields: &FieldsSpec{
+				Required: []FieldSpec{{Name: "title"}},
+				Optional: []FieldSpec{
+					{Name: "variant", Enum: []string{"card"}, Default: "card"},
+					{Name: "detail", AppliesTo: []string{"card"}},
+				}},
+			Variants: []VariantSpec{{Name: "card", UseWhen: "card content"}},
+			Example:  ":::fixture\ntitle: Title\nvariant: card\ndetail: Detail\n:::\n",
+			AgentContract: &AgentContractSpec{
+				BodyFormat:    BodyFormatFields,
+				Required:      []string{"title"},
+				Optional:      []string{"variant", "detail"},
+				Enums:         map[string][]string{"variant": {"card"}},
+				Defaults:      map[string]string{"variant": "card"},
+				Applicability: map[string][]string{"detail": {"card"}},
+				Invalid:       []string{"blank-title"},
+				Ignored:       []string{},
+				Legacy:        []string{},
+			},
+		}
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*LayoutSpec)
+		want   string
+	}{
+		{
+			name: "required field repeated as optional",
+			mutate: func(spec *LayoutSpec) {
+				spec.AgentContract.Optional = append(spec.AgentContract.Optional, "title")
+			},
+			want: "both required and optional",
+		},
+		{
+			name: "missing applicability collection",
+			mutate: func(spec *LayoutSpec) {
+				spec.AgentContract.Applicability = nil
+			},
+			want: "applicability",
+		},
+		{
+			name: "duplicate required field",
+			mutate: func(spec *LayoutSpec) {
+				spec.AgentContract.Required = append(spec.AgentContract.Required, "title")
+			},
+			want: "duplicate required",
+		},
+		{
+			name: "blank default value",
+			mutate: func(spec *LayoutSpec) {
+				spec.AgentContract.Defaults["variant"] = ""
+			},
+			want: "default",
+		},
+		{
+			name: "duplicate invalid rule",
+			mutate: func(spec *LayoutSpec) {
+				spec.AgentContract.Invalid = append(spec.AgentContract.Invalid, "blank-title")
+			},
+			want: "duplicate invalid",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := valid()
+			tt.mutate(spec)
+			if err := validateAgentContract(spec.AgentContract, spec.Lifecycle); err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("validateAgentContract() error = %v, want %q", err, tt.want)
+			}
+		})
+	}
+
+	if err := validateAgentContract(valid().AgentContract, LifecycleRecommended); err != nil {
+		t.Fatalf("valid agent contract rejected: %v", err)
+	}
+
+	for _, tt := range []struct {
+		name   string
+		mutate func(*LayoutSpec)
+	}{
+		{
+			name: "canonical body format mismatch",
+			mutate: func(spec *LayoutSpec) {
+				spec.AgentContract.BodyFormat = BodyFormatRows
+			},
+		},
+		{
+			name: "applicability differs from canonical schema",
+			mutate: func(spec *LayoutSpec) {
+				spec.AgentContract.Applicability["detail"] = []string{"missing"}
+			},
+		},
+		{
+			name: "canonical enum differs from declared field",
+			mutate: func(spec *LayoutSpec) {
+				spec.AgentContract.Enums["variant"] = []string{"other"}
+			},
+		},
+		{
+			name: "canonical enum order differs from declared field",
+			mutate: func(spec *LayoutSpec) {
+				spec.Fields.Optional[0].Enum = []string{"other", "card"}
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := valid()
+			tt.mutate(spec)
+			if err := validateLoadedWitnesses(spec); err == nil || !strings.Contains(err.Error(), "agent_contract") {
+				t.Fatalf("validateLoadedWitnesses() error = %v, want agent_contract drift", err)
+			}
+		})
+	}
+}
+
 func TestParseLayoutSpecValidatesVariantDefaults(t *testing.T) {
 	base := `schema_version: "1"
 name: variant-defaults

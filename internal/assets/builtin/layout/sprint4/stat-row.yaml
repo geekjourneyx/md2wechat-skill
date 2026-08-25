@@ -43,6 +43,24 @@ example: |
   :::stat-row
   [{"value":"99%","label":"满意度"},{"value":"12K","label":"用户","unit":"人"}]
   :::
+agent_contract:
+  body_format: json_array
+  required:
+    - value
+    - label
+  optional:
+    - unit
+  enums: {}
+  defaults: {}
+  invalid:
+    - non-array
+    - empty-array
+    - blank-item
+    - wrong-type-item
+  ignored:
+    - unknown-keys
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

@@ -71,6 +71,55 @@ example: |
   ![复制](https://example.com/copy.jpg)
   desc: 检查预览后复制。
   :::
+agent_contract:
+  body_format: markdown_fields
+  required:
+    - step
+    - image
+    - desc
+  optional:
+    - note
+    - columns
+    - caption_style
+    - accent
+    - density
+    - wechat_safe_level
+  enums:
+    caption_style:
+      - none
+      - minimal
+      - numbered
+      - label
+    accent:
+      - brand
+      - muted
+      - contrast
+    density:
+      - compact
+      - normal
+      - airy
+    wechat_safe_level:
+      - strict
+      - normal
+  defaults:
+    columns: "1"
+    columns-out-of-range: clamped-1-4
+    caption_style: numbered
+    accent: brand
+    density: normal
+    wechat_safe_level: normal
+    unknown-enum: field-default
+  invalid:
+    - malformed-group
+  ignored:
+    - unsupported-attrs
+  legacy:
+    - case-folded-header-keys
+    - Step-label
+    - Desc-label
+    - Note-label
+    - experimental-to-normal
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

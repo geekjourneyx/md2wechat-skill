@@ -41,6 +41,24 @@ example: |
   资料 | 品牌素材库 | 放封面图、Logo 和活动物料 | https://github.com/geekjourneyx/md2wechat-skill
   工具 | Markdown 转换 API | 适合接进自动化工作流 | https://md2wechat.com/api/convert
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - category
+    - name
+    - description
+  optional:
+    - header-title
+  enums: {}
+  defaults:
+    header-title: 资源工具箱
+  invalid:
+    - blank-required-cell
+  ignored:
+    - cells-after-description
+  legacy:
+    - fourth-cell-ignored
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

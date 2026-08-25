@@ -48,6 +48,36 @@ example: |
   source: 内部实验数据
   :::
 example_assert_contains: "2026 年用户增长曲线"
+agent_contract:
+  body_format: markdown_fields
+  required:
+    - image
+    - caption
+  optional:
+    - caption_style
+    - source
+  enums:
+    caption_style:
+      - none
+      - minimal
+      - numbered
+      - label
+  defaults:
+    caption_style: numbered
+    unknown-enum: numbered
+  invalid:
+    - blank-image
+    - unsafe-image
+  ignored:
+    - blank-caption-node
+    - accent
+    - density
+    - wechat_safe_level
+    - unsupported-attrs
+  legacy:
+    - case-folded-header-keys
+    - image-alt-to-caption
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

@@ -65,6 +65,31 @@ example: |
   point: 02 | 指标区 | 适合讲关键数字、结果和变化
   point: 03 | 行动区 | 适合解释按钮、入口和下一步动作
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - image
+    - point
+  optional:
+    - title
+    - eyebrow
+    - note
+    - alt
+    - point-description
+  enums: {}
+  defaults:
+    eyebrow: 图片解读卡
+    max-points: "3"
+  invalid:
+    - blank-image
+    - unsafe-image
+    - malformed-point
+    - zero-valid-points
+  ignored:
+    - points-after-3
+    - unknown-fields
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

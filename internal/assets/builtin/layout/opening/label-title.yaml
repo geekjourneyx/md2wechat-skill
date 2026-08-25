@@ -36,6 +36,21 @@ example: |
   label: 引导
   title: 模块的任务，是把内容拆成更好读的层次
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - label
+    - title
+  optional: []
+  enums: {}
+  defaults: {}
+  invalid:
+    - blank-label
+    - blank-title
+  ignored:
+    - unknown-fields
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

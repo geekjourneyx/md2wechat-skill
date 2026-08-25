@@ -43,6 +43,23 @@ example: |
   API 调用|无|有|有
   私有部署|无|无|有
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - headers
+    - rows
+  optional: []
+  enums: {}
+  defaults: {}
+  invalid:
+    - blank-header
+    - blank-cell
+    - zero-rows
+    - ragged-row
+    - markdown-separator-row
+  ignored: []
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

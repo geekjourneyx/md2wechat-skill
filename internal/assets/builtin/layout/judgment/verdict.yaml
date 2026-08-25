@@ -50,6 +50,25 @@ example: |
   body: 模块必须解决新的阅读任务，否则只是换皮。
   note: 适合观点文、复盘、方案结论
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - title
+  optional:
+    - eyebrow
+    - body
+    - note
+  enums: {}
+  defaults:
+    eyebrow: 最终判断
+  invalid:
+    - blank-title
+  ignored:
+    - unknown-fields
+  legacy:
+    - body-to-title
+    - meta-to-note
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

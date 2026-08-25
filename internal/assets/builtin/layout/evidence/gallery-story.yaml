@@ -48,6 +48,58 @@ example: |
   ![第一站](https://example.com/story-1.jpg) | 第一站 | 用一张图建立现场感。
   ![第二站](https://example.com/story-2.jpg) | 第二站 | 用段落解释关键细节。
   :::
+agent_contract:
+  body_format: markdown_images
+  required:
+    - image
+    - title
+    - body
+  optional:
+    - variant
+    - density
+    - caption_style
+    - accent
+    - wechat_safe_level
+  enums:
+    variant:
+      - clean
+      - card
+    density:
+      - compact
+      - normal
+      - airy
+    caption_style:
+      - none
+      - minimal
+      - numbered
+      - label
+    accent:
+      - brand
+      - muted
+      - contrast
+    wechat_safe_level:
+      - strict
+      - normal
+  defaults:
+    variant: card
+    density: normal
+    caption_style: minimal
+    accent: brand
+    wechat_safe_level: normal
+    unknown-enum: field-default
+  invalid:
+    - malformed-image
+    - malformed-row
+  ignored:
+    - unsupported-attrs
+  legacy:
+    - case-folded-header-keys
+    - magazine-to-clean
+    - tech-to-clean
+    - elegant-to-clean
+    - bold-to-clean
+    - experimental-to-normal
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

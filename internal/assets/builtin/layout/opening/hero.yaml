@@ -110,6 +110,59 @@ example: |
   brand: md2wechat
   tags: 开场 | 判断
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - title
+  optional:
+    - variant
+    - eyebrow
+    - meta
+    - subtitle
+    - brand
+    - kicker
+    - points
+    - image
+    - tags
+    - symbol
+  enums:
+    variant:
+      - editorial
+      - briefing
+      - story
+      - masthead
+    symbol:
+      - spark-solid
+      - spark-outline
+      - diamond-solid
+      - diamond-outline
+      - reference-mark
+      - asterism
+      - double-circle
+      - circle
+      - square-solid
+      - square-outline
+      - star
+      - infinity
+  defaults:
+    variant: editorial
+    masthead.symbol: spark-solid
+  invalid:
+    - blank-title
+  ignored:
+    - masthead.kicker
+    - masthead.points
+    - masthead.image
+    - masthead.tags
+    - non-masthead.symbol
+  legacy:
+    - case-folded-variant
+  applicability:
+    kicker: [editorial, briefing, story]
+    points: [editorial, briefing, story]
+    image: [editorial, briefing, story]
+    tags: [editorial, briefing, story]
+    symbol: [masthead]
 metadata:
   author: md2wechat
   provenance: builtin

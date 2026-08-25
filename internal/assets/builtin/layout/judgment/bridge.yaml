@@ -47,6 +47,23 @@ example: |
   body: 没有证据的观点只是态度，下一段用数据和案例把它撑住。
   next: 继续看证据模块
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - title-or-body-or-next
+  optional:
+    - label
+    - title
+    - body
+    - next
+  enums: {}
+  defaults: {}
+  invalid:
+    - all-content-blank
+  ignored:
+    - unknown-fields
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

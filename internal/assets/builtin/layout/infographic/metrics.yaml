@@ -42,6 +42,28 @@ example: |
   结构复用 | 38 模块 | 同一篇内容可切到不同主题 | accent
   制作负担 | -42% | 固定骨架后，不再反复重搭版式 | default
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - label
+    - value
+    - note
+  optional:
+    - header-title
+    - tone
+  enums:
+    tone:
+      - default
+      - accent
+  defaults:
+    header-title: 核心数据
+    tone: default
+  invalid:
+    - blank-required-cell
+  ignored:
+    - cells-after-tone
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

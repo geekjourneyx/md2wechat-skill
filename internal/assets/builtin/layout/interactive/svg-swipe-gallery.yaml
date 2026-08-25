@@ -52,6 +52,57 @@ example: |
   ![B](https://mmbiz.qpic.cn/...) | 第二张
   :::
 example_assert_contains: "第一张"
+agent_contract:
+  body_format: markdown_images
+  required:
+    - image
+  optional:
+    - variant
+    - accent
+    - density
+    - wechat_safe_level
+    - svg_fallback
+    - title
+  enums:
+    variant:
+      - clean
+      - card
+    accent:
+      - brand
+      - muted
+      - contrast
+    density:
+      - compact
+      - normal
+      - airy
+    wechat_safe_level:
+      - strict
+      - normal
+    svg_fallback:
+      - static
+      - first-layer
+  defaults:
+    variant: card
+    accent: brand
+    density: normal
+    wechat_safe_level: normal
+    svg_fallback: first-layer
+    unknown-enum: field-default
+  invalid:
+    - zero-valid-images
+    - malformed-image
+  ignored:
+    - interactive-images-after-2
+    - unsupported-attrs
+  legacy:
+    - one-image-static-card
+    - case-folded-header-keys
+    - magazine-to-clean
+    - tech-to-clean
+    - elegant-to-clean
+    - bold-to-clean
+    - experimental-to-normal
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

@@ -97,6 +97,54 @@ example: |
   highlight: 先把结构搭稳，再让主题接管气质
   body: 这样同一篇内容切到不同主题时，重点和节奏仍然清楚。
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - one-line.highlight
+    - three.items
+    - decision.fit-or-recommendation
+    - save.items
+  optional:
+    - variant
+    - eyebrow
+    - highlight
+    - title
+    - body
+    - items
+    - fit
+    - not_fit
+    - recommendation
+    - note
+  enums:
+    variant:
+      - three
+      - decision
+      - save
+  defaults:
+    omitted-variant: one-line
+  invalid:
+    - one-line.missing-highlight
+    - three.missing-items
+    - decision.missing-fit-and-recommendation
+    - save.missing-items
+  ignored:
+    - inapplicable-fields
+    - unknown-fields
+  legacy:
+    - points-to-three
+    - recommend-to-decision
+    - checklist-to-save
+    - action-to-save
+    - for-to-fit
+    - not-to-not_fit
+    - avoid-to-not_fit
+    - fit_label
+    - not_fit_label
+    - highlight-title-fallback
+    - items-auto-three
+    - decision-fields-auto-decision
+    - case-folded-variant
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

@@ -60,6 +60,36 @@ example: |
   alt: 图文双栏示例图片
   :::
 example_assert_contains: "图和说明绑在一起，读者更容易跟上重点"
+agent_contract:
+  body_format: fields
+  required:
+    - image
+    - title-or-body
+  optional:
+    - layout
+    - eyebrow
+    - title
+    - body
+    - note
+    - alt
+  enums:
+    layout:
+      - left
+      - right
+  defaults:
+    layout: left
+    eyebrow: 图文双栏
+    alt: 图文双栏
+  invalid:
+    - blank-image
+    - unsafe-image
+    - missing-title-and-body
+  ignored:
+    - unknown-fields
+  legacy:
+    - image-right-to-right
+    - case-folded-layout
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

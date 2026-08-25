@@ -3,6 +3,8 @@ package layoutcatalog
 import (
 	"bytes"
 	"fmt"
+	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -171,6 +173,142 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	return &spec, nil
 }
 
+func validateAgentContract(contract *AgentContractSpec, lifecycle string) error {
+	if lifecycle != LifecycleRecommended {
+		return nil
+	}
+	if contract == nil {
+		return fmt.Errorf("recommended layout requires agent_contract")
+	}
+	if contract.Required == nil || contract.Optional == nil || contract.Enums == nil || contract.Defaults == nil || contract.Applicability == nil || contract.Invalid == nil || contract.Ignored == nil || contract.Legacy == nil {
+		return fmt.Errorf("agent_contract requires required, optional, enums, defaults, applicability, invalid, ignored, and legacy")
+	}
+	if !ValidBodyFormats[contract.BodyFormat] {
+		return fmt.Errorf("agent_contract has invalid body_format %q", contract.BodyFormat)
+	}
+	required, err := validateAgentContractList("required", contract.Required)
+	if err != nil {
+		return err
+	}
+	if _, err := validateAgentContractList("optional", contract.Optional); err != nil {
+		return err
+	}
+	for _, field := range contract.Optional {
+		if required[field] {
+			return fmt.Errorf("agent_contract field %q is both required and optional", field)
+		}
+	}
+	for field, values := range contract.Enums {
+		if strings.TrimSpace(field) == "" || strings.TrimSpace(field) != field {
+			return fmt.Errorf("agent_contract enum field %q is invalid", field)
+		}
+		if values == nil || len(values) == 0 {
+			return fmt.Errorf("agent_contract enum %q requires values", field)
+		}
+		seen := make(map[string]bool, len(values))
+		for _, value := range values {
+			if strings.TrimSpace(value) == "" || strings.TrimSpace(value) != value {
+				return fmt.Errorf("agent_contract enum %q value %q is invalid", field, value)
+			}
+			if seen[value] {
+				return fmt.Errorf("agent_contract enum %q has duplicate value %q", field, value)
+			}
+			seen[value] = true
+		}
+	}
+	for field, value := range contract.Defaults {
+		if strings.TrimSpace(field) == "" || strings.TrimSpace(field) != field || strings.TrimSpace(value) == "" {
+			return fmt.Errorf("agent_contract default %q must have a non-empty key and value", field)
+		}
+	}
+	for field, variants := range contract.Applicability {
+		if strings.TrimSpace(field) == "" || strings.TrimSpace(field) != field {
+			return fmt.Errorf("agent_contract applicability field %q is invalid", field)
+		}
+		if variants == nil || len(variants) == 0 {
+			return fmt.Errorf("agent_contract applicability %q requires variants", field)
+		}
+		if _, err := validateAgentContractList("applicability "+field, variants); err != nil {
+			return err
+		}
+	}
+	for name, values := range map[string][]string{
+		"invalid": contract.Invalid,
+		"ignored": contract.Ignored,
+		"legacy":  contract.Legacy,
+	} {
+		if _, err := validateAgentContractList(name, values); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateAgentContractList(name string, values []string) (map[string]bool, error) {
+	seen := make(map[string]bool, len(values))
+	for _, value := range values {
+		if strings.TrimSpace(value) == "" || strings.TrimSpace(value) != value {
+			return nil, fmt.Errorf("agent_contract %s value %q is invalid", name, value)
+		}
+		if seen[value] {
+			return nil, fmt.Errorf("agent_contract has duplicate %s value %q", name, value)
+		}
+		seen[value] = true
+	}
+	return seen, nil
+}
+
+func validateAgentContractMatchesSpec(spec *LayoutSpec) error {
+	if err := validateAgentContract(spec.AgentContract, spec.Lifecycle); err != nil {
+		return err
+	}
+	if spec.Lifecycle != LifecycleRecommended {
+		return nil
+	}
+	if spec.AgentContract.BodyFormat != spec.BodyFormat {
+		return fmt.Errorf("agent_contract body_format %q differs from canonical body_format %q", spec.AgentContract.BodyFormat, spec.BodyFormat)
+	}
+	for name, field := range declaredAgentContractFields(spec) {
+		if values, ok := spec.AgentContract.Enums[name]; ok && !slices.Equal(values, field.Enum) {
+			return fmt.Errorf("agent_contract enum %q %v differs from canonical field enum %v", name, values, field.Enum)
+		}
+	}
+	wantApplicability := declaredAgentApplicability(spec)
+	if !reflect.DeepEqual(spec.AgentContract.Applicability, wantApplicability) {
+		return fmt.Errorf("agent_contract applicability %v differs from canonical schema applicability %v", spec.AgentContract.Applicability, wantApplicability)
+	}
+	return nil
+}
+
+// declaredAgentContractFields collects schema inputs that can carry a public
+// enum. Agent contracts may also describe server-only fallback behavior (for
+// example omitted-variant), so defaults deliberately remain independent; the
+// exact public projection is pinned by its oracle.
+func declaredAgentContractFields(spec *LayoutSpec) map[string]FieldSpec {
+	fields := make(map[string]FieldSpec)
+	for _, field := range declaredSpecFields(spec) {
+		fields[field.Name] = field
+	}
+	if spec.Opener != nil {
+		for _, param := range spec.Opener.Params {
+			if _, exists := fields[param.Name]; !exists {
+				fields[param.Name] = FieldSpec{Name: param.Name, Enum: param.Enum, Default: param.Default}
+			}
+		}
+	}
+	return fields
+}
+
+func declaredAgentApplicability(spec *LayoutSpec) map[string][]string {
+	applicability := map[string][]string{}
+	for _, field := range declaredSpecFields(spec) {
+		if len(field.AppliesTo) != 0 {
+			applicability[field.Name] = field.AppliesTo
+		}
+	}
+	return applicability
+}
+
 func validateInputPositions(positions []AgentInputPosition) error {
 	seen := map[AgentInputPosition]bool{}
 	for _, position := range positions {
@@ -186,6 +324,9 @@ func validateInputPositions(positions []AgentInputPosition) error {
 }
 
 func validateLoadedWitnesses(spec *LayoutSpec) error {
+	if err := validateAgentContractMatchesSpec(spec); err != nil {
+		return err
+	}
 	if spec.Lifecycle != LifecycleRecommended {
 		return nil
 	}

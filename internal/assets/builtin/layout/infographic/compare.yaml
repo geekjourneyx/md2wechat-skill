@@ -46,6 +46,26 @@ example: |
   手工堆样式 | 每篇都要重搭结构，容易乱 | 模块化排版 | 节奏固定，替换内容就能稳定复用
   硬塞双列 | 手机里容易挤，信息也容易断开 | 单列卡片 | 重点成组出现，阅读更稳定
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - left-title
+    - left-body
+    - right-title
+    - right-body
+  optional:
+    - left-header
+    - right-header
+  enums: {}
+  defaults:
+    left-header: 旧方式
+    right-header: 新方式
+  invalid:
+    - blank-required-cell
+  ignored:
+    - cells-after-right-body
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

@@ -39,6 +39,24 @@ example: |
   02 | 再看基础元素 | 标题、表格、代码怎么共存
   03 | 最后看行动区域 | 如何把文章收得更完整
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - index
+    - title
+  optional:
+    - header-title
+    - description
+  enums: {}
+  defaults:
+    header-title: 目录导航
+  invalid:
+    - blank-index
+    - blank-title
+  ignored:
+    - cells-after-description
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

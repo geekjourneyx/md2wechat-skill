@@ -205,6 +205,94 @@ example: |
   title: 高级排版不是装饰，是阅读决策系统
   subtitle: 它先帮读者判断值不值得看，再帮作者建立记忆点
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - title
+  optional:
+    - type
+    - eyebrow
+    - subtitle
+    - quote
+    - value
+    - label
+    - items
+    - left
+    - right
+    - formula
+    - tradeoffs
+    - note
+    - accent
+  enums:
+    type:
+      - thesis
+      - pullquote
+      - number
+      - path
+      - contrast
+      - formula
+      - anatomy
+      - diagnosis
+      - tradeoff
+      - evidence-chain
+      - micro-case
+    accent:
+      - green
+      - emerald
+      - blue
+      - sky
+      - orange
+      - amber
+      - red
+      - rose
+      - "#RGB"
+      - "#RRGGBB"
+  defaults:
+    type: thesis
+    eyebrow: 文章信息图
+    accent: theme-derived
+    caps: title22,eyebrow10,subtitle30,quote28,value12,label14,item16,formula4x10,tradeoff4x8x10,note20,highlight3
+  invalid:
+    - blank-title
+  ignored:
+    - image
+    - alt
+    - serial
+    - unknown-fields
+  legacy:
+    - variant-selector
+    - layout-selector
+    - flow-to-items
+    - statement-to-thesis
+    - judgment-to-thesis
+    - claim-to-thesis
+    - quote-to-pullquote
+    - saying-to-pullquote
+    - golden-to-pullquote
+    - golden-quote-to-pullquote
+    - data-to-number
+    - metric-to-number
+    - stat-to-number
+    - type-flow-to-path
+    - logic-to-path
+    - chain-to-path
+    - compare-to-contrast
+    - comparison-to-contrast
+    - vs-to-contrast
+    - equation-to-formula
+    - breakdown-to-anatomy
+    - deconstruct-to-anatomy
+    - diagnose-to-diagnosis
+    - problem-to-diagnosis
+    - trade-off-to-tradeoff
+    - tradeoffs-to-tradeoff
+    - evidence-to-evidence-chain
+    - proof-chain-to-evidence-chain
+    - case-to-micro-case
+    - mini-case-to-micro-case
+    - case-folded-selector
+    - case-folded-accent
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

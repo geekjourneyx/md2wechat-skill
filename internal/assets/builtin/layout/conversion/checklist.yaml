@@ -41,6 +41,33 @@ example: |
   warn | 链接和说明单独检查 | 避免手机里出现跳读和看不清
   :::
 example_assert_contains: "结构先搭好"
+agent_contract:
+  body_format: rows
+  required:
+    - status
+    - title
+  optional:
+    - header-title
+    - description
+  enums:
+    status:
+      - done
+      - pending
+      - warn
+  defaults:
+    header-title: 检查清单
+  invalid:
+    - blank-title
+    - unknown-status
+  ignored:
+    - cells-after-description
+  legacy:
+    - title-only-to-pending
+    - todo-to-pending
+    - "[x]-to-done"
+    - "[ ]-to-pending"
+    - case-folded-status
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

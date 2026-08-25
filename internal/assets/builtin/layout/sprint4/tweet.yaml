@@ -46,6 +46,27 @@ example: |
   :::tweet
   {"name":"企业内容负责人","handle":"@content-lead","text":"真正节省时间的地方，是 Agent 已经帮我把结构排好了。","timestamp":"2026-05-21"}
   :::
+agent_contract:
+  body_format: json_object
+  required:
+    - name
+    - text
+  optional:
+    - handle
+    - avatar
+    - timestamp
+  enums: {}
+  defaults: {}
+  invalid:
+    - malformed-json
+    - blank-name
+    - blank-text
+    - wrong-type-known-field
+  ignored:
+    - unsafe-avatar
+    - unknown-keys
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

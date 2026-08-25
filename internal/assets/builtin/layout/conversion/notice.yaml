@@ -42,6 +42,33 @@ example: |
   risk | 风险 | 模块堆太多会抢正文 | 一篇文章保留 3 到 6 个重点模块更稳
   avoid | 不适合 | 特别短的快讯 | 这类内容通常一两个基础模块就够了
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - tone
+    - label
+    - body
+  optional:
+    - header-title
+    - note
+  enums:
+    tone:
+      - fit
+      - avoid
+      - risk
+      - require
+      - note
+  defaults:
+    header-title: 适用说明
+  invalid:
+    - unknown-tone
+    - blank-label
+    - blank-body
+    - extra-cells
+  ignored: []
+  legacy:
+    - chinese-label-inference-negative-first
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

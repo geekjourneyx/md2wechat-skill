@@ -48,6 +48,51 @@ example: |
   ![首页](https://example.com/home.jpg) | 首页截图
   ![详情](https://example.com/detail.jpg) | 详情截图
   :::
+agent_contract:
+  body_format: markdown_images
+  required:
+    - image
+  optional:
+    - columns
+    - image_shape
+    - variant
+    - wechat_safe_level
+    - title
+  enums:
+    image_shape:
+      - square
+      - rounded
+      - phone
+      - poster
+      - original
+    variant:
+      - clean
+      - card
+    wechat_safe_level:
+      - strict
+      - normal
+  defaults:
+    columns: "2"
+    columns-out-of-range: clamped-1-4
+    image_shape: phone
+    variant: clean
+    wechat_safe_level: normal
+    unknown-enum: field-default
+  invalid:
+    - malformed-image
+  ignored:
+    - caption_style
+    - accent
+    - unsupported-attrs
+    - phone-content-not-validated
+  legacy:
+    - case-folded-header-keys
+    - magazine-to-clean
+    - tech-to-clean
+    - elegant-to-clean
+    - bold-to-clean
+    - experimental-to-normal
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

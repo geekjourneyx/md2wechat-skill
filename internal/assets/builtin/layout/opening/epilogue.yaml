@@ -40,6 +40,39 @@ example: |
   subtitle: 下一节把这个判断落到真实工作流。
   symbol: infinity
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - title
+  optional:
+    - symbol
+    - subtitle
+  enums:
+    symbol:
+      - spark-solid
+      - spark-outline
+      - diamond-solid
+      - diamond-outline
+      - reference-mark
+      - asterism
+      - double-circle
+      - circle
+      - square-solid
+      - square-outline
+      - star
+      - infinity
+  defaults:
+    symbol: infinity
+    unknown-or-raw-symbol: infinity
+  invalid:
+    - blank-title
+  ignored:
+    - index
+    - label
+    - variant
+    - unknown-fields
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

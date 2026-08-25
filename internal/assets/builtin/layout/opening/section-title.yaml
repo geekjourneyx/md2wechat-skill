@@ -109,6 +109,57 @@ example: |
   title: 先校准输入契约
   symbol: diamond-outline
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - title
+  optional:
+    - variant
+    - subtitle
+    - symbol
+    - index
+  enums:
+    variant:
+      - marker
+      - divider
+      - numbered
+      - frame
+      - focus
+      - vertical
+    symbol:
+      - spark-solid
+      - spark-outline
+      - diamond-solid
+      - diamond-outline
+      - reference-mark
+      - asterism
+      - double-circle
+      - circle
+      - square-solid
+      - square-outline
+      - star
+      - infinity
+  defaults:
+    variant: marker
+    unknown-variant: marker
+    marker.symbol: diamond-outline
+    divider.symbol: spark-outline
+    focus.symbol: double-circle
+    vertical.symbol: diamond-solid
+    unknown-or-raw-symbol: location-default
+  invalid:
+    - blank-title
+    - numbered-missing-index
+    - numbered-index-over-4
+  ignored:
+    - numbered.symbol
+    - frame.symbol
+    - non-numbered.index
+  legacy:
+    - case-folded-variant
+  applicability:
+    symbol: [marker, divider, focus, vertical]
+    index: [numbered]
 metadata:
   author: md2wechat
   provenance: builtin

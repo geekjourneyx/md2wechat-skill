@@ -56,6 +56,28 @@ example: |
   note: 关注我，持续看产品和内容系统的真实打磨过程
   link: md2wechat.com
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - name
+  optional:
+    - role
+    - bio
+    - tags
+    - note
+    - link
+  enums: {}
+  defaults:
+    max-tags: "4"
+    link: plain-text
+  invalid:
+    - blank-name
+  ignored:
+    - tags-after-4
+    - unknown-fields
+  legacy:
+    - json-object
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

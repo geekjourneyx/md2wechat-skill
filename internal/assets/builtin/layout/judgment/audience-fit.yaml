@@ -50,6 +50,26 @@ example: |
   fit: 正在写长文的人 | 想建立个人品牌的人 | 需要稳定交付内容的人
   avoid: 只发短讯的人 | 不需要结构化表达的人
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - fit-or-avoid
+  optional:
+    - title
+    - subtitle
+    - fit
+    - avoid
+  enums: {}
+  defaults: {}
+  invalid:
+    - missing-fit-and-avoid
+  ignored:
+    - unknown-fields
+  legacy:
+    - for-to-fit
+    - not-to-avoid
+    - note-to-subtitle
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

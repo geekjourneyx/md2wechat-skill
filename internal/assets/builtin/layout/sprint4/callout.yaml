@@ -46,6 +46,26 @@ example: |
   type: warning
   body: 注意：发布前请检查图片、链接和行动按钮，避免复制到公众号后出现断链。
   :::
+agent_contract:
+  body_format: markdown_fields
+  required:
+    - body
+  optional:
+    - type
+  enums:
+    type:
+      - info
+      - warning
+      - success
+      - danger
+  defaults:
+    type: info
+  invalid:
+    - blank-body
+  ignored: []
+  legacy:
+    - case-folded-type
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

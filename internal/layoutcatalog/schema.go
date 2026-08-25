@@ -143,6 +143,21 @@ type LayoutMetadata struct {
 	InspiredBy string `yaml:"inspired_by,omitempty"`
 }
 
+// AgentContractSpec records the upstream authoring contract separately from
+// local validation mechanics. It is declarative discovery metadata: it never
+// selects a parser or changes rendering behavior.
+type AgentContractSpec struct {
+	BodyFormat    string              `yaml:"body_format" json:"body_format"`
+	Required      []string            `yaml:"required" json:"required"`
+	Optional      []string            `yaml:"optional" json:"optional"`
+	Enums         map[string][]string `yaml:"enums" json:"enums"`
+	Defaults      map[string]string   `yaml:"defaults" json:"defaults"`
+	Applicability map[string][]string `yaml:"applicability" json:"applicability"`
+	Invalid       []string            `yaml:"invalid" json:"invalid"`
+	Ignored       []string            `yaml:"ignored" json:"ignored"`
+	Legacy        []string            `yaml:"legacy" json:"legacy"`
+}
+
 type VariantSpec struct {
 	Name           string            `yaml:"name"`
 	Aliases        []string          `yaml:"aliases,omitempty"`
@@ -206,6 +221,7 @@ type LayoutSpec struct {
 	ExampleAssertContains string               `yaml:"example_assert_contains,omitempty"`
 	Variants              []VariantSpec        `yaml:"variants,omitempty"`
 	Metadata              LayoutMetadata       `yaml:"metadata"`
+	AgentContract         *AgentContractSpec   `yaml:"agent_contract,omitempty" json:"agent_contract,omitempty"`
 }
 
 type ListFilter struct {
