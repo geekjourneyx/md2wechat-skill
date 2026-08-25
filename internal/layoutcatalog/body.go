@@ -26,6 +26,7 @@ type bodyFacts struct {
 	fieldValues map[string][]string
 	fieldTypes  map[string][]string
 	jsonItems   []jsonItemFacts
+	rows        [][]string
 	imageCount  int
 	itemCount   int
 }
@@ -199,18 +200,11 @@ func parseRowsBody(spec *LayoutSpec, body []string) (bodyFacts, []bodyValidation
 				return facts, []bodyValidationIssue{{message: fmt.Sprintf("row column %d must not be empty", i+1)}}
 			}
 		}
-		if len(spec.Rows.Schema) > 0 {
-			for i, cell := range cells {
-				if i >= len(spec.Rows.Schema) {
-					break
-				}
-				field := spec.Rows.Schema[i]
-				value := strings.TrimSpace(cell)
-				if fieldIssues := validateFieldValue(field, nil, value, "string", nil); len(fieldIssues) > 0 {
-					return facts, fieldIssues
-				}
-			}
+		row := make([]string, len(cells))
+		for i, cell := range cells {
+			row[i] = strings.TrimSpace(cell)
 		}
+		facts.rows = append(facts.rows, row)
 	}
 	if facts.itemCount == 0 {
 		return facts, []bodyValidationIssue{{message: "rows module requires at least one data row"}}
@@ -376,16 +370,16 @@ func validateBodyFacts(spec *LayoutSpec, format string, facts bodyFacts) []bodyV
 		}
 		issues = append(issues, validateStructuredFields(spec, facts.fieldValues, facts.fieldTypes)...)
 	}
+	if format == BodyFormatRows {
+		issues = append(issues, validateRowSchema(spec, facts.rows, facts.fieldValues)...)
+	}
 	return issues
 }
 
 func validateStructuredFields(spec *LayoutSpec, values, types map[string][]string) []bodyValidationIssue {
 	var issues []bodyValidationIssue
 	issues = append(issues, validateUnknownStructuredFields(spec.Fields, types)...)
-	active, selectorPresent, selectorIssues := resolveVariant(spec.Variants, values)
-	if active == nil && len(selectorIssues) == 0 {
-		active = resolveDefaultVariant(spec.Fields, spec.Variants)
-	}
+	active, selectorPresent, selectorIssues := resolveEffectiveVariant(spec, values)
 	issues = append(issues, selectorIssues...)
 	fieldIssues := validateFields(spec.Fields, spec.Variants, values, types, !selectorPresent, active)
 	for _, issue := range fieldIssues {
@@ -404,6 +398,37 @@ func validateStructuredFields(spec *LayoutSpec, values, types map[string][]strin
 		issues = append(issues, validateVariantFields(*active, values)...)
 	}
 	return issues
+}
+
+func validateRowSchema(spec *LayoutSpec, rows [][]string, values map[string][]string) []bodyValidationIssue {
+	if spec.Rows == nil || len(spec.Rows.Schema) == 0 {
+		return nil
+	}
+	active, _, selectorIssues := resolveEffectiveVariant(spec, values)
+	var issues []bodyValidationIssue
+	for _, row := range rows {
+		for i, value := range row {
+			if i >= len(spec.Rows.Schema) {
+				break
+			}
+			field := spec.Rows.Schema[i]
+			if len(selectorIssues) > 0 {
+				field.AppliesTo = nil
+			}
+			if fieldIssues := validateFieldValue(field, nil, value, "string", active); len(fieldIssues) > 0 {
+				issues = append(issues, fieldIssues...)
+			}
+		}
+	}
+	return issues
+}
+
+func resolveEffectiveVariant(spec *LayoutSpec, values map[string][]string) (*VariantSpec, bool, []bodyValidationIssue) {
+	active, selectorPresent, selectorIssues := resolveVariant(spec.Variants, values)
+	if active == nil && len(selectorIssues) == 0 {
+		active = resolveDefaultVariant(spec.Fields, spec.Variants)
+	}
+	return active, selectorPresent, selectorIssues
 }
 
 func resolveDefaultVariant(fields *FieldsSpec, variants []VariantSpec) *VariantSpec {

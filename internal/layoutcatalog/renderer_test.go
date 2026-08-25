@@ -296,6 +296,42 @@ func TestRenderRejectsFieldOutsideEffectiveVariantWithoutInjectingDefault(t *tes
 	}
 }
 
+func TestRowsSchemaAppliesToKeepsRenderAndValidateAligned(t *testing.T) {
+	c := NewCatalog()
+	c.modules["row-schema-fixture"] = &LayoutSpec{
+		Name: "row-schema-fixture", BodyFormat: BodyFormatRows,
+		Fields: &FieldsSpec{Optional: []FieldSpec{{Name: "variant", Default: "numbered"}}},
+		Rows: &RowsSpec{Delimiter: "|", MinColumns: 2, MaxColumns: 2, Schema: []FieldSpec{
+			{Name: "label"}, {Name: "index", AppliesTo: []string{"numbered"}},
+		}},
+		Variants: []VariantSpec{{Name: "numbered"}, {Name: "plain"}},
+	}
+	tests := []struct {
+		name, variant string
+		accepted      bool
+	}{
+		{name: "selected variant accepts row field", variant: "numbered", accepted: true},
+		{name: "other variant rejects row field", variant: "plain"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fields := map[string]any{"variant": tt.variant, "rows": []any{[]any{"Chapter", "1"}}}
+			out, err := c.Render("row-schema-fixture", fields)
+			if got := err == nil; got != tt.accepted {
+				t.Fatalf("Render() error = %v, accepted = %v, want %v", err, got, tt.accepted)
+			}
+			markdown := ":::row-schema-fixture\nvariant: " + tt.variant + "\nChapter|1\n:::\n"
+			report := c.Validate(markdown)
+			if got := len(report.Errors) == 0; got != tt.accepted {
+				t.Fatalf("Validate() errors = %+v, accepted = %v, want %v", report.Errors, got, tt.accepted)
+			}
+			if tt.accepted && len(c.Validate(out).Errors) != 0 {
+				t.Fatalf("rendered output failed validation: %q", out)
+			}
+		})
+	}
+}
+
 func TestRenderBlockRejectsCaptionWithExplicitOrDefaultParams(t *testing.T) {
 	tests := []struct {
 		name   string
