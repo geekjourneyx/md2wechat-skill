@@ -284,6 +284,14 @@ for skill_path in skills/md2wechat/SKILL.md platforms/openclaw/md2wechat/SKILL.m
   grep -Fq 'AI mode (`--mode ai`) does not parse `:::module` syntax' "$skill_path" || fail "$skill_path must preserve AI-mode non-rendering"
 done
 GOCACHE="${GOCACHE:-/tmp/md2wechat-go-build}" go test ./cmd/md2wechat -run '^TestLayoutDocumentation' -count=1 >/dev/null || fail "layout documentation contracts must pass"
+! rg -Fq 'https://md2wechat.app' examples/layout-e2e-test.md \
+  || fail "layout E2E fixture must not hardcode an unrelated production endpoint"
+grep -Fq 'https://www.md2wechat.cn/api/convert' examples/layout-e2e-test.md \
+  || fail "layout E2E fixture must state the default convert endpoint"
+grep -Fq 'MD2WECHAT_BASE_URL' examples/layout-e2e-test.md \
+  || fail "layout E2E fixture must state endpoint override resolution"
+grep -Fq '与 `convert` 相同的解析结果' examples/layout-e2e-test.md \
+  || fail "layout E2E fixture must require the same endpoint resolution as convert"
 grep -q -- '--body-file' docs/LAYOUT.md || fail "LAYOUT must document complex body input"
 grep -q 'layout list --lifecycle compatibility --json' skills/md2wechat/SKILL.md || fail "embedded skill must isolate compatibility layouts"
 grep -q 'layout list --lifecycle compatibility --json' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must isolate compatibility layouts"

@@ -265,6 +265,23 @@ func TestLayoutDocumentationE2EFixtureMatchesCurrentCatalog(t *testing.T) {
 	}
 }
 
+func TestLayoutDocumentationE2EFixtureUsesConvertResolvedEndpoint(t *testing.T) {
+	markdown := readDocumentationFile(t, "../../examples/layout-e2e-test.md")
+	if strings.Contains(markdown, "https://md2wechat.app") {
+		t.Fatal("layout E2E fixture must not hardcode an unrelated production endpoint")
+	}
+	for _, phrase := range []string{
+		"https://www.md2wechat.cn/api/convert",
+		"MD2WECHAT_BASE_URL",
+		"api.md2wechat_base_url",
+		"与 `convert` 相同的解析结果",
+	} {
+		if !strings.Contains(markdown, phrase) {
+			t.Errorf("layout E2E fixture must define convert-resolved endpoint behavior %q", phrase)
+		}
+	}
+}
+
 func TestLayoutDocumentationE2EFixtureComposition(t *testing.T) {
 	markdown := readDocumentationFile(t, "../../examples/layout-e2e-test.md")
 

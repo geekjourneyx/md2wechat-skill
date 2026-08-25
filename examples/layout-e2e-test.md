@@ -4,7 +4,7 @@ author: md2wechat
 digest: 覆盖九类推荐模块的真实 API 渲染测试，每次发布前必须通过
 ---
 
-> 本文件是九类推荐语法的人工综合样例，不替代发布 conformance。发布证据使用 `make e2e-layout`，固定验证生产目标 `https://md2wechat.app` 的 canonical、结构 variant 和 3 个 compatibility witness；其他目标不能作为发布完成证明。
+> 本文件是九类推荐语法的人工综合样例，不替代发布 conformance。发布证据使用 `make e2e-layout`，并与 `convert` 共用同一端点解析：未配置时目标为 `https://www.md2wechat.cn/api/convert`；设置 `MD2WECHAT_BASE_URL` 或 `api.md2wechat_base_url` 后，conformance 必须验证与 `convert` 相同的解析结果。它覆盖 canonical、结构 variant 和 3 个 compatibility witness；其他未通过该解析路径指定的目标不能作为发布完成证明。
 
 :::hero
 variant: masthead
