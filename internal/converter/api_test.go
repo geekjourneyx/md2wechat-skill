@@ -104,6 +104,21 @@ func TestPostAPIConvertReturnsContractFailuresWithoutRetry(t *testing.T) {
 	}
 }
 
+func TestPostAPIConvertRetriesTransportErrorsExactlyTwiceThenFails(t *testing.T) {
+	attempts := 0
+	client := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		attempts++
+		return nil, io.ErrUnexpectedEOF
+	})}
+	_, err := PostAPIConvert(client, "https://transport.invalid", "secret", APIRequest{Markdown: "# title", Theme: "default"})
+	if err == nil || !strings.Contains(err.Error(), "send request") {
+		t.Fatalf("error = %v", err)
+	}
+	if attempts != 3 {
+		t.Fatalf("transport attempts = %d, want initial request plus two retries", attempts)
+	}
+}
+
 func TestAPILocalParameterMatrixUsesDiscoveryThemeAndExactSharedFields(t *testing.T) {
 	themes := NewThemeManager()
 	if err := themes.LoadThemes(); err != nil {
@@ -267,3 +282,7 @@ func TestAPIConverterUsesSharedResponseDecoder(t *testing.T) {
 func successEnvelope(html string) string {
 	return `{"code":0,"msg":"ok","data":{"html":"` + html + `","theme":"default","fontSize":"medium","backgroundType":"none","wordCount":2,"estimatedReadTime":1,"future":"allowed"}}`
 }
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }

@@ -276,6 +276,14 @@ func TestSemanticConformanceEnforcesHeroMastheadAndCTAThreeParts(t *testing.T) {
 	if err := checkSemanticConformance(e2eWitness{Module: "cta", Variant: "trial"}, `<section data-module-part="cta-title"><span data-module-part="cta-primary"></span><span data-module-part="cta-secondary"></span></section>`); err != nil {
 		t.Fatal(err)
 	}
+	for _, html := range []string{
+		`<section data-module-part="cta-title"><span data-module-part="cta-primary"></span><span data-module-part="unrelated"></span></section>`,
+		`<section data-module-part="cta-title"><span data-module-part="cta-primary"></span><span data-module-part="cta-primary"></span></section>`,
+	} {
+		if err := checkSemanticConformance(e2eWitness{Module: "cta", Variant: "trial"}, html); err == nil {
+			t.Fatalf("CTA with missing exact named part must fail: %s", html)
+		}
+	}
 }
 
 func TestCompactPR1BoundaryAndThemeProbeConstructionIsCatalogBacked(t *testing.T) {
@@ -846,6 +854,57 @@ func TestE2EOpinionPieceFixture(t *testing.T) {
 	}
 }
 
+func TestE2ECompactLayoutBoundaryAndThemeProbes(t *testing.T) {
+	settings := e2eGate(t)
+	c, err := layoutConformanceCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	markdown := strings.Join([]string{
+		":::hero", "variant: masthead", "title: Compact theme probe", "symbol: spark-solid", ":::",
+		":::section-title", "variant: numbered", "index: 1234", "title: Boundary section", ":::",
+		":::cta", "variant: trial", "title: CTA probe", "points: one | two | three", ":::",
+		":::faq", "Q: Question?", "A: Answer.", "Q: Another?", "A: Another answer.", ":::",
+		":::notice", "fit | Fit | Body", "avoid | Avoid | Body", "risk | Risk | Body", "require | Require | Body", "note | Note | Body", ":::",
+		":::summary", "highlight: Omitted variant", ":::",
+		":::summary", "variant: three", "items: one | two | three", ":::",
+		":::summary", "variant: decision", "recommendation: Decide", ":::",
+		":::summary", "variant: save", "items: one | two | three", ":::",
+	}, "\n") + "\n"
+	if report := c.Validate(markdown); len(report.Errors) != 0 {
+		t.Fatalf("compact probe does not validate: %+v", report.Errors)
+	}
+	for _, theme := range []string{"default", "apple", "cyber", "bytedance", "sports", "chinese"} {
+		t.Run(theme, func(t *testing.T) {
+			resp, err := postConvertRequest(layoutConformanceHTTPClient(), settings.BaseURL, settings.APIKey, converter.APIRequest{Markdown: markdown, Theme: theme, FontSize: "medium", BackgroundType: "none"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			data, err := converter.DecodeAPIResponse(resp)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if data.Theme != theme || data.FontSize != "medium" || data.BackgroundType != "none" {
+				t.Fatalf("parameter echo = %+v", data)
+			}
+			for _, witness := range []e2eWitness{
+				{Module: "hero", Variant: "masthead", Probe: "Compact theme probe"},
+				{Module: "section-title", Variant: "numbered", Probe: "Boundary section"},
+				{Module: "cta", Variant: "trial", Probe: "CTA probe"},
+			} {
+				if err := checkConformanceHTML(witness, data.HTML); err != nil {
+					t.Fatal(err)
+				}
+			}
+			for _, module := range []string{"faq", "notice", "summary"} {
+				if strings.Contains(data.HTML, ":::"+module) {
+					t.Fatalf("%s raw fence remained", module)
+				}
+			}
+		})
+	}
+}
+
 func TestE2EValidatorVsAPIConsistency(t *testing.T) {
 	settings := e2eGate(t)
 	bad := ":::hero\neyebrow: only\n:::\n"
@@ -1060,8 +1119,12 @@ func checkSemanticConformanceNode(witness e2eWitness, node *html.Node) error {
 	if witness.Module == "hero" && witness.Variant == "masthead" && !hasDOMAttributeValue(node, "data-module-part", "hero-masthead") {
 		return fmt.Errorf("hero/masthead response missing data-module-part=%q", "hero-masthead")
 	}
-	if witness.Module == "cta" && countDOMAttributes(node, "data-module-part") < 3 {
-		return fmt.Errorf("cta/%s response has fewer than three structural parts", witness.Variant)
+	if witness.Module == "cta" {
+		for _, part := range []string{"cta-title", "cta-primary", "cta-secondary"} {
+			if !hasDOMAttributeValue(node, "data-module-part", part) {
+				return fmt.Errorf("cta/%s response missing data-module-part=%q", witness.Variant, part)
+			}
+		}
 	}
 	minimumImages := 0
 	imageElement := "img"
@@ -1080,22 +1143,6 @@ func checkSemanticConformanceNode(witness e2eWitness, node *html.Node) error {
 		return fmt.Errorf("%s response has %d %s element(s), want at least %d", witness.Module, count, imageElement, minimumImages)
 	}
 	return nil
-}
-
-func countDOMAttributes(node *html.Node, name string) int {
-	count := 0
-	if node.Type == html.ElementNode {
-		for _, attr := range node.Attr {
-			if attr.Key == name {
-				count++
-				break
-			}
-		}
-	}
-	for child := node.FirstChild; child != nil; child = child.NextSibling {
-		count += countDOMAttributes(child, name)
-	}
-	return count
 }
 
 func countDOMElements(node *html.Node, element string) int {
@@ -1135,7 +1182,11 @@ func remoteBuildIdentity(header http.Header) (string, bool) {
 }
 
 func postConvert(client *http.Client, baseURL, apiKey, markdown string) (*http.Response, error) {
-	resp, err := converter.PostAPIConvert(client, baseURL, apiKey, converter.APIRequest{Markdown: markdown, Theme: "default"})
+	return postConvertRequest(client, baseURL, apiKey, converter.APIRequest{Markdown: markdown, Theme: "default"})
+}
+
+func postConvertRequest(client *http.Client, baseURL, apiKey string, request converter.APIRequest) (*http.Response, error) {
+	resp, err := converter.PostAPIConvert(client, baseURL, apiKey, request)
 	if err != nil {
 		return nil, fmt.Errorf("network failure: send request: %w", err)
 	}

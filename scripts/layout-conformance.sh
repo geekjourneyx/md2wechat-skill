@@ -10,7 +10,7 @@ MD2WECHAT_CLI_COMMIT="$MD2WECHAT_CLI_COMMIT" \
 MD2WECHAT_BASE_URL="${MD2WECHAT_BASE_URL:-}" \
 MD2WECHAT_API_BUILD_ID="${MD2WECHAT_API_BUILD_ID:-}" \
 GOCACHE="${GOCACHE:-/tmp/md2wechat-go-build}" \
-go test -timeout=6m -json ./cmd/md2wechat -run '^TestE2ELayoutConformance$' -count=1 | tee "$output"
+go test -timeout=6m -json ./cmd/md2wechat -run '^(TestE2ELayoutConformance|TestE2ECompactLayoutBoundaryAndThemeProbes)$' -count=1 | tee "$output"
 
 printf 'layout conformance target: %s\n' "$target"
 printf 'layout conformance report: %s\n' "$output"
