@@ -446,6 +446,12 @@ func validateFieldShapeSpecs(shapes []FieldShapeSpec, declared map[string]bool, 
 		if shape.MinParts <= 1 {
 			return fmt.Errorf("%s shape min_parts must be greater than 1", owner)
 		}
+		if shape.MaxParts < 0 {
+			return fmt.Errorf("%s shape max_parts must be nonnegative", owner)
+		}
+		if shape.MaxParts > 0 && shape.MaxParts < shape.MinParts {
+			return fmt.Errorf("%s shape max_parts must be at least min_parts", owner)
+		}
 		if shape.MaxOccurrences < 0 {
 			return fmt.Errorf("%s shape max_occurrences must be nonnegative", owner)
 		}

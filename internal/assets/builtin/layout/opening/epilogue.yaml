@@ -1,0 +1,46 @@
+schema_version: "1"
+name: epilogue
+lifecycle: recommended
+body_format: fields
+version: "1.0.0"
+since: "3.3.0"
+category: opening
+serves: [memorability, readability]
+content_types: [opinion, tutorial, report, announcement]
+industry: [general]
+tags: [opening, epilogue, transition, closure]
+position: body
+input_positions: [body-kv]
+when_to_use: |
+  在一段完整叙事后留出安静的过渡或余韵，再进入总结或下一部分。
+when_not_to_use: |
+  文章的行动收尾使用 cta 或 closing；不要把 epilogue 当作带按钮的转化区。
+pairs_well_with: [summary, section-title]
+avoid_combining_with: [closing, cta]
+anti_pattern: |
+  缺少 title 会失去收束对象；不要加入 index、label 或 variant 等 API 会忽略的字段。
+fields:
+  required:
+    - name: title
+      description: 留给读者的收束句
+      example: "结构稳定之后，表达才有余地生长。"
+  optional:
+    - name: subtitle
+      description: 可选补充句
+      example: "下一节把这个判断落到真实工作流。"
+    - name: symbol
+      description: 收束装饰符号
+      enum: [spark-solid, spark-outline, diamond-solid, diamond-outline, reference-mark, asterism, double-circle, circle, square-solid, square-outline, star, infinity]
+      default: infinity
+      example: infinity
+  output_order: [symbol, title, subtitle]
+example: |
+  :::epilogue
+  title: 结构稳定之后，表达才有余地生长。
+  subtitle: 下一节把这个判断落到真实工作流。
+  symbol: infinity
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#epilogue"

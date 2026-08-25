@@ -10,6 +10,7 @@ content_types: [opinion, announcement, manifesto, product-launch]
 industry: [general]
 tags: [opening, hero, first-screen]
 position: opening
+input_positions: [body-kv]
 when_to_use: |
   文章开篇第一屏需要让读者在 3 秒内判断这篇值不值得读。
   适合观点文、产品发布、重大宣布、品牌主张。
@@ -30,7 +31,8 @@ fields:
   optional:
     - name: variant
       description: 结构变体
-      enum: [editorial, briefing, story]
+      enum: [editorial, briefing, story, masthead]
+      default: editorial
       example: editorial
     - name: eyebrow
       description: 标签词，定位文章类别
@@ -40,23 +42,33 @@ fields:
       example: "8 min read"
     - name: kicker
       description: 标题前的引导判断
+      applies_to: [editorial, briefing, story]
       example: "先把判断讲清楚"
     - name: subtitle
       description: 副标题，对主标题补一刀
       example: "是读者愿不愿意读完"
     - name: points
       description: 简报或故事要点，用 | 分隔
+      applies_to: [editorial, briefing, story]
       example: "契约校准 | 真实渲染 | 发布门禁"
     - name: image
       description: 辅助图片 URL
+      applies_to: [editorial, briefing, story]
       example: "https://example.com/hero.png"
     - name: brand
       description: 品牌名称
       example: md2wechat
     - name: tags
       description: 标签，用 | 分隔
+      applies_to: [editorial, briefing, story]
       example: "开场 | 判断"
-  output_order: [variant, eyebrow, meta, kicker, title, subtitle, points, image, brand, tags]
+    - name: symbol
+      description: masthead 标题装饰符号
+      enum: [spark-solid, spark-outline, diamond-solid, diamond-outline, reference-mark, asterism, double-circle, circle, square-solid, square-outline, star, infinity]
+      default: spark-solid
+      applies_to: [masthead]
+      example: spark-solid
+  output_order: [variant, eyebrow, meta, kicker, title, subtitle, points, image, symbol, brand, tags]
 variants:
   - name: editorial
     use_when: 观点文开场先给出判断
@@ -85,6 +97,15 @@ variants:
       variant: story
       kicker: 一篇草稿如何变成可发布高级稿
       title: 好文章让读者更快看见重点
+      :::
+  - name: masthead
+    use_when: 极简开场只保留标题、摘要和装饰符号
+    required: [title]
+    example: |
+      :::hero
+      variant: masthead
+      title: 先让读者看见这篇文章的主判断
+      symbol: spark-solid
       :::
 example: |
   :::hero

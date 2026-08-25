@@ -51,7 +51,7 @@ func TestFieldShapeSpecJSONOmitsUnsetExtensionConstraints(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, field := range []string{"MaxOccurrences", "PartRules", "ItemMaxParts"} {
+	for _, field := range []string{"MaxParts", "MaxOccurrences", "PartRules", "ItemMaxParts"} {
 		if strings.Contains(string(encoded), field) {
 			t.Fatalf("unset extension constraint %s leaked into JSON: %s", field, encoded)
 		}

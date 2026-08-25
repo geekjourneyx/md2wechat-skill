@@ -104,6 +104,7 @@ type FieldShapeSpec struct {
 	Field          string              `yaml:"field"`
 	Separator      string              `yaml:"separator"`
 	MinParts       int                 `yaml:"min_parts"`
+	MaxParts       int                 `yaml:"max_parts,omitempty" json:"MaxParts,omitempty"`
 	MaxOccurrences int                 `yaml:"max_occurrences,omitempty" json:"MaxOccurrences,omitempty"`
 	PartRules      []FieldPartRuleSpec `yaml:"part_rules,omitempty" json:"-"`
 	ItemSeparator  string              `yaml:"item_separator,omitempty"`

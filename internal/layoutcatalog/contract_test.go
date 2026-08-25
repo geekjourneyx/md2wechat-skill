@@ -783,6 +783,103 @@ func TestKnownDriftContractsAreCalibrated(t *testing.T) {
 	}
 }
 
+func TestTitleAndClosureCatalogContracts(t *testing.T) {
+	const sharedSymbols = "spark-solid,spark-outline,diamond-solid,diamond-outline,reference-mark,asterism,double-circle,circle,square-solid,square-outline,star,infinity"
+	type contract struct {
+		category, defaultVariant, defaultSymbol string
+		variants                                []string
+		inputPositions                          []AgentInputPosition
+	}
+	contracts := map[string]contract{
+		"hero":          {category: "opening", defaultVariant: "editorial", variants: []string{"editorial", "briefing", "story", "masthead"}, inputPositions: []AgentInputPosition{InputBodyKV}},
+		"section-title": {category: "opening", defaultVariant: "marker", variants: []string{"marker", "divider", "numbered", "frame", "focus", "vertical"}, inputPositions: []AgentInputPosition{InputBodyKV}},
+		"epilogue":      {category: "opening", defaultSymbol: "infinity", inputPositions: []AgentInputPosition{InputBodyKV}},
+		"closing":       {category: "conversion", defaultSymbol: "asterism", inputPositions: []AgentInputPosition{InputBodyKV}},
+		"cta":           {category: "conversion", defaultVariant: "save-follow", variants: []string{"save-follow", "consult", "trial"}, inputPositions: []AgentInputPosition{InputBodyKV}},
+	}
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range contracts {
+		t.Run(name, func(t *testing.T) {
+			spec, ok := c.Get(name)
+			if !ok {
+				t.Fatalf("missing %s", name)
+			}
+			if spec.Category != want.category || !slices.Equal(spec.InputPositions, want.inputPositions) {
+				t.Fatalf("category/input_positions = %q/%v, want %q/%v", spec.Category, spec.InputPositions, want.category, want.inputPositions)
+			}
+			if want.defaultVariant != "" {
+				field := fieldByName(spec.Fields.Optional, "variant")
+				if field.Default != want.defaultVariant {
+					t.Fatalf("variant default = %q, want %q", field.Default, want.defaultVariant)
+				}
+				if got := variantNames(spec.Variants); !slices.Equal(got, want.variants) {
+					t.Fatalf("variants = %v, want %v", got, want.variants)
+				}
+			}
+			if want.defaultSymbol != "" {
+				if got := fieldByName(spec.Fields.Optional, "symbol").Default; got != want.defaultSymbol {
+					t.Fatalf("symbol default = %q, want %q", got, want.defaultSymbol)
+				}
+			}
+			if name == "hero" || name == "section-title" || name == "epilogue" || name == "closing" {
+				if got := strings.Join(fieldByName(spec.Fields.Optional, "symbol").Enum, ","); got != sharedSymbols {
+					t.Fatalf("symbol enum = %q, want %q", got, sharedSymbols)
+				}
+			}
+			switch name {
+			case "hero":
+				if got := fieldByName(spec.Fields.Optional, "symbol"); !slices.Equal(got.AppliesTo, []string{"masthead"}) || got.Default != "spark-solid" {
+					t.Fatalf("masthead symbol = %#v", got)
+				}
+				for _, field := range []string{"kicker", "points", "image", "tags"} {
+					if got := fieldByName(spec.Fields.Optional, field).AppliesTo; !slices.Equal(got, []string{"editorial", "briefing", "story"}) {
+						t.Fatalf("%s applicability = %v", field, got)
+					}
+				}
+			case "section-title":
+				if got := fieldByName(spec.Fields.Optional, "symbol"); !slices.Equal(got.AppliesTo, []string{"marker", "divider", "focus", "vertical"}) || got.Default != "diamond-outline" {
+					t.Fatalf("section symbol = %#v", got)
+				}
+				if got := fieldByName(spec.Fields.Optional, "index"); !slices.Equal(got.AppliesTo, []string{"numbered"}) || got.MinRunes != 1 || got.MaxRunes != 4 {
+					t.Fatalf("numbered index = %#v", got)
+				}
+			case "cta":
+				if got := fieldByName(spec.Fields.Optional, "points").AppliesTo; !slices.Equal(got, []string{"trial"}) {
+					t.Fatalf("points applicability = %v", got)
+				}
+				if got := spec.Fields.Shapes; len(got) != 1 || got[0].Field != "points" || got[0].MaxParts != 3 {
+					t.Fatalf("points shape = %#v", got)
+				}
+				for field, wantDefault := range map[string]string{"primary": "收藏这篇", "secondary": "关注更新", "tertiary": "转给同事"} {
+					if got := fieldByName(spec.Fields.Optional, field).Default; got != wantDefault {
+						t.Fatalf("%s default = %q, want %q", field, got, wantDefault)
+					}
+				}
+			}
+		})
+	}
+}
+
+func fieldByName(fields []FieldSpec, name string) FieldSpec {
+	for _, field := range fields {
+		if field.Name == name {
+			return field
+		}
+	}
+	return FieldSpec{}
+}
+
+func variantNames(variants []VariantSpec) []string {
+	names := make([]string, 0, len(variants))
+	for _, variant := range variants {
+		names = append(names, variant.Name)
+	}
+	return names
+}
+
 func fieldNames(fields []FieldSpec) []string {
 	names := make([]string, 0, len(fields))
 	for _, field := range fields {

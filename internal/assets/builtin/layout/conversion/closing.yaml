@@ -1,0 +1,46 @@
+schema_version: "1"
+name: closing
+lifecycle: recommended
+body_format: fields
+version: "1.0.0"
+since: "3.3.0"
+category: conversion
+serves: [memorability, conversion]
+content_types: [opinion, tutorial, report, announcement]
+industry: [general]
+tags: [conversion, closing, closure, ending]
+position: closing
+input_positions: [body-kv]
+when_to_use: |
+  在文章最后用一句收束判断结束阅读；如果需要行动引导，先放 cta，再放 closing。
+when_not_to_use: |
+  不需要结尾留白时不必使用；不要在 closing 中放 action、link 或 image。
+pairs_well_with: [cta, summary]
+avoid_combining_with: [subscribe, author-card]
+anti_pattern: |
+  不要把 closing 变成第二个 CTA；action、link、image 和 variant 都是 API 忽略的无效 Agent 输入。
+fields:
+  required:
+    - name: title
+      description: 文章最后的收束句
+      example: "先把结构做成可信的，读者才会愿意继续。"
+  optional:
+    - name: subtitle
+      description: 可选的简短余韵
+      example: "下一篇从一份真实草稿开始。"
+    - name: symbol
+      description: 结尾装饰符号
+      enum: [spark-solid, spark-outline, diamond-solid, diamond-outline, reference-mark, asterism, double-circle, circle, square-solid, square-outline, star, infinity]
+      default: asterism
+      example: asterism
+  output_order: [symbol, title, subtitle]
+example: |
+  :::closing
+  title: 先把结构做成可信的，读者才会愿意继续。
+  subtitle: 下一篇从一份真实草稿开始。
+  symbol: asterism
+  :::
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#closing"

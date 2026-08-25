@@ -746,6 +746,10 @@ func validateFieldShapes(shapes []FieldShapeSpec, values map[string][]string) []
 				issues = append(issues, bodyValidationIssue{field: shape.Field, message: fmt.Sprintf("field %s requires at least %d parts separated by %q", shape.Field, shape.MinParts, shape.Separator), cause: ErrInvalidFieldValue})
 				continue
 			}
+			if shape.MaxParts > 0 && len(parts) > shape.MaxParts {
+				issues = append(issues, bodyValidationIssue{field: shape.Field, message: fmt.Sprintf("field %s allows at most %d parts separated by %q", shape.Field, shape.MaxParts, shape.Separator), cause: ErrInvalidFieldValue})
+				continue
+			}
 			for _, rule := range shape.PartRules {
 				partCount := len(rawParts)
 				if rule.MinParts > 0 && partCount < rule.MinParts {

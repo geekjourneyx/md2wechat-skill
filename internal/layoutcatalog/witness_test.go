@@ -143,8 +143,6 @@ func TestRecommendedScenarioMappingMatchesPinnedSources(t *testing.T) {
 }
 
 func TestRecommendedScenarioCatalogProjection(t *testing.T) {
-	t.Skip("catalog projection is implemented in Tasks 3-4")
-
 	c := NewCatalog()
 	if err := c.Load(); err != nil {
 		t.Fatal(err)

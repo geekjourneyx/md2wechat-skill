@@ -226,6 +226,7 @@ func TestFieldShapeValidationMatrix(t *testing.T) {
 	}{
 		{name: "pipe accepts two", values: []string{"one | two"}, shapes: []FieldShapeSpec{{Field: "items", Separator: "|", MinParts: 2}}},
 		{name: "pipe rejects one", values: []string{"one"}, shapes: []FieldShapeSpec{{Field: "items", Separator: "|", MinParts: 2}}, wantErr: true},
+		{name: "pipe rejects overflow", values: []string{"one | two | three"}, shapes: []FieldShapeSpec{{Field: "items", Separator: "|", MinParts: 2, MaxParts: 2}}, wantErr: true},
 		{name: "plus ignores empty parts", values: []string{"one + "}, shapes: []FieldShapeSpec{{Field: "items", Separator: "+", MinParts: 2}}, wantErr: true},
 		{name: "validates every repeated value", values: []string{"01 | 20 | 30 | title", "broken"}, shapes: []FieldShapeSpec{{Field: "point", Separator: "|", MinParts: 4}}, wantErr: true},
 	}
@@ -419,6 +420,71 @@ func TestFieldRuneBoundsAndAppliesToAreGeneric(t *testing.T) {
 	}
 }
 
+func TestTitleAndClosureContractValidationMatrix(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"hero", "section-title", "epilogue", "closing", "cta"} {
+		if _, ok := c.Get(name); !ok {
+			t.Fatalf("missing %s contract", name)
+		}
+	}
+
+	tests := []struct {
+		name, markdown string
+		accepted       bool
+	}{
+		{name: "hero masthead accepts its symbol", markdown: ":::hero\nvariant: masthead\ntitle: 标题\nsymbol: spark-solid\n:::\n", accepted: true},
+		{name: "hero rejects missing title", markdown: ":::hero\nvariant: masthead\nsymbol: spark-solid\n:::\n"},
+		{name: "hero rejects unknown variant", markdown: ":::hero\nvariant: unknown\ntitle: 标题\n:::\n"},
+		{name: "hero rejects symbol outside masthead", markdown: ":::hero\nvariant: editorial\ntitle: 标题\nsymbol: spark-solid\n:::\n"},
+		{name: "hero masthead rejects ineffective kicker", markdown: ":::hero\nvariant: masthead\ntitle: 标题\nkicker: 无效\n:::\n"},
+		{name: "hero masthead rejects ineffective points", markdown: ":::hero\nvariant: masthead\ntitle: 标题\npoints: 一 | 二\n:::\n"},
+		{name: "hero masthead rejects ineffective image", markdown: ":::hero\nvariant: masthead\ntitle: 标题\nimage: https://example.com/hero.png\n:::\n"},
+		{name: "hero masthead rejects ineffective tags", markdown: ":::hero\nvariant: masthead\ntitle: 标题\ntags: 开场 | 判断\n:::\n"},
+		{name: "section title marker is default", markdown: ":::section-title\ntitle: 标题\n:::\n", accepted: true},
+		{name: "section title marker accepts symbol", markdown: ":::section-title\nvariant: marker\ntitle: 标题\nsymbol: diamond-outline\n:::\n", accepted: true},
+		{name: "section title divider accepts symbol", markdown: ":::section-title\nvariant: divider\ntitle: 标题\nsymbol: spark-outline\n:::\n", accepted: true},
+		{name: "section title numbered accepts bounded index", markdown: ":::section-title\nvariant: numbered\ntitle: 标题\nindex: 一二三四\n:::\n", accepted: true},
+		{name: "section title frame accepts title", markdown: ":::section-title\nvariant: frame\ntitle: 标题\n:::\n", accepted: true},
+		{name: "section title focus accepts symbol", markdown: ":::section-title\nvariant: focus\ntitle: 标题\nsymbol: double-circle\n:::\n", accepted: true},
+		{name: "section title vertical accepts symbol", markdown: ":::section-title\nvariant: vertical\ntitle: 标题\nsymbol: diamond-solid\n:::\n", accepted: true},
+		{name: "section title rejects blank title", markdown: ":::section-title\ntitle:   \n:::\n"},
+		{name: "section title numbered requires index", markdown: ":::section-title\nvariant: numbered\ntitle: 标题\n:::\n"},
+		{name: "section title numbered rejects blank index", markdown: ":::section-title\nvariant: numbered\ntitle: 标题\nindex:   \n:::\n"},
+		{name: "section title numbered rejects long index", markdown: ":::section-title\nvariant: numbered\ntitle: 标题\nindex: 一二三四五\n:::\n"},
+		{name: "section title rejects symbol on numbered", markdown: ":::section-title\nvariant: numbered\ntitle: 标题\nindex: 01\nsymbol: star\n:::\n"},
+		{name: "section title rejects symbol on frame", markdown: ":::section-title\nvariant: frame\ntitle: 标题\nsymbol: star\n:::\n"},
+		{name: "section title rejects index outside numbered", markdown: ":::section-title\nvariant: marker\ntitle: 标题\nindex: 01\n:::\n"},
+		{name: "epilogue accepts title subtitle and symbol", markdown: ":::epilogue\ntitle: 结语\nsubtitle: 继续前进\nsymbol: infinity\n:::\n", accepted: true},
+		{name: "epilogue rejects missing title", markdown: ":::epilogue\nsubtitle: 继续前进\n:::\n"},
+		{name: "epilogue rejects invalid symbol", markdown: ":::epilogue\ntitle: 结语\nsymbol: glyph\n:::\n"},
+		{name: "closing accepts title subtitle and symbol", markdown: ":::closing\ntitle: 收尾\nsubtitle: 到这里\nsymbol: asterism\n:::\n", accepted: true},
+		{name: "closing rejects missing title", markdown: ":::closing\nsubtitle: 到这里\n:::\n"},
+		{name: "closing rejects action input", markdown: ":::closing\ntitle: 收尾\naction: 立即开始\n:::\n"},
+		{name: "closing rejects link input", markdown: ":::closing\ntitle: 收尾\nlink: https://example.com\n:::\n"},
+		{name: "closing rejects image input", markdown: ":::closing\ntitle: 收尾\nimage: https://example.com/closing.png\n:::\n"},
+		{name: "closing rejects variant input", markdown: ":::closing\ntitle: 收尾\nvariant: plain\n:::\n"},
+		{name: "closing rejects invalid symbol", markdown: ":::closing\ntitle: 收尾\nsymbol: glyph\n:::\n"},
+		{name: "cta save follow accepts title", markdown: ":::cta\nvariant: save-follow\ntitle: 收藏\n:::\n", accepted: true},
+		{name: "cta rejects missing title", markdown: ":::cta\nvariant: save-follow\n:::\n"},
+		{name: "cta consult accepts title", markdown: ":::cta\nvariant: consult\ntitle: 咨询\n:::\n", accepted: true},
+		{name: "cta trial accepts three points", markdown: ":::cta\nvariant: trial\ntitle: 试用\npoints: 一 | 二 | 三\n:::\n", accepted: true},
+		{name: "cta rejects unknown variant", markdown: ":::cta\nvariant: unknown\ntitle: 标题\n:::\n"},
+		{name: "cta rejects points outside trial", markdown: ":::cta\nvariant: save-follow\ntitle: 收藏\npoints: 一 | 二\n:::\n"},
+		{name: "cta rejects more than three trial points", markdown: ":::cta\nvariant: trial\ntitle: 试用\npoints: 一 | 二 | 三 | 四\n:::\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			report := c.Validate(tt.markdown)
+			if got := len(report.Errors) == 0; got != tt.accepted {
+				t.Fatalf("accepted = %v, want %v; errors=%+v", got, tt.accepted, report.Errors)
+			}
+		})
+	}
+}
+
 func TestRowsBodyRejectsMaxColumns(t *testing.T) {
 	spec := &LayoutSpec{Name: "row-fixture", BodyFormat: BodyFormatRows, Rows: &RowsSpec{
 		Delimiter: "|", MinColumns: 2, MaxColumns: 2,
@@ -449,6 +515,8 @@ func TestParseLayoutSpecFieldShapeAndOutputOrderSchema(t *testing.T) {
 		{name: "unknown shape field", fields: "  shapes:\n    - {field: missing, separator: '|', min_parts: 2}\n", want: "shape field"},
 		{name: "empty separator", fields: "  shapes:\n    - {field: items, separator: '', min_parts: 2}\n", want: "separator"},
 		{name: "small minimum", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 1}\n", want: "greater than 1"},
+		{name: "negative max parts", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 2, max_parts: -1}\n", want: "max_parts"},
+		{name: "inverted max parts", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 3, max_parts: 2}\n", want: "at least min_parts"},
 		{name: "negative max occurrences", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 2, max_occurrences: -1}\n", want: "max_occurrences"},
 		{name: "part rule missing bounds", fields: "  shapes:\n    - field: items\n      separator: '|'\n      min_parts: 2\n      part_rules:\n        - {required_positions: [1]}\n", want: "requires min_parts or max_parts"},
 		{name: "part rule negative bound", fields: "  shapes:\n    - field: items\n      separator: '|'\n      min_parts: 2\n      part_rules:\n        - {min_parts: -1, required_positions: [1]}\n", want: "bounds must be nonnegative"},
