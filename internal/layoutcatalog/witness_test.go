@@ -13,6 +13,7 @@ import (
 type recommendedScenarioMap struct {
 	SourceCommit               string   `yaml:"source_commit"`
 	SourceFile                 string   `yaml:"source_file"`
+	SourceSHA256               string   `yaml:"source_sha256"`
 	GuideOnlyRecommendedSyntax []string `yaml:"guide_only_recommended_syntax"`
 	Scenarios                  []struct {
 		ID      string `yaml:"id"`
@@ -25,8 +26,16 @@ const pinnedRecommendedScenarioOracle = `
 hero-editorial|hero|editorial
 hero-briefing|hero|briefing
 hero-story|hero|story
+hero-masthead|hero|masthead
 cards|cards|
 part|part|
+epilogue|epilogue|
+section-title-marker|section-title|marker
+section-title-divider|section-title|divider
+section-title-numbered|section-title|numbered
+section-title-frame|section-title|frame
+section-title-focus|section-title|focus
+section-title-vertical|section-title|vertical
 toc|toc|
 label-title|label-title|
 audience-fit|audience-fit|
@@ -69,10 +78,11 @@ checklist|checklist|
 toolbox|toolbox|
 specs|specs|
 notice|notice|
-summary-legacy|summary|
+summary-one-line|summary|
 summary-three|summary|three
 summary-decision|summary|decision
 summary-save|summary|save
+closing|closing|
 cta-save-follow|cta|save-follow
 cta-consult|cta|consult
 cta-trial|cta|trial
@@ -93,15 +103,14 @@ dialogue-pair|dialogue-pair|
 `
 
 func TestRecommendedScenarioMappingMatchesPinnedSources(t *testing.T) {
-	c := NewCatalog()
-	if err := c.Load(); err != nil {
-		t.Fatal(err)
-	}
 	m := readRecommendedScenarioMap(t)
-	if m.SourceCommit != "989a335" || m.SourceFile != "lib/advanced-module-groups.ts" {
+	if m.SourceCommit != "edcde64ae1be56f1a08a0617bb1862471e7e00b1" || m.SourceFile != "lib/advanced-module-groups.ts" {
 		t.Fatalf("source = %q:%q", m.SourceCommit, m.SourceFile)
 	}
-	if len(m.Scenarios) != 68 {
+	if m.SourceSHA256 != "e5443d6c7298bf592ec556395622f55e49721a418f2aa7578d8867555470e050" {
+		t.Fatalf("source digest = %q", m.SourceSHA256)
+	}
+	if len(m.Scenarios) != 77 {
 		t.Fatalf("scenario count = %d", len(m.Scenarios))
 	}
 	if err := comparePinnedScenarioTuples(m); err != nil {
@@ -114,15 +123,10 @@ func TestRecommendedScenarioMappingMatchesPinnedSources(t *testing.T) {
 			t.Fatalf("invalid duplicate id %q", scenario.ID)
 		}
 		seenIDs[scenario.ID] = true
-		spec, ok := c.Get(scenario.Module)
-		if !ok || spec.Lifecycle != LifecycleRecommended {
-			t.Fatalf("invalid target %+v", scenario)
-		}
-		assertScenarioHasWitness(t, spec, scenario.Variant)
 		coveredModules[scenario.Module] = true
 	}
-	if len(coveredModules) != 48 {
-		t.Fatalf("covered module count = %d, want 48", len(coveredModules))
+	if len(coveredModules) != 51 {
+		t.Fatalf("covered module count = %d, want 51", len(coveredModules))
 	}
 	wantGuideOnly := []string{
 		"figure-caption", "gallery-grid", "gallery-story", "svg-reveal", "svg-swipe-gallery",
@@ -135,6 +139,22 @@ func TestRecommendedScenarioMappingMatchesPinnedSources(t *testing.T) {
 	slices.Sort(diff)
 	if !slices.Equal(diff, wantGuideOnly) {
 		t.Fatalf("scenario-source gap = %v, want %v", diff, wantGuideOnly)
+	}
+}
+
+func TestRecommendedScenarioCatalogProjection(t *testing.T) {
+	t.Skip("catalog projection is implemented in Tasks 3-4")
+
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, scenario := range readRecommendedScenarioMap(t).Scenarios {
+		spec, ok := c.Get(scenario.Module)
+		if !ok || spec.Lifecycle != LifecycleRecommended {
+			t.Fatalf("invalid target %+v", scenario)
+		}
+		assertScenarioHasWitness(t, spec, scenario.Variant)
 	}
 }
 

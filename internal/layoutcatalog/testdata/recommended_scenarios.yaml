@@ -1,5 +1,6 @@
-source_commit: "989a335"
+source_commit: edcde64ae1be56f1a08a0617bb1862471e7e00b1
 source_file: lib/advanced-module-groups.ts
+source_sha256: e5443d6c7298bf592ec556395622f55e49721a418f2aa7578d8867555470e050
 guide_only_recommended_syntax:
   - figure-caption
   - gallery-grid
@@ -10,8 +11,16 @@ scenarios:
   - {id: hero-editorial, module: hero, variant: editorial}
   - {id: hero-briefing, module: hero, variant: briefing}
   - {id: hero-story, module: hero, variant: story}
+  - {id: hero-masthead, module: hero, variant: masthead}
   - {id: cards, module: cards}
   - {id: part, module: part}
+  - {id: epilogue, module: epilogue}
+  - {id: section-title-marker, module: section-title, variant: marker}
+  - {id: section-title-divider, module: section-title, variant: divider}
+  - {id: section-title-numbered, module: section-title, variant: numbered}
+  - {id: section-title-frame, module: section-title, variant: frame}
+  - {id: section-title-focus, module: section-title, variant: focus}
+  - {id: section-title-vertical, module: section-title, variant: vertical}
   - {id: toc, module: toc}
   - {id: label-title, module: label-title}
   - {id: audience-fit, module: audience-fit}
@@ -54,10 +63,11 @@ scenarios:
   - {id: toolbox, module: toolbox}
   - {id: specs, module: specs}
   - {id: notice, module: notice}
-  - {id: summary-legacy, module: summary}
+  - {id: summary-one-line, module: summary}
   - {id: summary-three, module: summary, variant: three}
   - {id: summary-decision, module: summary, variant: decision}
   - {id: summary-save, module: summary, variant: save}
+  - {id: closing, module: closing}
   - {id: cta-save-follow, module: cta, variant: save-follow}
   - {id: cta-consult, module: cta, variant: consult}
   - {id: cta-trial, module: cta, variant: trial}

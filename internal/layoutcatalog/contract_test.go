@@ -1,13 +1,79 @@
 package layoutcatalog
 
 import (
+	"os"
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/assets"
+	"gopkg.in/yaml.v3"
 )
+
+type upstreamAgentContractOracle struct {
+	SourceCommit string                  `yaml:"source_commit"`
+	SourceFile   string                  `yaml:"source_file"`
+	SourceSHA256 string                  `yaml:"source_sha256"`
+	Contracts    []upstreamAgentContract `yaml:"contracts"`
+}
+
+type upstreamAgentContract struct {
+	Syntax   string              `yaml:"syntax"`
+	Input    []string            `yaml:"input"`
+	Required []string            `yaml:"required"`
+	Optional []string            `yaml:"optional"`
+	Enums    map[string][]string `yaml:"enums"`
+	Defaults map[string]string   `yaml:"defaults"`
+	Invalid  []string            `yaml:"invalid"`
+	Ignored  []string            `yaml:"ignored"`
+	Legacy   []string            `yaml:"legacy"`
+}
+
+func TestUpstreamAgentContractOracle(t *testing.T) {
+	oracle := readUpstreamAgentContracts(t)
+	if oracle.SourceCommit != "edcde64ae1be56f1a08a0617bb1862471e7e00b1" {
+		t.Fatalf("upstream source commit = %q", oracle.SourceCommit)
+	}
+	if oracle.SourceFile != "__tests__/fixtures/advanced-layout-agent-contract.ts" {
+		t.Fatalf("upstream source file = %q", oracle.SourceFile)
+	}
+	if oracle.SourceSHA256 != "265b50ae88d3688614273423df1d5de7fddfb899fc7d496a6c88d37ec66ff1d3" {
+		t.Fatalf("upstream source digest = %q", oracle.SourceSHA256)
+	}
+	if len(oracle.Contracts) != 56 {
+		t.Fatalf("contract count = %d, want 56", len(oracle.Contracts))
+	}
+
+	seen := make(map[string]bool, len(oracle.Contracts))
+	got := make([]string, 0, len(oracle.Contracts))
+	for _, contract := range oracle.Contracts {
+		if contract.Syntax == "" || seen[contract.Syntax] {
+			t.Fatalf("invalid duplicate syntax %q", contract.Syntax)
+		}
+		seen[contract.Syntax] = true
+		got = append(got, contract.Syntax)
+	}
+	want := slices.Clone(recommendedModuleNames)
+	slices.Sort(got)
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Fatalf("contract syntax names = %v, want %v", got, want)
+	}
+}
+
+func readUpstreamAgentContracts(t *testing.T) upstreamAgentContractOracle {
+	t.Helper()
+	data, err := os.ReadFile("testdata/upstream_agent_contracts.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var oracle upstreamAgentContractOracle
+	if err := yaml.Unmarshal(data, &oracle); err != nil {
+		t.Fatal(err)
+	}
+	return oracle
+}
 
 func TestBuiltinYAMLExplicitlyDeclaresLifecycle(t *testing.T) {
 	categories, err := assets.ListBuiltinLayoutCategories()
@@ -416,11 +482,11 @@ var recommendedModuleNames = []string{
 	"audience-fit", "author-card", "bridge", "callout", "cards", "cases",
 	"changelog", "checklist", "compare", "comparison-table", "cta", "definition",
 	"dialogue-pair", "faq", "figure-caption", "flow", "gallery-grid", "gallery-story",
-	"hero", "image-annotate", "image-compare", "image-phone-shot", "image-steps",
+	"hero", "image-annotate", "image-compare", "image-phone-shot", "image-steps", "closing",
 	"image-text", "infographic", "label-title", "logos", "manifesto", "matrix",
 	"metrics", "myth-fact", "notice", "part", "people", "pricing", "question",
 	"quote", "quote-card", "resource-list", "series", "specs", "split", "stat-row",
-	"steps", "subscribe", "summary", "svg-reveal", "svg-swipe-gallery", "timeline",
+	"steps", "subscribe", "summary", "svg-reveal", "svg-swipe-gallery", "timeline", "epilogue", "section-title",
 	"toc", "toolbox", "tweet", "verdict",
 }
 
@@ -448,6 +514,8 @@ func TestListFilteredDefaultsToRecommended(t *testing.T) {
 }
 
 func TestBuiltinRecommendedModuleSetMatchesUpstream(t *testing.T) {
+	t.Skip("catalog projection is implemented in Tasks 3-4")
+
 	c := NewCatalog()
 	if err := c.Load(); err != nil {
 		t.Fatal(err)

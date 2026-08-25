@@ -1,0 +1,1571 @@
+source_commit: edcde64ae1be56f1a08a0617bb1862471e7e00b1
+source_file: __tests__/fixtures/advanced-layout-agent-contract.ts
+source_sha256: 265b50ae88d3688614273423df1d5de7fddfb899fc7d496a6c88d37ec66ff1d3
+contracts:
+  - syntax: hero
+    input:
+      - body-kv
+    required:
+      - title
+    optional:
+      - variant
+      - eyebrow
+      - meta
+      - subtitle
+      - brand
+      - kicker
+      - points
+      - image
+      - tags
+      - symbol
+    enums:
+      variant:
+        - editorial
+        - briefing
+        - story
+        - masthead
+      symbol:
+        - spark-solid
+        - spark-outline
+        - diamond-solid
+        - diamond-outline
+        - reference-mark
+        - asterism
+        - double-circle
+        - circle
+        - square-solid
+        - square-outline
+        - star
+        - infinity
+    defaults:
+      variant: editorial
+      masthead.symbol: spark-solid
+    invalid:
+      - blank-title
+    ignored:
+      - masthead.kicker
+      - masthead.points
+      - masthead.image
+      - masthead.tags
+      - non-masthead.symbol
+    legacy:
+      - case-folded-variant
+  - syntax: cards
+    input:
+      - row-dsl
+    required:
+      - label
+      - title
+      - description
+    optional:
+      - header-title
+      - tone
+    enums:
+      tone:
+        - default
+        - accent
+    defaults:
+      header-title: 模块列表
+      tone: default
+    invalid:
+      - fewer-than-3-cells
+      - agent-forbidden-blank-required-cell
+    ignored:
+      - cells-after-tone
+    legacy: []
+  - syntax: part
+    input:
+      - body-kv
+    required:
+      - index
+      - title
+    optional:
+      - label
+      - subtitle
+    enums: {}
+    defaults: {}
+    invalid:
+      - blank-index
+      - blank-title
+    ignored:
+      - symbol
+      - variant
+      - unknown-fields
+    legacy: []
+  - syntax: epilogue
+    input:
+      - body-kv
+    required:
+      - title
+    optional:
+      - symbol
+      - subtitle
+    enums:
+      symbol:
+        - spark-solid
+        - spark-outline
+        - diamond-solid
+        - diamond-outline
+        - reference-mark
+        - asterism
+        - double-circle
+        - circle
+        - square-solid
+        - square-outline
+        - star
+        - infinity
+    defaults:
+      symbol: infinity
+      unknown-or-raw-symbol: infinity
+    invalid:
+      - blank-title
+    ignored:
+      - index
+      - label
+      - variant
+      - unknown-fields
+    legacy: []
+  - syntax: section-title
+    input:
+      - body-kv
+    required:
+      - title
+    optional:
+      - variant
+      - subtitle
+      - symbol
+      - index
+    enums:
+      variant:
+        - marker
+        - divider
+        - numbered
+        - frame
+        - focus
+        - vertical
+      symbol:
+        - spark-solid
+        - spark-outline
+        - diamond-solid
+        - diamond-outline
+        - reference-mark
+        - asterism
+        - double-circle
+        - circle
+        - square-solid
+        - square-outline
+        - star
+        - infinity
+    defaults:
+      variant: marker
+      unknown-variant: marker
+      marker.symbol: diamond-outline
+      divider.symbol: spark-outline
+      focus.symbol: double-circle
+      vertical.symbol: diamond-solid
+      unknown-or-raw-symbol: location-default
+    invalid:
+      - blank-title
+      - numbered-missing-index
+      - numbered-index-over-4
+    ignored:
+      - numbered.symbol
+      - frame.symbol
+      - non-numbered.index
+    legacy:
+      - case-folded-variant
+  - syntax: toc
+    input:
+      - row-dsl
+    required:
+      - index
+      - title
+    optional:
+      - header-title
+      - description
+    enums: {}
+    defaults:
+      header-title: 目录导航
+    invalid:
+      - blank-index
+      - blank-title
+    ignored:
+      - cells-after-description
+    legacy: []
+  - syntax: label-title
+    input:
+      - body-kv
+    required:
+      - label
+      - title
+    optional: []
+    enums: {}
+    defaults: {}
+    invalid:
+      - blank-label
+      - blank-title
+    ignored:
+      - unknown-fields
+    legacy: []
+  - syntax: audience-fit
+    input:
+      - body-kv
+    required:
+      - fit-or-avoid
+    optional:
+      - title
+      - subtitle
+      - fit
+      - avoid
+    enums: {}
+    defaults: {}
+    invalid:
+      - missing-fit-and-avoid
+    ignored:
+      - unknown-fields
+    legacy:
+      - for-to-fit
+      - not-to-avoid
+      - note-to-subtitle
+  - syntax: verdict
+    input:
+      - body-kv
+    required:
+      - title
+    optional:
+      - eyebrow
+      - body
+      - note
+    enums: {}
+    defaults:
+      eyebrow: 最终判断
+    invalid:
+      - blank-title
+    ignored:
+      - unknown-fields
+    legacy:
+      - body-to-title
+      - meta-to-note
+  - syntax: myth-fact
+    input:
+      - row-dsl
+    required:
+      - myth
+      - fact
+    optional:
+      - header-title
+      - note
+    enums: {}
+    defaults:
+      header-title: 误区纠正
+    invalid:
+      - blank-myth
+      - blank-fact
+    ignored:
+      - cells-after-note
+    legacy: []
+  - syntax: bridge
+    input:
+      - body-kv
+    required:
+      - title-or-body-or-next
+    optional:
+      - label
+      - title
+      - body
+      - next
+    enums: {}
+    defaults: {}
+    invalid:
+      - all-content-blank
+    ignored:
+      - unknown-fields
+    legacy: []
+  - syntax: manifesto
+    input:
+      - body-kv
+    required:
+      - title
+    optional:
+      - label
+      - body
+      - believe
+      - against
+      - note
+    enums: {}
+    defaults: {}
+    invalid:
+      - blank-title
+      - against-only
+    ignored:
+      - unknown-fields
+    legacy:
+      - subtitle-to-body
+      - believe-to-title
+  - syntax: infographic
+    input:
+      - body-kv
+    required:
+      - title
+    optional:
+      - type
+      - eyebrow
+      - subtitle
+      - quote
+      - value
+      - label
+      - items
+      - left
+      - right
+      - formula
+      - tradeoffs
+      - note
+      - accent
+    enums:
+      type:
+        - thesis
+        - pullquote
+        - number
+        - path
+        - contrast
+        - formula
+        - anatomy
+        - diagnosis
+        - tradeoff
+        - evidence-chain
+        - micro-case
+      accent:
+        - green
+        - emerald
+        - blue
+        - sky
+        - orange
+        - amber
+        - red
+        - rose
+        - "#RGB"
+        - "#RRGGBB"
+    defaults:
+      type: thesis
+      eyebrow: 文章信息图
+      accent: theme-derived
+      caps: title22,eyebrow10,subtitle30,quote28,value12,label14,item16,formula4x10,tradeoff4x8x10,note20,highlight3
+    invalid:
+      - blank-title
+    ignored:
+      - image
+      - alt
+      - serial
+      - unknown-fields
+    legacy:
+      - variant-selector
+      - layout-selector
+      - flow-to-items
+      - statement-to-thesis
+      - judgment-to-thesis
+      - claim-to-thesis
+      - quote-to-pullquote
+      - saying-to-pullquote
+      - golden-to-pullquote
+      - golden-quote-to-pullquote
+      - data-to-number
+      - metric-to-number
+      - stat-to-number
+      - type-flow-to-path
+      - logic-to-path
+      - chain-to-path
+      - compare-to-contrast
+      - comparison-to-contrast
+      - vs-to-contrast
+      - equation-to-formula
+      - breakdown-to-anatomy
+      - deconstruct-to-anatomy
+      - diagnose-to-diagnosis
+      - problem-to-diagnosis
+      - trade-off-to-tradeoff
+      - tradeoffs-to-tradeoff
+      - evidence-to-evidence-chain
+      - proof-chain-to-evidence-chain
+      - case-to-micro-case
+      - mini-case-to-micro-case
+      - case-folded-selector
+      - case-folded-accent
+  - syntax: metrics
+    input:
+      - row-dsl
+    required:
+      - label
+      - value
+      - note
+    optional:
+      - header-title
+      - tone
+    enums:
+      tone:
+        - default
+        - accent
+    defaults:
+      header-title: 核心数据
+      tone: default
+    invalid:
+      - blank-required-cell
+    ignored:
+      - cells-after-tone
+    legacy: []
+  - syntax: compare
+    input:
+      - row-dsl
+    required:
+      - left-title
+      - left-body
+      - right-title
+      - right-body
+    optional:
+      - left-header
+      - right-header
+    enums: {}
+    defaults:
+      left-header: 旧方式
+      right-header: 新方式
+    invalid:
+      - blank-required-cell
+    ignored:
+      - cells-after-right-body
+    legacy: []
+  - syntax: steps
+    input:
+      - row-dsl
+    required:
+      - index
+      - title
+      - body
+    optional:
+      - header-title
+    enums: {}
+    defaults:
+      header-title: 使用步骤
+    invalid:
+      - blank-required-cell
+    ignored:
+      - cells-after-body
+    legacy: []
+  - syntax: timeline
+    input:
+      - row-dsl
+    required:
+      - meta
+      - title
+    optional:
+      - header-title
+      - body
+      - image
+    enums:
+      format:
+        - meta-dot-title
+        - meta-title-body
+        - meta-image-title-body
+    defaults:
+      header-title: 时间线
+    invalid:
+      - malformed-row
+      - blank-required-cell
+      - zero-valid-rows
+      - extra-pipe-cells
+    ignored: []
+    legacy: []
+  - syntax: quote
+    input:
+      - body-kv
+    required:
+      - quote
+    optional:
+      - variant
+      - image
+      - image_alt
+      - eyebrow
+      - source
+      - brand
+      - role
+      - context
+      - source_type
+      - note
+    enums:
+      variant:
+        - light
+        - brand
+        - proof
+    defaults:
+      variant: light
+      eyebrow: 观点强调
+      proof-without-source: light
+    invalid:
+      - blank-quote
+    ignored:
+      - unsafe-image
+      - unknown-fields
+    legacy:
+      - text-to-quote
+      - author-to-source
+      - img-to-image
+      - cover-to-image
+      - alt-to-image_alt
+      - default-to-light
+      - plain-to-light
+      - accent-to-brand
+      - evidence-to-proof
+      - tone-accent-to-brand
+      - case-folded-variant
+  - syntax: image-text
+    input:
+      - body-kv
+    required:
+      - image
+      - title-or-body
+    optional:
+      - layout
+      - eyebrow
+      - title
+      - body
+      - note
+      - alt
+    enums:
+      layout:
+        - left
+        - right
+    defaults:
+      layout: left
+      eyebrow: 图文双栏
+      alt: 图文双栏
+    invalid:
+      - blank-image
+      - unsafe-image
+      - missing-title-and-body
+    ignored:
+      - unknown-fields
+    legacy:
+      - image-right-to-right
+      - case-folded-layout
+  - syntax: image-compare
+    input:
+      - body-kv
+    required:
+      - left_image
+      - right_image
+    optional:
+      - left_title
+      - right_title
+      - left_alt
+      - right_alt
+      - eyebrow
+      - title
+      - note
+    enums: {}
+    defaults:
+      eyebrow: 左右对比图
+    invalid:
+      - blank-required-image
+      - unsafe-required-image
+    ignored:
+      - unknown-fields
+    legacy: []
+  - syntax: image-annotate
+    input:
+      - body-kv
+      - row-dsl
+    required:
+      - image
+      - point
+    optional:
+      - title
+      - eyebrow
+      - note
+      - alt
+      - point-description
+    enums: {}
+    defaults:
+      eyebrow: 图片解读卡
+      max-points: "3"
+    invalid:
+      - blank-image
+      - unsafe-image
+      - malformed-point
+      - zero-valid-points
+    ignored:
+      - points-after-3
+      - unknown-fields
+    legacy: []
+  - syntax: image-steps
+    input:
+      - header-attrs
+      - prefix-dsl
+      - markdown-body
+    required:
+      - step
+      - image
+      - desc
+    optional:
+      - note
+      - columns
+      - caption_style
+      - accent
+      - density
+      - wechat_safe_level
+    enums:
+      caption_style:
+        - none
+        - minimal
+        - numbered
+        - label
+      accent:
+        - brand
+        - muted
+        - contrast
+      density:
+        - compact
+        - normal
+        - airy
+      wechat_safe_level:
+        - strict
+        - normal
+    defaults:
+      columns: "1"
+      columns-out-of-range: clamped-1-4
+      caption_style: numbered
+      accent: brand
+      density: normal
+      wechat_safe_level: normal
+      unknown-enum: field-default
+    invalid:
+      - malformed-group
+    ignored:
+      - unsupported-attrs
+    legacy:
+      - case-folded-header-keys
+      - Step-label
+      - Desc-label
+      - Note-label
+      - experimental-to-normal
+  - syntax: image-phone-shot
+    input:
+      - header-attrs
+      - markdown-body
+    required:
+      - image
+    optional:
+      - columns
+      - image_shape
+      - variant
+      - wechat_safe_level
+      - title
+    enums:
+      image_shape:
+        - square
+        - rounded
+        - phone
+        - poster
+        - original
+      variant:
+        - clean
+        - card
+      wechat_safe_level:
+        - strict
+        - normal
+    defaults:
+      columns: "2"
+      columns-out-of-range: clamped-1-4
+      image_shape: phone
+      variant: clean
+      wechat_safe_level: normal
+      unknown-enum: field-default
+    invalid:
+      - malformed-image
+    ignored:
+      - caption_style
+      - accent
+      - unsupported-attrs
+      - phone-content-not-validated
+    legacy:
+      - case-folded-header-keys
+      - magazine-to-clean
+      - tech-to-clean
+      - elegant-to-clean
+      - bold-to-clean
+      - experimental-to-normal
+  - syntax: author-card
+    input:
+      - body-kv
+    required:
+      - name
+    optional:
+      - role
+      - bio
+      - tags
+      - note
+      - link
+    enums: {}
+    defaults:
+      max-tags: "4"
+      link: plain-text
+    invalid:
+      - blank-name
+    ignored:
+      - tags-after-4
+      - unknown-fields
+    legacy:
+      - json-object
+  - syntax: series
+    input:
+      - body-kv
+    required:
+      - name
+      - title
+    optional:
+      - issue
+      - desc
+      - tags
+      - next
+    enums: {}
+    defaults:
+      max-tags: "4"
+    invalid:
+      - blank-name
+      - blank-title
+    ignored:
+      - tags-after-4
+      - unknown-fields
+    legacy: []
+  - syntax: subscribe
+    input:
+      - body-kv
+    required:
+      - title
+    optional:
+      - label
+      - subtitle
+      - primary
+      - secondary
+      - note
+    enums: {}
+    defaults:
+      primary: 继续关注
+      secondary: 收藏这篇
+    invalid:
+      - blank-title
+    ignored:
+      - action-urls
+      - unknown-fields
+    legacy:
+      - json-object
+      - actions-fields
+  - syntax: people
+    input:
+      - row-dsl
+    required:
+      - name
+      - role
+      - body
+    optional:
+      - header-title
+      - tone
+    enums:
+      tone:
+        - default
+        - accent
+    defaults:
+      header-title: 核心角色
+      tone: default
+    invalid:
+      - blank-required-cell
+      - image-leading-row
+    ignored:
+      - cells-after-tone
+    legacy: []
+  - syntax: cases
+    input:
+      - row-dsl
+    required:
+      - title
+      - result
+      - body
+    optional:
+      - header-title
+      - image
+      - tone
+    enums:
+      tone:
+        - default
+        - accent
+    defaults:
+      header-title: 案例精选
+      tone: default
+    invalid:
+      - blank-required-cell
+    ignored:
+      - unsafe-image
+      - cells-after-tone
+    legacy: []
+  - syntax: pricing
+    input:
+      - row-dsl
+    required:
+      - plan
+      - price
+      - features
+    optional:
+      - header-title
+      - tone
+    enums:
+      tone:
+        - default
+        - accent
+    defaults:
+      header-title: 方案选择
+      tone: default
+    invalid:
+      - blank-required-cell
+    ignored:
+      - cells-after-tone
+    legacy: []
+  - syntax: faq
+    input:
+      - prefix-dsl
+    required:
+      - Q
+      - A
+    optional:
+      - header-title
+    enums: {}
+    defaults: {}
+    invalid:
+      - lowercase-prefix
+      - missing-Q-or-A
+      - blank-Q-or-A
+      - zero-pairs
+    ignored: []
+    legacy:
+      - pipe-row
+  - syntax: logos
+    input:
+      - row-dsl
+    required:
+      - name
+    optional:
+      - header-title
+      - note
+    enums: {}
+    defaults:
+      header-title: 合作品牌
+    invalid:
+      - blank-name
+      - trailing-empty-cell
+    ignored:
+      - cells-after-note
+    legacy: []
+  - syntax: checklist
+    input:
+      - row-dsl
+    required:
+      - status
+      - title
+    optional:
+      - header-title
+      - description
+    enums:
+      status:
+        - done
+        - pending
+        - warn
+    defaults:
+      header-title: 检查清单
+    invalid:
+      - blank-title
+      - unknown-status
+    ignored:
+      - cells-after-description
+    legacy:
+      - title-only-to-pending
+      - todo-to-pending
+      - "[x]-to-done"
+      - "[ ]-to-pending"
+      - case-folded-status
+  - syntax: toolbox
+    input:
+      - row-dsl
+    required:
+      - category
+      - name
+      - description
+    optional:
+      - header-title
+    enums: {}
+    defaults:
+      header-title: 资源工具箱
+    invalid:
+      - blank-required-cell
+    ignored:
+      - cells-after-description
+    legacy:
+      - fourth-cell-ignored
+  - syntax: specs
+    input:
+      - row-dsl
+    required:
+      - label
+      - value
+    optional:
+      - header-title
+      - note
+    enums: {}
+    defaults:
+      header-title: 参数信息
+    invalid:
+      - blank-label
+      - blank-value
+      - trailing-empty-note
+    ignored:
+      - cells-after-note
+    legacy: []
+  - syntax: notice
+    input:
+      - row-dsl
+    required:
+      - tone
+      - label
+      - body
+    optional:
+      - header-title
+      - note
+    enums:
+      tone:
+        - fit
+        - avoid
+        - risk
+        - require
+        - note
+    defaults:
+      header-title: 适用说明
+    invalid:
+      - unknown-tone
+      - blank-label
+      - blank-body
+      - extra-cells
+    ignored: []
+    legacy:
+      - chinese-label-inference-negative-first
+  - syntax: summary
+    input:
+      - body-kv
+    required:
+      - one-line.highlight
+      - three.items
+      - decision.fit-or-recommendation
+      - save.items
+    optional:
+      - variant
+      - eyebrow
+      - highlight
+      - title
+      - body
+      - items
+      - fit
+      - not_fit
+      - recommendation
+      - note
+    enums:
+      variant:
+        - three
+        - decision
+        - save
+    defaults:
+      omitted-variant: one-line
+    invalid:
+      - one-line.missing-highlight
+      - three.missing-items
+      - decision.missing-fit-and-recommendation
+      - save.missing-items
+    ignored:
+      - inapplicable-fields
+      - unknown-fields
+    legacy:
+      - points-to-three
+      - recommend-to-decision
+      - checklist-to-save
+      - action-to-save
+      - for-to-fit
+      - not-to-not_fit
+      - avoid-to-not_fit
+      - fit_label
+      - not_fit_label
+      - highlight-title-fallback
+      - items-auto-three
+      - decision-fields-auto-decision
+      - case-folded-variant
+  - syntax: closing
+    input:
+      - body-kv
+    required:
+      - title
+    optional:
+      - symbol
+      - subtitle
+    enums:
+      symbol:
+        - spark-solid
+        - spark-outline
+        - diamond-solid
+        - diamond-outline
+        - reference-mark
+        - asterism
+        - double-circle
+        - circle
+        - square-solid
+        - square-outline
+        - star
+        - infinity
+    defaults:
+      symbol: asterism
+      unknown-or-raw-symbol: asterism
+    invalid:
+      - blank-title
+    ignored:
+      - action
+      - link
+      - image
+      - variant
+      - unknown-fields
+    legacy: []
+  - syntax: cta
+    input:
+      - body-kv
+    required:
+      - title
+    optional:
+      - variant
+      - subtitle
+      - primary
+      - secondary
+      - tertiary
+      - note
+      - points
+    enums:
+      variant:
+        - save-follow
+        - consult
+        - trial
+    defaults:
+      variant: save-follow
+      unknown-variant: save-follow
+      save-follow.actions: 收藏这篇/关注更新/转给同事
+      consult.actions: 回复「排版」/查看案例/收藏这篇
+      trial.actions: 试一版高级稿/查看工作流/获取 API Key
+      max-points: "3"
+    invalid:
+      - blank-title
+    ignored:
+      - non-trial.points
+      - points-after-3
+      - unknown-fields
+    legacy:
+      - case-folded-variant
+  - syntax: callout
+    input:
+      - markdown-body
+    required:
+      - body
+    optional:
+      - type
+    enums:
+      type:
+        - info
+        - warning
+        - success
+        - danger
+    defaults:
+      type: info
+    invalid:
+      - blank-body
+    ignored: []
+    legacy:
+      - case-folded-type
+  - syntax: quote-card
+    input:
+      - json
+    required:
+      - text
+    optional:
+      - source
+    enums: {}
+    defaults:
+      source: 佚名
+    invalid:
+      - malformed-json
+      - blank-text
+      - wrong-type-text
+      - wrong-type-source
+    ignored:
+      - unknown-keys
+    legacy: []
+  - syntax: stat-row
+    input:
+      - json
+    required:
+      - value
+      - label
+    optional:
+      - unit
+    enums: {}
+    defaults: {}
+    invalid:
+      - non-array
+      - empty-array
+      - blank-item
+      - wrong-type-item
+    ignored:
+      - unknown-keys
+    legacy: []
+  - syntax: definition
+    input:
+      - json
+    required:
+      - term
+      - def
+    optional:
+      - termLabel
+    enums: {}
+    defaults:
+      termLabel: 术语
+    invalid:
+      - malformed-json
+      - blank-known-field
+      - wrong-type-known-field
+    ignored:
+      - defLabel
+      - unknown-keys
+    legacy: []
+  - syntax: tweet
+    input:
+      - json
+    required:
+      - name
+      - text
+    optional:
+      - handle
+      - avatar
+      - timestamp
+    enums: {}
+    defaults: {}
+    invalid:
+      - malformed-json
+      - blank-name
+      - blank-text
+      - wrong-type-known-field
+    ignored:
+      - unsafe-avatar
+      - unknown-keys
+    legacy: []
+  - syntax: question
+    input:
+      - prefix-dsl
+    required:
+      - Q
+      - A
+    optional: []
+    enums: {}
+    defaults: {}
+    invalid:
+      - lowercase-prefix
+      - missing-Q-or-A
+      - blank-Q-or-A
+      - zero-pairs
+    ignored: []
+    legacy:
+      - json-array
+  - syntax: comparison-table
+    input:
+      - json
+    required:
+      - left.title
+      - left.items
+      - right.title
+      - right.items
+    optional: []
+    enums: {}
+    defaults: {}
+    invalid:
+      - malformed-json
+      - missing-side
+      - blank-title
+      - empty-items
+      - wrong-type
+    ignored:
+      - unknown-keys
+    legacy: []
+  - syntax: changelog
+    input:
+      - json
+    required:
+      - version
+      - nonempty-category
+    optional:
+      - date
+      - added
+      - changed
+      - fixed
+      - removed
+    enums: {}
+    defaults: {}
+    invalid:
+      - malformed-json
+      - blank-version
+      - wrong-known-type
+      - no-nonempty-category
+    ignored:
+      - unknown-keys
+    legacy: []
+  - syntax: resource-list
+    input:
+      - json
+    required:
+      - name
+    optional:
+      - desc
+      - icon
+    enums: {}
+    defaults:
+      icon: uppercase-first-character
+    invalid:
+      - non-array
+      - empty-array
+      - blank-name
+      - wrong-type-known-field
+    ignored:
+      - unknown-keys
+    legacy:
+      - url-accepted-and-ignored
+  - syntax: split
+    input:
+      - header-attrs
+      - markdown-body
+    required:
+      - left-body
+      - right-body
+    optional:
+      - ratio
+    enums: {}
+    defaults:
+      ratio: 1:1
+    invalid:
+      - missing-divider
+      - multiple-dividers
+      - blank-side
+      - nonnumeric-ratio
+    ignored: []
+    legacy:
+      - space-separated-ratio
+      - out-of-range-ratio-clamped
+  - syntax: flow
+    input:
+      - markdown-body
+    required:
+      - nodes
+    optional:
+      - header-title
+    enums:
+      separator:
+        - →
+    defaults: {}
+    invalid:
+      - zero-nodes
+      - blank-node
+    ignored:
+      - extra-body-forms
+    legacy:
+      - arrow-ascii
+      - list-body
+  - syntax: matrix
+    input:
+      - header-attrs
+      - row-dsl
+    required:
+      - headers
+      - rows
+    optional: []
+    enums: {}
+    defaults: {}
+    invalid:
+      - blank-header
+      - blank-cell
+      - zero-rows
+      - ragged-row
+      - markdown-separator-row
+    ignored: []
+    legacy: []
+  - syntax: dialogue-pair
+    input:
+      - header-attrs
+      - prefix-dsl
+    required:
+      - U-or-E
+    optional:
+      - left
+      - right
+    enums: {}
+    defaults:
+      left: 用户
+      right: 助手
+    invalid:
+      - zero-valid-lines
+    ignored:
+      - unknown-opener-keys
+      - lowercase-prefix
+    legacy: []
+  - syntax: gallery-grid
+    input:
+      - header-attrs
+      - markdown-body
+    required:
+      - image
+    optional:
+      - variant
+      - density
+      - columns
+      - image_shape
+      - caption_style
+      - accent
+      - wechat_safe_level
+      - title
+      - description
+    enums:
+      variant:
+        - clean
+        - card
+      density:
+        - compact
+        - normal
+        - airy
+      image_shape:
+        - square
+        - rounded
+        - phone
+        - poster
+        - original
+      caption_style:
+        - none
+        - minimal
+        - numbered
+        - label
+      accent:
+        - brand
+        - muted
+        - contrast
+      wechat_safe_level:
+        - strict
+        - normal
+    defaults:
+      variant: clean
+      density: normal
+      columns: "3"
+      columns-out-of-range: clamped-1-4
+      image_shape: square
+      caption_style: minimal
+      accent: brand
+      wechat_safe_level: normal
+      unknown-enum: field-default
+    invalid:
+      - malformed-image
+    ignored:
+      - unsupported-attrs
+    legacy:
+      - case-folded-header-keys
+      - magazine-to-clean
+      - tech-to-clean
+      - elegant-to-clean
+      - bold-to-clean
+      - experimental-to-normal
+  - syntax: gallery-story
+    input:
+      - header-attrs
+      - markdown-body
+    required:
+      - image
+      - title
+      - body
+    optional:
+      - variant
+      - density
+      - caption_style
+      - accent
+      - wechat_safe_level
+    enums:
+      variant:
+        - clean
+        - card
+      density:
+        - compact
+        - normal
+        - airy
+      caption_style:
+        - none
+        - minimal
+        - numbered
+        - label
+      accent:
+        - brand
+        - muted
+        - contrast
+      wechat_safe_level:
+        - strict
+        - normal
+    defaults:
+      variant: card
+      density: normal
+      caption_style: minimal
+      accent: brand
+      wechat_safe_level: normal
+      unknown-enum: field-default
+    invalid:
+      - malformed-image
+      - malformed-row
+    ignored:
+      - unsupported-attrs
+    legacy:
+      - case-folded-header-keys
+      - magazine-to-clean
+      - tech-to-clean
+      - elegant-to-clean
+      - bold-to-clean
+      - experimental-to-normal
+  - syntax: figure-caption
+    input:
+      - header-attrs
+      - body-kv
+      - markdown-body
+    required:
+      - image
+      - caption
+    optional:
+      - caption_style
+      - source
+    enums:
+      caption_style:
+        - none
+        - minimal
+        - numbered
+        - label
+    defaults:
+      caption_style: numbered
+      unknown-enum: numbered
+    invalid:
+      - blank-image
+      - unsafe-image
+    ignored:
+      - blank-caption-node
+      - accent
+      - density
+      - wechat_safe_level
+      - unsupported-attrs
+    legacy:
+      - case-folded-header-keys
+      - image-alt-to-caption
+  - syntax: svg-reveal
+    input:
+      - header-attrs
+      - body-kv
+    required:
+      - question
+      - answer
+    optional:
+      - variant
+      - accent
+      - density
+      - wechat_safe_level
+      - svg_fallback
+    enums:
+      variant:
+        - clean
+        - card
+      accent:
+        - brand
+        - muted
+        - contrast
+      density:
+        - compact
+        - normal
+        - airy
+      wechat_safe_level:
+        - strict
+        - normal
+      svg_fallback:
+        - static
+        - first-layer
+    defaults:
+      variant: card
+      accent: brand
+      density: normal
+      wechat_safe_level: normal
+      svg_fallback: first-layer
+      unknown-enum: field-default
+    invalid:
+      - blank-question
+      - blank-answer
+    ignored:
+      - unsupported-attrs
+    legacy:
+      - case-folded-header-keys
+      - magazine-to-clean
+      - tech-to-clean
+      - elegant-to-clean
+      - bold-to-clean
+      - experimental-to-normal
+  - syntax: svg-swipe-gallery
+    input:
+      - header-attrs
+      - markdown-body
+    required:
+      - image
+    optional:
+      - variant
+      - accent
+      - density
+      - wechat_safe_level
+      - svg_fallback
+      - title
+    enums:
+      variant:
+        - clean
+        - card
+      accent:
+        - brand
+        - muted
+        - contrast
+      density:
+        - compact
+        - normal
+        - airy
+      wechat_safe_level:
+        - strict
+        - normal
+      svg_fallback:
+        - static
+        - first-layer
+    defaults:
+      variant: card
+      accent: brand
+      density: normal
+      wechat_safe_level: normal
+      svg_fallback: first-layer
+      unknown-enum: field-default
+    invalid:
+      - zero-valid-images
+      - malformed-image
+    ignored:
+      - interactive-images-after-2
+      - unsupported-attrs
+    legacy:
+      - one-image-static-card
+      - case-folded-header-keys
+      - magazine-to-clean
+      - tech-to-clean
+      - elegant-to-clean
+      - bold-to-clean
+      - experimental-to-normal
