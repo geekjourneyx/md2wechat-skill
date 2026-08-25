@@ -176,6 +176,43 @@ func TestLayoutDocumentationSeparatesLocalValidationFromRemoteConformance(t *tes
 	}
 }
 
+func TestLayoutDocumentationKeepsPR1AuthoringBoundary(t *testing.T) {
+	layout := readDocumentationFile(t, "../../docs/LAYOUT.md")
+	for _, phrase := range []string{
+		"`input_positions`",
+		"primary `body_format`",
+		"`Opener` 与 `Fields` / `Rows` / `Body`",
+		"canonical `Variants[].Name`",
+		"canonical `Example`",
+		"`CompatibleBodyFormats` 和 `Variants[].Aliases`",
+		"普通 `##` / `###` heading 足以组织绝大多数正文",
+		"可选 `epilogue` → 可选 `summary` → 至多一个 `cta` → 可选 `closing`",
+	} {
+		if !strings.Contains(layout, phrase) {
+			t.Errorf("docs/LAYOUT.md must preserve PR1 authoring boundary %q", phrase)
+		}
+	}
+
+	for _, path := range []string{
+		"../../skills/md2wechat/SKILL.md",
+		"../../platforms/openclaw/md2wechat/SKILL.md",
+	} {
+		text := readDocumentationFile(t, path)
+		for _, phrase := range []string{
+			"Discover with `capabilities`, `layout list`, and `layout show` before authoring",
+			"Use ordinary headings by default; use `section-title` only for important transitions",
+			"Use at most one hero and one CTA",
+			"`epilogue` is an optional body-tail transition",
+			"`closing` is an optional quiet signature and never carries an action",
+			"Validate locally, then convert in API mode to prove rendering",
+		} {
+			if !strings.Contains(text, phrase) {
+				t.Errorf("%s must preserve Agent decision rule %q", path, phrase)
+			}
+		}
+	}
+}
+
 func TestLayoutDocumentationE2EFixtureMatchesCurrentCatalog(t *testing.T) {
 	markdown := readDocumentationFile(t, "../../examples/layout-e2e-test.md")
 	catalog := layoutcatalog.NewCatalog()

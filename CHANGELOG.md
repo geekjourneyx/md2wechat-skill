@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- v3.3.0 release candidate: recalibrated advanced-layout discovery to 77 recommended scenarios, 56 recommended syntax names, 3 compatibility modules, 4 base enhancements, and 63 render-layer syntax capabilities.
+- Added the `section-title`, `epilogue`, and `closing` authoring syntaxes, hero `masthead` guidance, explicit one-CTA/quiet-closing boundaries, and the full Agent field-contract reading order (`input_positions` through canonical example; compatibility fields remain read-only).
+- Updated the target conformance contract to 84 witnesses (56 canonical, 25 structurally distinct non-default branches, 3 compatibility). This is release-candidate documentation only; live production conformance remains required before release completion.
+
 ## [3.2.0] - 2026-07-14
 
 ### Changed

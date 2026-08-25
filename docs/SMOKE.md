@@ -10,6 +10,8 @@
 
 > 说明：本文档只记录验证结论和关键观察，不记录敏感凭证、草稿 ID、素材 ID。
 
+> v3.3.0 release candidate boundary: Gate B against the current production endpoint failed at 2026-08-25T15:41Z. The 84-witness description below remains the required conformance contract, not a claim that this candidate has passed live API proof. Historical smoke evidence is not rewritten by this note.
+
 ---
 
 ## 测试前提

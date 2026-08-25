@@ -52,16 +52,18 @@ Treat these commands as the source of truth for:
 - currently supported image providers
 - currently visible themes after override resolution
 - bundled and overridden prompt catalog entries
-- advanced layout counts: 68 recommended source scenarios, 53 recommended syntax names, 3 compatibility modules, 4 base enhancements, and 60 render-layer syntax capabilities
+- advanced layout counts: 77 recommended source scenarios, 56 recommended syntax names, 3 compatibility modules, 4 base enhancements, and 63 render-layer syntax capabilities
 - the nine recommended layout categories: `opening`, `infographic`, `judgment`, `evidence`, `conversion`, `brand`, `sprint4`, `free-layout`, and `interactive`
 - humanizer intensity levels: `gentle` / `medium` / `aggressive` / `authentic`
 
 **高级排版模块约束**：`layout` 模块使用通用 `:::name` 语法，仅在 **API 模式**（`convert` 默认）下渲染。`block` 是保留语法名，不是通用占位符。
 AI 模式（`--mode ai`）不解析 `:::name` 高级排版块，这些块将以普通段落输出。
 
-每个 recommended 语法必须有一个 canonical executable witness；只有结构不同的 renderer 分支才增加 variant witness。68 场景到 48 个来源语法名以及 5 个 guide-only 语法名的 mapping 只保存在测试中，不进入 CLI discovery 或运行时 catalog。
+每个 recommended 语法必须有一个 canonical executable witness；只有结构不同的 renderer 分支才增加 variant witness。77 场景到推荐语法名的 mapping 只保存在测试中，不进入 CLI discovery 或运行时 catalog。
 
-真实 conformance 必须证明所有 recommended canonical witness、结构不同的 variant witness 和 3 个 compatibility witness 都由目标 API 语义渲染：响应成功、模块 marker 与稳定内容存在、原始 `:::name` fence 不残留。`layout validate` 成功不等于远端 renderer 已部署。
+真实 conformance 必须证明 84 个 witness（56 个 recommended canonical、25 个结构不同的 non-default branch、3 个 compatibility）都由目标 API 语义渲染：响应成功、模块 marker 与稳定内容存在、原始 `:::name` fence 不残留。`layout validate` 成功不等于远端 renderer 已部署。
+
+新内容读取 `layout show` 时，依次读取 `input_positions`、primary `body_format` 与对应 `Opener`/`Fields`/`Rows`/`Body`、canonical `Variants[].Name`、canonical `Example`。`CompatibleBodyFormats` 和 `Variants[].Aliases` 只读且只服务旧稿兼容，不得作为新内容选择。
 
 ## Verification Order
 

@@ -33,7 +33,7 @@ md2wechat 把公众号发布流程拆成一组可验证的 CLI 命令：
 |---|---|
 | Markdown 转微信 HTML | `convert`，支持预览、上传图片、创建草稿 |
 | 发布前检查 | `inspect --json` 输出标题、摘要、图片、cover、draft readiness |
-| 稳定排版 | API 模式成功时返回最终 HTML，覆盖 68 个主推高级排版场景条目和 53 个主推 `:::` 语法名 |
+| 稳定排版 | API 模式成功时返回最终 HTML，覆盖 77 个主推高级排版场景条目和 56 个主推 `:::` 语法名 |
 | Agent 自动化 | `capabilities`、`doctor`、`themes`、`layout`、`providers` 等 discovery 命令 |
 | 内容生产 | `write`、`humanize`、`title suggest`、`generate_cover`、`generate_infographic` |
 | 多账号发布 | 命名公众号账号，本地只读发现，不输出 Secret |
@@ -87,15 +87,15 @@ API 模式适合需要稳定输出、多人协作、批量发布或 Agent 自动
 |---|---|---|
 | 输出方式 | 生成 prompt，由外部 LLM 继续处理 | 直接返回微信 HTML |
 | 主题 | 3 个基础主题 | 48 个专业主题 |
-| 高级排版模块 | 不解析，`:::module` 作为普通段落输出 | API renderer 解析 53 个推荐 `:::module` 语法 |
+| 高级排版模块 | 不解析，`:::module` 作为普通段落输出 | API renderer 解析 56 个推荐 `:::module` 语法 |
 | 转换结果 | 需要外部 LLM 完成 HTML | converter 成功时返回最终 HTML |
 | 发布自动化 | 适合实验 | 适合团队、客户号、矩阵号 |
 
 专业能力包括：
 
 - 48 个微信渲染精调主题：[theme-gallery](https://md2wechat.app/theme-gallery)
-- 68 个主推高级排版场景条目，对应 53 个主推 `:::` 语法名：[docs/LAYOUT.md](docs/LAYOUT.md)
-- 3 个兼容模块只用于旧稿迁移；加上 4 个基础增强能力，共计 60 项渲染层语法能力
+- 77 个主推高级排版场景条目，对应 56 个主推 `:::` 语法名：[docs/LAYOUT.md](docs/LAYOUT.md)
+- 3 个兼容模块只用于旧稿迁移；加上 4 个基础增强能力，共计 63 项渲染层语法能力
 - 多公众号账号：[docs/CONFIG.md](docs/CONFIG.md)
 - 微信接口固定出口：[docs/WECHAT-CREDENTIALS.md](docs/WECHAT-CREDENTIALS.md)
 - 发布前 readiness 检查：[docs/DISCOVERY.md](docs/DISCOVERY.md)
@@ -210,7 +210,7 @@ md2wechat layout validate --file article.md --json
 
 完整教程见 [docs/LAYOUT.md](docs/LAYOUT.md)。
 
-这里的计数不是同一维度：68 是上游使用场景条目，一个语法名可以覆盖多个结构变体；53 是 `layout list --json` 默认返回的推荐语法名。兼容模块默认不混入推荐列表。
+这里的计数不是同一维度：77 是上游使用场景条目，一个语法名可以覆盖多个结构变体；56 是 `layout list --json` 默认返回的推荐语法名。兼容模块默认不混入推荐列表。完整计数契约见 [docs/LAYOUT.md](docs/LAYOUT.md)。
 
 ---
 

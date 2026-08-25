@@ -153,14 +153,16 @@ Use this decision frame:
 
 Use CLI discovery as the source of truth for layout syntax instead of memorizing or guessing `body_format` values:
 
-- Inspect the opener, body schema, canonical executable example, and structurally distinct variants with `layout show <name> --json`. Reuse the canonical witness.
+- Discover with `capabilities`, `layout list`, and `layout show` before authoring. In `layout show`, read `input_positions`, then primary `body_format` and its `Opener` / `Fields` / `Rows` / `Body`, then canonical `Variants[].Name`, then canonical `Example`. `CompatibleBodyFormats` and `Variants[].Aliases` are read-only compatibility facts, never selectors for new content.
 - Use `layout render` for structured fields and `--body-file` (or `--body-file -` for stdin) for complex bodies, then validate the generated Markdown.
-- Default discovery returns recommended modules. Use `layout list --lifecycle compatibility --json` only for old-content migration. Local validation proves syntax acceptance only; production support is a release-conformance fact.
+- Default discovery returns recommended modules. Use `layout list --lifecycle compatibility --json` only for old-content migration. Validate locally, then convert in API mode to prove rendering; local validation proves syntax acceptance only, while production support is a release-conformance fact.
 
 Default module discipline:
 
 - Do not pile on modules.
-- Use at most one hero, one verdict, and one cta unless the user explicitly asks for more.
+- Use ordinary headings by default; use `section-title` only for important transitions.
+- Use at most one hero and one CTA unless the user explicitly asks for more.
+- `epilogue` is an optional body-tail transition. `closing` is an optional quiet signature and never carries an action.
 - Skip modules when the article does not provide enough content to fill them honestly.
 
 ## API And AI Mode

@@ -3,7 +3,7 @@
 > **前提**：高级排版模块是 **API 模式**专属功能。`convert` 命令默认即 API 模式，无需额外参数。  
 > 如需 API 访问权限，请联系作者咨询。
 
-本教程讲解微信公众号高级排版模块的核心用法。当前数量与完整规格以 `md2wechat capabilities --json`、`layout list --json` 和 `layout show` 为准；默认 discovery 返回 53 个推荐语法。
+本教程讲解微信公众号高级排版模块的核心用法。当前数量与完整规格以 `md2wechat capabilities --json`、`layout list --json` 和 `layout show` 为准；默认 discovery 返回 56 个推荐语法。
 
 ---
 
@@ -113,16 +113,27 @@ subtitle: 不是好不好看，是读者读不读得完
 
 ### Catalog 计数与 lifecycle
 
-<!-- layout-count-contract: recommended_scenarios=68 recommended_syntaxes=53 compatibility_modules=3 base_enhancements=4 render_syntaxes=60 -->
+<!-- layout-count-contract: recommended_scenarios=77 recommended_syntaxes=56 compatibility_modules=3 base_enhancements=4 render_syntaxes=63 -->
 
-- 68 个主推高级排版场景条目是上游使用场景维度。
-- 53 个主推 `:::` 语法名是 `layout list --json` 默认返回的 CLI 对象。
+- 77 个主推高级排版场景条目是上游使用场景维度。
+- 56 个主推 `:::` 语法名是 `layout list --json` 默认返回的 CLI 对象。
 - 3 个 compatibility 模块是 `dialogue`、`gallery`、`longimage`，只用于旧稿迁移。
-- 4 个基础增强能力与上述语法合计为 60 项渲染层语法能力。
+- 4 个基础增强能力与上述语法合计为 63 项渲染层语法能力。
 
-68 与 53 不能互换：一个语法名可以承载多个场景或结构变体。场景映射只用于维护测试，不会通过 CLI discovery 输出。
+77 与 56 不能互换：一个语法名可以承载多个场景或结构变体。场景映射只用于维护测试，不会通过 CLI discovery 输出。
 
 具体 opener、body、schema、canonical witness 和结构 variant 以 `layout show <name> --json` 为准。生产渲染状态以发布时保存的目标 API conformance 证据为准，不在常青教程中固化单次运行结果。
+
+### Agent 读取 `layout show` 的固定顺序
+
+不要从示例反推字段。对每个已选模块，按以下顺序读取：
+
+1. `input_positions`，确定输入进入 body、header 或 prefix 的位置；
+2. primary `body_format`，再读取相应的 `Opener` 与 `Fields` / `Rows` / `Body`；
+3. canonical `Variants[].Name`，只选择这些规范变体；
+4. canonical `Example`，作为可执行起点。
+
+`CompatibleBodyFormats` 和 `Variants[].Aliases` 是只读兼容事实：它们只帮助迁移旧稿，**不得**作为新内容的选择项。`layout validate` 只接受本地 catalog/schema；目标 API 是否实际支持 renderer，仍以一次 API `convert` 或发布 conformance 为准。
 
 ---
 
@@ -279,6 +290,17 @@ subtitle: 主题决定气质，模块决定读者能不能看懂
 - 在数据报告里用（改用 metrics）
 - 一篇文章放两个 hero
 
+**masthead 极简变体**：正文只保留 `title`、可选 `subtitle` 和 `symbol`；不要把 `kicker`、`points`、`image` 或 `tags` 塞进 masthead。
+
+```
+:::hero
+variant: masthead
+title: 先让读者看见这篇文章的主判断
+subtitle: 再用正文把判断说清楚
+symbol: spark-solid
+:::
+```
+
 ---
 
 #### toc — 阅读导航
@@ -325,6 +347,36 @@ PART 04 | 行动 | 今天就能上手的 3 步方法 | default
 index: 02
 title: 旧能力也要接进同一套系统
 subtitle: 系统模块 · 列表 / 代码 / 表格
+:::
+```
+
+---
+
+#### section-title — 重要章节转场
+
+**什么时候用**：普通 `##` / `###` heading 足以组织绝大多数正文；仅在重要主题切换、关键判断或章节节奏需要明确停顿时使用 `section-title`。它不是每段文字的装饰。
+
+`numbered` 必须带 `index`；`symbol` 只适用于 `marker`、`divider`、`focus`、`vertical`，不要填给 `numbered` 或 `frame`。
+
+```
+:::section-title
+variant: numbered
+index: "02"
+title: 再验证真实渲染
+:::
+```
+
+---
+
+#### epilogue — 正文尾部过渡
+
+**什么时候用**：在完整叙事后、`summary` 或结尾行动区之前，留一段可选的安静过渡。它不是 CTA，也不承载行动或链接。
+
+```
+:::epilogue
+title: 结构稳定之后，表达才有余地生长。
+subtitle: 下一节把这个判断落到真实工作流。
+symbol: infinity
 :::
 ```
 
@@ -647,19 +699,38 @@ note: 联系作者咨询 API 服务
 :::
 ```
 
+一篇文章最多一个 CTA。行动需要在这里说清；不要用 `closing` 再重复一次行动。
+
+---
+
+#### closing — 安静的最终签名
+
+**什么时候用**：可选地放在 CTA 之后，用一句不带行动的收束句结束文章。`closing` 永远不放 `action`、`link`、`image` 或第二个 CTA。
+
+```
+:::closing
+title: 先让读者看懂，再让读者行动。
+subtitle: 每次发布前都用真实转换结果验证。
+symbol: asterism
+:::
+```
+
 ---
 
 #### faq — 常见问题
 
 **什么时候用**：有 3-8 个读者经常问的问题，或者需要处理潜在疑虑时。
 
-**格式**：`问题 | 回答`
+**格式**：primary `dialogue` 使用成对的 `Q:` / `A:` 行；旧版 `问题 | 回答` 仅作为兼容格式，不用于新稿。
 
 ```
 :::faq[常见问题]
-这些模块只能在某个主题里用吗？ | 不是，48 个专业主题都支持高级排版模块。
-API 模式和 AI 模式有什么区别？ | API 模式直接转换输出 HTML，AI 模式生成提示词给外部 AI。
-我的文章需要用几个模块？ | 按 4 件事原则选，hero 1 个，verdict 1 个，cta 1 个，不要堆。
+Q: 这些模块只能在某个主题里用吗？
+A: 不是，专业主题都支持高级排版模块。
+Q: API 模式和 AI 模式有什么区别？
+A: API 模式直接转换输出 HTML，AI 模式生成提示词给外部 AI。
+Q: 我的文章需要用几个模块？
+A: 按 4 件事原则选，hero 1 个，CTA 1 个，不要堆。
 :::
 ```
 
@@ -721,9 +792,9 @@ note: 适合章节末尾和观点文复盘
 
 ```
 :::notice[适用说明]
-适合 | 干货长文、教程拆解、白皮书、活动总结 | 适合需要结构感和复用性的内容
-前提 | 先把信息分层 | 不要把所有信息都塞进一个模块
-风险 | 模块堆太多会抢正文 | 一篇文章保留 3 到 6 个重点模块更稳
+fit | 适合 | 干货长文、教程拆解、白皮书、活动总结 | 适合需要结构感和复用性的内容
+require | 前提 | 先把信息分层 | 不要把所有信息都塞进一个模块
+risk | 风险 | 模块堆太多会抢正文 | 一篇文章保留 3 到 6 个重点模块更稳
 :::
 ```
 
@@ -997,7 +1068,7 @@ md2wechat layout show gallery --json
 
 ## 四、一篇完整文章示例
 
-以下是一篇观点文的完整排版骨架，涵盖 opening → body → conversion → brand 的完整流程。
+以下是一篇观点文的完整排版骨架，涵盖 opening → body → conversion → brand 的完整流程。默认使用普通 headings；只有重要转场才加入 `section-title`。文章尾部的固定边界是：可选 `epilogue` → 可选 `summary` → 至多一个 `cta` → 可选 `closing`。`epilogue` 是正文尾部过渡，`cta` 是唯一行动区，`closing` 只是安静签名。
 
 ```markdown
 ---
@@ -1022,7 +1093,11 @@ kicker: 先给读者一个判断
 
 ---
 
-## 01 问题：读者没有理由读你的文章
+:::section-title
+variant: numbered
+index: "01"
+title: 读者为什么没有理由读你的文章
+:::
 
 :::audience-fit
 title: 这篇适合谁
@@ -1046,7 +1121,11 @@ fact | 选最少的模块，每件事做好一个
 
 ---
 
-## 02 原理：排版要解决的 4 件事
+:::section-title
+variant: focus
+title: 排版要解决的 4 件事
+symbol: double-circle
+:::
 
 :::metrics[排版的 4 个目标]
 让读者知道值不值得读 | attention | hero / cards / verdict | accent
@@ -1066,7 +1145,11 @@ fact | 选最少的模块，每件事做好一个
 
 ---
 
-## 03 实战：选最少的模块
+:::section-title
+variant: divider
+title: 选最少的模块
+symbol: spark-outline
+:::
 
 :::compare[模块化前 vs 后]
 制作时间 | 每篇约 2 小时，手工堆样式 | 每篇约 35 分钟，用模块填内容 | accent
@@ -1082,13 +1165,23 @@ body: 让读者每次打开你的文章都知道"哦，这是 XX 的风格"，�
 
 ---
 
-## 04 行动：今天就能上手
+:::section-title
+variant: vertical
+title: 今天就能上手
+symbol: diamond-solid
+:::
 
 :::checklist[上手清单]
 done | 安装 md2wechat CLI | 确认 version 输出
 pending | 配置 API Key | 先运行 config validate
-todo | 运行 layout list 发现模块 | 只选择能正确填充的模块
-todo | 写一篇文章 | 先 validate 再 convert
+pending | 运行 layout list 发现模块 | 只选择能正确填充的模块
+pending | 写一篇文章 | 先 validate 再 convert
+:::
+
+:::epilogue
+title: 当结构可复用，表达才有更大的自由。
+subtitle: 现在只保留读者真正需要的下一步。
+symbol: infinity
 :::
 
 :::summary
@@ -1113,6 +1206,11 @@ title: 如果这篇对你有帮助，可以把这个系列收藏起来
 subtitle: 每周分享 AI 工具和内容创作方法论。
 primary: 关注公众号
 secondary: 转发给正在写长文的人
+:::
+
+:::closing
+title: 先让读者看懂，再让读者行动。
+symbol: asterism
 :::
 ```
 
