@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -256,6 +257,55 @@ metadata:
 				t.Fatalf("decoded field default = %q, want marker", spec.Fields.Optional[0].Default)
 			}
 			if tt.want != "" && (err == nil || !strings.Contains(err.Error(), tt.want)) {
+				t.Fatalf("parseLayoutSpec() error = %v, want %q", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseLayoutSpecValidatesVariantDefaults(t *testing.T) {
+	base := `schema_version: "1"
+name: variant-defaults
+body_format: fields
+version: "1.0.0"
+category: opening
+serves: [attention]
+fields:
+  optional:
+    - name: variant
+      default: marker
+    - name: symbol
+      enum: [circle, star]
+      applies_to: [marker]
+variants:
+  - name: marker
+    defaults:
+      %s
+metadata:
+  author: test
+  provenance: test
+`
+	tests := []struct {
+		name, defaults, want string
+	}{
+		{name: "valid", defaults: "symbol: circle"},
+		{name: "unknown field", defaults: "missing: value", want: "not declared"},
+		{name: "invalid enum", defaults: "symbol: square", want: "must be one of"},
+		{name: "blank value", defaults: "symbol: ''", want: "must not be empty"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec, err := parseLayoutSpec([]byte(fmt.Sprintf(base, tt.defaults)))
+			if tt.want == "" {
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got := spec.Variants[0].Defaults; !reflect.DeepEqual(got, map[string]string{"symbol": "circle"}) {
+					t.Fatalf("defaults = %#v", got)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("parseLayoutSpec() error = %v, want %q", err, tt.want)
 			}
 		})

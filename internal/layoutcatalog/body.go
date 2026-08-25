@@ -742,7 +742,7 @@ func validateFieldShapes(shapes []FieldShapeSpec, values map[string][]string) []
 					parts = append(parts, strings.TrimSpace(part))
 				}
 			}
-			if len(parts) < shape.MinParts {
+			if shape.MinParts > 0 && len(parts) < shape.MinParts {
 				issues = append(issues, bodyValidationIssue{field: shape.Field, message: fmt.Sprintf("field %s requires at least %d parts separated by %q", shape.Field, shape.MinParts, shape.Separator), cause: ErrInvalidFieldValue})
 				continue
 			}

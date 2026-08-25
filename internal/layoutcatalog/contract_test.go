@@ -846,6 +846,15 @@ func TestTitleAndClosureCatalogContracts(t *testing.T) {
 				if got := fieldByName(spec.Fields.Optional, "index"); !slices.Equal(got.AppliesTo, []string{"numbered"}) || got.MinRunes != 1 || got.MaxRunes != 4 {
 					t.Fatalf("numbered index = %#v", got)
 				}
+				for variant, wantDefaults := range map[string]map[string]string{
+					"divider":  {"symbol": "spark-outline"},
+					"focus":    {"symbol": "double-circle"},
+					"vertical": {"symbol": "diamond-solid"},
+				} {
+					if got := variantDefaults(spec.Variants, variant); !reflect.DeepEqual(got, wantDefaults) {
+						t.Fatalf("%s defaults = %#v, want %#v", variant, got, wantDefaults)
+					}
+				}
 			case "cta":
 				if got := fieldByName(spec.Fields.Optional, "points").AppliesTo; !slices.Equal(got, []string{"trial"}) {
 					t.Fatalf("points applicability = %v", got)
@@ -856,6 +865,14 @@ func TestTitleAndClosureCatalogContracts(t *testing.T) {
 				for field, wantDefault := range map[string]string{"primary": "收藏这篇", "secondary": "关注更新", "tertiary": "转给同事"} {
 					if got := fieldByName(spec.Fields.Optional, field).Default; got != wantDefault {
 						t.Fatalf("%s default = %q, want %q", field, got, wantDefault)
+					}
+				}
+				for variant, wantDefaults := range map[string]map[string]string{
+					"consult": {"primary": "回复「排版」", "secondary": "查看案例", "tertiary": "收藏这篇"},
+					"trial":   {"primary": "试一版高级稿", "secondary": "查看工作流", "tertiary": "获取 API Key"},
+				} {
+					if got := variantDefaults(spec.Variants, variant); !reflect.DeepEqual(got, wantDefaults) {
+						t.Fatalf("%s defaults = %#v, want %#v", variant, got, wantDefaults)
 					}
 				}
 			}
@@ -878,6 +895,15 @@ func variantNames(variants []VariantSpec) []string {
 		names = append(names, variant.Name)
 	}
 	return names
+}
+
+func variantDefaults(variants []VariantSpec, name string) map[string]string {
+	for _, variant := range variants {
+		if variant.Name == name {
+			return variant.Defaults
+		}
+	}
+	return nil
 }
 
 func fieldNames(fields []FieldSpec) []string {

@@ -144,15 +144,16 @@ type LayoutMetadata struct {
 }
 
 type VariantSpec struct {
-	Name           string           `yaml:"name"`
-	Aliases        []string         `yaml:"aliases,omitempty"`
-	Description    string           `yaml:"description,omitempty"`
-	UseWhen        string           `yaml:"use_when"`
-	Required       []string         `yaml:"required,omitempty"`
-	RequiredAny    [][]string       `yaml:"required_any,omitempty"`
-	Shapes         []FieldShapeSpec `yaml:"shapes,omitempty"`
-	Example        string           `yaml:"example"`
-	AssertContains string           `yaml:"assert_contains,omitempty"`
+	Name           string            `yaml:"name"`
+	Aliases        []string          `yaml:"aliases,omitempty"`
+	Description    string            `yaml:"description,omitempty"`
+	UseWhen        string            `yaml:"use_when"`
+	Defaults       map[string]string `yaml:"defaults,omitempty" json:"defaults,omitempty"`
+	Required       []string          `yaml:"required,omitempty"`
+	RequiredAny    [][]string        `yaml:"required_any,omitempty"`
+	Shapes         []FieldShapeSpec  `yaml:"shapes,omitempty"`
+	Example        string            `yaml:"example"`
+	AssertContains string            `yaml:"assert_contains,omitempty"`
 }
 
 type ParamSpec struct {

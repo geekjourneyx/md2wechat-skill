@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
 
@@ -162,6 +163,9 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 		return nil, err
 	}
 	if err := validateFieldApplicability(&spec); err != nil {
+		return nil, err
+	}
+	if err := validateVariantDefaults(&spec); err != nil {
 		return nil, err
 	}
 	return &spec, nil
@@ -423,6 +427,35 @@ func validateFieldApplicability(spec *LayoutSpec) error {
 	return nil
 }
 
+func validateVariantDefaults(spec *LayoutSpec) error {
+	fields := map[string]FieldSpec{}
+	for _, field := range declaredSpecFields(spec) {
+		fields[field.Name] = field
+	}
+	for _, variant := range spec.Variants {
+		for name, value := range variant.Defaults {
+			field, ok := fields[name]
+			if !ok {
+				return fmt.Errorf("variant %q default field %q is not declared", variant.Name, name)
+			}
+			if !fieldAppliesToVariant(field, &variant) {
+				return fmt.Errorf("variant %q default field %q does not apply", variant.Name, name)
+			}
+			if strings.TrimSpace(value) == "" {
+				return fmt.Errorf("variant %q default field %q must not be empty", variant.Name, name)
+			}
+			if err := checkFieldEnum(field, spec.Variants, value); err != nil {
+				return fmt.Errorf("variant %q default field %q: %w", variant.Name, name, err)
+			}
+			runes := utf8.RuneCountInString(strings.TrimSpace(value))
+			if runes < field.MinRunes || (field.MaxRunes > 0 && runes > field.MaxRunes) {
+				return fmt.Errorf("variant %q default field %q violates rune bounds", variant.Name, name)
+			}
+		}
+	}
+	return nil
+}
+
 func declaredSpecFields(spec *LayoutSpec) []FieldSpec {
 	var fields []FieldSpec
 	if spec.Fields != nil {
@@ -443,8 +476,11 @@ func validateFieldShapeSpecs(shapes []FieldShapeSpec, declared map[string]bool, 
 		if shape.Separator == "" {
 			return fmt.Errorf("%s shape separator must not be empty", owner)
 		}
-		if shape.MinParts <= 1 {
+		if shape.MinParts < 0 || shape.MinParts == 1 {
 			return fmt.Errorf("%s shape min_parts must be greater than 1", owner)
+		}
+		if shape.MinParts == 0 && shape.MaxParts == 0 {
+			return fmt.Errorf("%s shape requires min_parts or max_parts", owner)
 		}
 		if shape.MaxParts < 0 {
 			return fmt.Errorf("%s shape max_parts must be nonnegative", owner)

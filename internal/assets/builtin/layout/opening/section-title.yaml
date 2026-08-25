@@ -61,6 +61,8 @@ variants:
       :::
   - name: divider
     use_when: 用分隔线清晰切开上下文
+    defaults:
+      symbol: spark-outline
     required: [title]
     example: |
       :::section-title
@@ -88,6 +90,8 @@ variants:
       :::
   - name: focus
     use_when: 需要聚焦一个关键转折
+    defaults:
+      symbol: double-circle
     required: [title]
     example: |
       :::section-title
@@ -97,6 +101,8 @@ variants:
       :::
   - name: vertical
     use_when: 用竖向标题制造更强的章节节奏
+    defaults:
+      symbol: diamond-solid
     required: [title]
     example: |
       :::section-title

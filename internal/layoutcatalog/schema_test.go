@@ -79,6 +79,7 @@ func TestSchemaExtensionsExposeAgentInputAndFieldDefaults(t *testing.T) {
 		Fields: &FieldsSpec{Optional: []FieldSpec{{
 			Name: "variant", Default: "marker", MinRunes: 1, MaxRunes: 4, AppliesTo: []string{"marker"},
 		}}},
+		Variants: []VariantSpec{{Name: "marker", Defaults: map[string]string{"symbol": "diamond-outline"}}},
 	}
 	if got := spec.Fields.Optional[0].Default; got != "marker" {
 		t.Fatalf("field default = %q, want marker", got)
@@ -89,5 +90,8 @@ func TestSchemaExtensionsExposeAgentInputAndFieldDefaults(t *testing.T) {
 	}
 	if !strings.Contains(string(encoded), `"input_positions":["body-kv","header-attrs"]`) {
 		t.Fatalf("input positions missing from JSON: %s", encoded)
+	}
+	if !strings.Contains(string(encoded), `"defaults":{"symbol":"diamond-outline"}`) {
+		t.Fatalf("variant defaults missing from JSON: %s", encoded)
 	}
 }

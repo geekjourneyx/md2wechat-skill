@@ -226,7 +226,8 @@ func TestFieldShapeValidationMatrix(t *testing.T) {
 	}{
 		{name: "pipe accepts two", values: []string{"one | two"}, shapes: []FieldShapeSpec{{Field: "items", Separator: "|", MinParts: 2}}},
 		{name: "pipe rejects one", values: []string{"one"}, shapes: []FieldShapeSpec{{Field: "items", Separator: "|", MinParts: 2}}, wantErr: true},
-		{name: "pipe rejects overflow", values: []string{"one | two | three"}, shapes: []FieldShapeSpec{{Field: "items", Separator: "|", MinParts: 2, MaxParts: 2}}, wantErr: true},
+		{name: "max only accepts one", values: []string{"one"}, shapes: []FieldShapeSpec{{Field: "items", Separator: "|", MaxParts: 2}}},
+		{name: "max only rejects overflow", values: []string{"one | two | three"}, shapes: []FieldShapeSpec{{Field: "items", Separator: "|", MaxParts: 2}}, wantErr: true},
 		{name: "plus ignores empty parts", values: []string{"one + "}, shapes: []FieldShapeSpec{{Field: "items", Separator: "+", MinParts: 2}}, wantErr: true},
 		{name: "validates every repeated value", values: []string{"01 | 20 | 30 | title", "broken"}, shapes: []FieldShapeSpec{{Field: "point", Separator: "|", MinParts: 4}}, wantErr: true},
 	}
@@ -471,6 +472,7 @@ func TestTitleAndClosureContractValidationMatrix(t *testing.T) {
 		{name: "cta rejects missing title", markdown: ":::cta\nvariant: save-follow\n:::\n"},
 		{name: "cta consult accepts title", markdown: ":::cta\nvariant: consult\ntitle: 咨询\n:::\n", accepted: true},
 		{name: "cta trial accepts three points", markdown: ":::cta\nvariant: trial\ntitle: 试用\npoints: 一 | 二 | 三\n:::\n", accepted: true},
+		{name: "cta trial accepts one point", markdown: ":::cta\nvariant: trial\ntitle: 试用\npoints: 一\n:::\n", accepted: true},
 		{name: "cta rejects unknown variant", markdown: ":::cta\nvariant: unknown\ntitle: 标题\n:::\n"},
 		{name: "cta rejects points outside trial", markdown: ":::cta\nvariant: save-follow\ntitle: 收藏\npoints: 一 | 二\n:::\n"},
 		{name: "cta rejects more than three trial points", markdown: ":::cta\nvariant: trial\ntitle: 试用\npoints: 一 | 二 | 三 | 四\n:::\n"},
@@ -515,6 +517,7 @@ func TestParseLayoutSpecFieldShapeAndOutputOrderSchema(t *testing.T) {
 		{name: "unknown shape field", fields: "  shapes:\n    - {field: missing, separator: '|', min_parts: 2}\n", want: "shape field"},
 		{name: "empty separator", fields: "  shapes:\n    - {field: items, separator: '', min_parts: 2}\n", want: "separator"},
 		{name: "small minimum", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 1}\n", want: "greater than 1"},
+		{name: "max only", fields: "  shapes:\n    - {field: items, separator: '|', max_parts: 3}\n"},
 		{name: "negative max parts", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 2, max_parts: -1}\n", want: "max_parts"},
 		{name: "inverted max parts", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 3, max_parts: 2}\n", want: "at least min_parts"},
 		{name: "negative max occurrences", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 2, max_occurrences: -1}\n", want: "max_occurrences"},

@@ -59,7 +59,6 @@ fields:
   shapes:
     - field: points
       separator: "|"
-      min_parts: 2
       max_parts: 3
 variants:
   - name: save-follow
@@ -74,6 +73,10 @@ variants:
       :::
   - name: consult
     use_when: 结尾引导咨询
+    defaults:
+      primary: 回复「排版」
+      secondary: 查看案例
+      tertiary: 收藏这篇
     required: [title]
     example: |
       :::cta
@@ -85,6 +88,10 @@ variants:
       :::
   - name: trial
     use_when: 结尾引导试用或购买
+    defaults:
+      primary: 试一版高级稿
+      secondary: 查看工作流
+      tertiary: 获取 API Key
     required: [title]
     example: |
       :::cta
