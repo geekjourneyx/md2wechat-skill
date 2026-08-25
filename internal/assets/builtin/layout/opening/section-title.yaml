@@ -53,12 +53,6 @@ variants:
   - name: marker
     use_when: 用轻量标记开始一个正文主题
     required: [title]
-    example: |
-      :::section-title
-      variant: marker
-      title: 先校准输入契约
-      symbol: diamond-outline
-      :::
   - name: divider
     use_when: 用分隔线清晰切开上下文
     defaults:

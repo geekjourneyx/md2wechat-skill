@@ -31,6 +31,7 @@ fields:
     - name: variant
       description: 引用结构变体
       enum: [light, brand, proof]
+      default: light
       example: light
     - name: quote
       description: 引用正文（quote 或 text 至少填一个）
@@ -87,11 +88,6 @@ variants:
     use_when: 需要轻量突出一句引用
     required_any:
       - [quote, text]
-    example: |
-      :::quote
-      variant: light
-      quote: 模块服务阅读任务，而不是填满页面。
-      :::
   - name: brand
     aliases: [accent]
     use_when: 需要突出品牌主张
@@ -117,7 +113,6 @@ variants:
       :::
 example: |
   :::quote
-  variant: light
   eyebrow: 核心观点
   quote: 模块帮助读者更快找到判断、证据和下一步。
   source: 内容设计原则

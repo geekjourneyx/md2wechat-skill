@@ -40,6 +40,12 @@ func validateBlockBody(spec *LayoutSpec, body []string) []bodyValidationIssue {
 		issues := parseIssues
 		if len(parseIssues) == 0 {
 			issues = append(issues, validateBodyFacts(spec, format, facts)...)
+			// Compatibility formats preserve old syntax only. Once the primary
+			// syntax parsed, its field and enum validation is authoritative and
+			// must not be bypassed by a looser legacy format.
+			if i == 0 && len(issues) != 0 {
+				return issues
+			}
 		}
 		if len(issues) == 0 {
 			return nil
@@ -64,9 +70,7 @@ func parseBodyFacts(spec *LayoutSpec, format string, body []string) (bodyFacts, 
 	case BodyFormatFields, "":
 		return parseFieldsBody(spec.Fields, body)
 	case BodyFormatMarkdownFields:
-		facts.addDeclaredFields(spec.Fields, body)
-		facts.imageCount = countMarkdownImages(body)
-		return facts, nil
+		return parseMarkdownFieldsBody(spec.Fields, body)
 	case BodyFormatJSONObject, BodyFormatJSONArray:
 		fields, types, items, err := parseJSONBodyData(body, format)
 		if err != nil {
@@ -95,6 +99,26 @@ func parseBodyFacts(spec *LayoutSpec, format string, body []string) (bodyFacts, 
 	default:
 		return facts, []bodyValidationIssue{{message: fmt.Sprintf("unsupported body_format %q", format)}}
 	}
+}
+
+func parseMarkdownFieldsBody(fields *FieldsSpec, body []string) (bodyFacts, []bodyValidationIssue) {
+	facts := newBodyFacts()
+	for _, raw := range body {
+		line := strings.TrimSpace(strings.TrimRight(raw, "\r"))
+		if line == "" {
+			continue
+		}
+		if name, value, ok := parseDeclaredField(fields, line); ok {
+			facts.addField(name, value)
+			continue
+		}
+		if markdownImageLineRE.MatchString(line) {
+			facts.imageCount++
+			continue
+		}
+		return facts, []bodyValidationIssue{{message: "markdown fields body requires a declared field or Markdown image"}}
+	}
+	return facts, nil
 }
 
 func parseFieldsBody(fields *FieldsSpec, body []string) (bodyFacts, []bodyValidationIssue) {

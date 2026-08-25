@@ -73,13 +73,6 @@ variants:
   - name: editorial
     use_when: 观点文开场先给出判断
     required: [title]
-    example: |
-      :::hero
-      variant: editorial
-      eyebrow: 深度观察
-      title: 高级排版服务阅读决策
-      subtitle: 主题决定气质，模块决定读者能不能看懂
-      :::
   - name: briefing
     use_when: 报告开场需要列出导读
     required: [title]
@@ -109,7 +102,6 @@ variants:
       :::
 example: |
   :::hero
-  variant: editorial
   eyebrow: 深度观察
   meta: 8 min read
   kicker: 先把判断讲清楚

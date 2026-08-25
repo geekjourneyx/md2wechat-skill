@@ -922,7 +922,7 @@ func TestKnownDriftContractsAreCalibrated(t *testing.T) {
 		"resource-list":  {required: []string{"name"}},
 	}
 	calibratedFormats := map[string]string{
-		"callout": BodyFormatLines, "image-steps": BodyFormatMarkdownFields, "question": BodyFormatDialogue,
+		"callout": BodyFormatMarkdownFields, "image-steps": BodyFormatMarkdownFields, "question": BodyFormatDialogue,
 	}
 	c := NewCatalog()
 	if err := c.Load(); err != nil {

@@ -210,6 +210,12 @@ func assertScenarioHasWitness(t *testing.T, spec *LayoutSpec, variant string) {
 			continue
 		}
 		c := NewCatalogWithSpec(spec)
+		if strings.TrimSpace(candidate.Example) == "" && isCanonicalDefaultVariant(spec, candidate.Name) {
+			if err := checkExecutableWitness(c, spec.Name, "", spec.Example, spec.ExampleAssertContains); err != nil {
+				t.Fatal(err)
+			}
+			return
+		}
 		if err := c.ValidateWitness(WitnessContract{
 			Module: spec.Name, Variant: candidate.Name, VariantAliases: candidate.Aliases,
 			Example: candidate.Example, AssertContains: candidate.AssertContains,
@@ -296,6 +302,26 @@ func TestExecutableWitnessUsesEffectiveLastWriteSelector(t *testing.T) {
 	}
 }
 
+func TestInfographicMicroCaseCanonicalWitnessAvoidsLegacyAlias(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	spec, ok := c.Get("infographic")
+	if !ok {
+		t.Fatal("missing infographic")
+	}
+	for _, variant := range spec.Variants {
+		if variant.Name == "micro-case" {
+			if strings.Contains(variant.Example, "type: mini-case") || !strings.Contains(variant.Example, "type: micro-case") {
+				t.Fatalf("micro-case canonical witness = %q", variant.Example)
+			}
+			return
+		}
+	}
+	t.Fatal("missing micro-case variant")
+}
+
 func TestExecutableWitnessRejectsInvalidContracts(t *testing.T) {
 	c := NewCatalog()
 	c.modules["demo"] = &LayoutSpec{
@@ -344,6 +370,9 @@ func TestBuiltinVariantWitnesses(t *testing.T) {
 	for _, spec := range c.ListFiltered(ListFilter{}) {
 		for _, variant := range spec.Variants {
 			variant := variant
+			if strings.TrimSpace(variant.Example) == "" && isCanonicalDefaultVariant(spec, variant.Name) {
+				continue
+			}
 			t.Run(spec.Name+"/"+variant.Name, func(t *testing.T) {
 				if err := c.ValidateWitness(WitnessContract{
 					Module: spec.Name, Variant: variant.Name, VariantAliases: variant.Aliases,
@@ -369,6 +398,9 @@ func TestBuiltinExecutableWitnessesAreComplete(t *testing.T) {
 		})
 		for _, variant := range spec.Variants {
 			variant := variant
+			if strings.TrimSpace(variant.Example) == "" && isCanonicalDefaultVariant(spec, variant.Name) {
+				continue
+			}
 			t.Run(spec.Name+"/"+variant.Name, func(t *testing.T) {
 				if strings.TrimSpace(variant.UseWhen) == "" {
 					t.Fatal("variant use_when is required")
@@ -381,6 +413,30 @@ func TestBuiltinExecutableWitnessesAreComplete(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestBuiltinRemoteWitnessInventory(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	canonical, variants, compatibility := 0, 0, 0
+	for _, spec := range c.ListFiltered(ListFilter{}) {
+		canonical++
+		for _, variant := range spec.Variants {
+			if strings.TrimSpace(variant.Example) != "" {
+				variants++
+			}
+		}
+	}
+	for _, spec := range c.ListFiltered(ListFilter{Lifecycle: LifecycleCompatibility}) {
+		if strings.TrimSpace(spec.Example) != "" {
+			compatibility++
+		}
+	}
+	if canonical != 56 || variants != 25 || compatibility != 3 || canonical+variants+compatibility != 84 {
+		t.Fatalf("witness inventory = canonical:%d variants:%d compatibility:%d total:%d, want 56/25/3/84", canonical, variants, compatibility, canonical+variants+compatibility)
 	}
 }
 

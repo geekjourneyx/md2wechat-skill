@@ -83,11 +83,6 @@ variants:
     aliases: [statement, judgment, claim]
     use_when: 需要突出单一主判断
     required: [title]
-    example: |
-      :::infographic
-      type: thesis
-      title: 高级排版不是装饰，是阅读决策系统
-      :::
   - name: formula
     aliases: [equation]
     use_when: 需要表达可记忆公式
@@ -200,13 +195,12 @@ variants:
       - {field: items, separator: "|", min_parts: 2}
     example: |
       :::infographic
-      type: mini-case
+      type: micro-case
       title: 一篇草稿如何变成可发布稿
       items: 原稿没有结构 | 补齐判断与证据 | 完成发布检查
       :::
 example: |
   :::infographic
-  type: thesis
   eyebrow: 核心判断
   title: 高级排版不是装饰，是阅读决策系统
   subtitle: 它先帮读者判断值不值得看，再帮作者建立记忆点

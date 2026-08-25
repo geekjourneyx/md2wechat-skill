@@ -204,6 +204,9 @@ func validateLoadedWitnesses(spec *LayoutSpec) error {
 			return fmt.Errorf("variant %q requires use_when", variant.Name)
 		}
 		if strings.TrimSpace(variant.Example) == "" {
+			if isCanonicalDefaultVariant(spec, variant.Name) {
+				continue
+			}
 			return fmt.Errorf("variant %q requires an executable example", variant.Name)
 		}
 		if err := temporary.ValidateWitness(WitnessContract{
@@ -214,6 +217,21 @@ func validateLoadedWitnesses(spec *LayoutSpec) error {
 		}
 	}
 	return nil
+}
+
+// isCanonicalDefaultVariant identifies the branch selected by a declared
+// schema default. Such a variant is covered by the module's canonical witness
+// and does not require a redundant second remote witness.
+func isCanonicalDefaultVariant(spec *LayoutSpec, variant string) bool {
+	if spec.Fields == nil {
+		return false
+	}
+	for _, field := range spec.Fields.Optional {
+		if field.Default == variant {
+			return true
+		}
+	}
+	return false
 }
 
 func validateRowsSpec(rows *RowsSpec) error {

@@ -1,7 +1,8 @@
 schema_version: "1"
 name: callout
 lifecycle: recommended
-body_format: lines
+body_format: markdown_fields
+compatible_body_formats: [lines]
 version: "1.0.0"
 since: "1.5.0"
 category: sprint4
@@ -26,6 +27,9 @@ anti_pattern: |
   danger 类型用于非危险场景失去警示意义；
   内容写太长应该拆成正文段落。
 fields:
+  required:
+    - name: body
+      description: 提示正文
   optional:
     - name: type
       enum: [info, warning, success, danger]
@@ -40,7 +44,7 @@ body:
 example: |
   :::callout
   type: warning
-  注意：发布前请检查图片、链接和行动按钮，避免复制到公众号后出现断链。
+  body: 注意：发布前请检查图片、链接和行动按钮，避免复制到公众号后出现断链。
   :::
 metadata:
   author: md2wechat

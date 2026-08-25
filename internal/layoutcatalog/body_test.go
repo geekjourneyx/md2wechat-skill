@@ -20,6 +20,28 @@ func TestValidateRowsRejectsTooFewColumns(t *testing.T) {
 	}
 }
 
+func TestCalloutCanonicalTypeAndLegacyTokenBody(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		name, markdown string
+		wantErr        bool
+	}{
+		{name: "canonical type", markdown: ":::callout\ntype: warning\nbody: 先完成发布前检查。\n:::\n"},
+		{name: "canonical invalid type", markdown: ":::callout\ntype: urgent\nbody: 先完成发布前检查。\n:::\n", wantErr: true},
+		{name: "legacy token opener", markdown: ":::callout warning\n先完成发布前检查。\n:::\n"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			report := c.Validate(tt.markdown)
+			if (len(report.Errors) != 0) != tt.wantErr {
+				t.Fatalf("errors = %+v, wantErr %v", report.Errors, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestValidateBlockBodyMatrix(t *testing.T) {
 	field := func(name string) FieldSpec { return FieldSpec{Name: name} }
 	tests := []struct {
@@ -95,7 +117,7 @@ func TestValidateBlockBodyMatrix(t *testing.T) {
 				Fields:     &FieldsSpec{Optional: []FieldSpec{field("step"), field("desc")}},
 				Body:       &BodySpec{Group: &FieldGroupSpec{Start: "step", Required: []string{"step", "desc"}, Min: 1}},
 			},
-			body: []string{"unrelated"}, wantErr: "at least 1 complete group",
+			body: []string{"unrelated"}, wantErr: "declared field or Markdown image",
 		},
 		{
 			name: "split accepts two nonempty sides",

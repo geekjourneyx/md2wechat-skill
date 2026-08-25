@@ -64,13 +64,6 @@ variants:
   - name: save-follow
     use_when: 结尾引导收藏或关注
     required: [title]
-    example: |
-      :::cta
-      variant: save-follow
-      title: 收藏这套结构，下一篇直接复用
-      primary: 收藏
-      secondary: 关注
-      :::
   - name: consult
     use_when: 结尾引导咨询
     defaults:
@@ -104,7 +97,6 @@ variants:
       :::
 example: |
   :::cta
-  variant: save-follow
   title: 如果这篇对你有帮助，可以先收藏，再试着改一篇自己的文章。
   primary: 收藏这篇
   secondary: 关注更新
