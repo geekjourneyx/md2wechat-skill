@@ -840,6 +840,12 @@ var recommendedModuleNames = []string{
 
 var compatibilityModuleNames = []string{"dialogue", "gallery", "longimage"}
 
+func TestRecommendedSyntaxInventoryHasExactCount(t *testing.T) {
+	if got := len(recommendedModuleNames); got != 56 {
+		t.Fatalf("recommended syntax inventory = %d, want 56", got)
+	}
+}
+
 func moduleNames(mods []*LayoutSpec) []string {
 	names := make([]string, 0, len(mods))
 	for _, mod := range mods {

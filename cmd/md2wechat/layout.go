@@ -18,9 +18,8 @@ const (
 	codeLayoutRendered  = "LAYOUT_RENDERED"
 	codeLayoutValidated = "LAYOUT_VALIDATED"
 
-	recommendedLayoutScenarioCount = 68
+	recommendedLayoutScenarioCount = 77
 	baseLayoutEnhancementCount     = 4
-	renderLayoutSyntaxCount        = 60
 )
 
 var (

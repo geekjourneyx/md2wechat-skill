@@ -286,11 +286,11 @@ func TestLayoutListCompatibilityIsolation(t *testing.T) {
 	}
 
 	defaultNames := listNames("")
-	if len(defaultNames) != 53 {
-		t.Fatalf("default count = %d, want 53", len(defaultNames))
+	if len(defaultNames) != 56 {
+		t.Fatalf("default count = %d, want 56", len(defaultNames))
 	}
-	if got := buildLayoutCapabilityData()["module_count"]; got != 53 {
-		t.Fatalf("capability module_count = %#v, want 53", got)
+	if got := buildLayoutCapabilityData()["module_count"]; got != 56 {
+		t.Fatalf("capability module_count = %#v, want 56", got)
 	}
 	for _, legacy := range []string{"dialogue", "gallery", "longimage"} {
 		if slices.Contains(defaultNames, legacy) {

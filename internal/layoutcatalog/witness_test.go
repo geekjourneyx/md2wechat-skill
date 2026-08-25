@@ -435,8 +435,14 @@ func TestBuiltinRemoteWitnessInventory(t *testing.T) {
 			compatibility++
 		}
 	}
-	if canonical != 56 || variants != 25 || compatibility != 3 || canonical+variants+compatibility != 84 {
-		t.Fatalf("witness inventory = canonical:%d variants:%d compatibility:%d total:%d, want 56/25/3/84", canonical, variants, compatibility, canonical+variants+compatibility)
+	const (
+		recommendedCanonicalWitnessCount = 56
+		structuralVariantWitnessCount    = 25
+		compatibilityWitnessCount        = 3
+	)
+	wantTotal := recommendedCanonicalWitnessCount + structuralVariantWitnessCount + compatibilityWitnessCount
+	if canonical != recommendedCanonicalWitnessCount || variants != structuralVariantWitnessCount || compatibility != compatibilityWitnessCount || canonical+variants+compatibility != wantTotal {
+		t.Fatalf("witness inventory = canonical:%d variants:%d compatibility:%d total:%d, want 56/25/3/%d", canonical, variants, compatibility, canonical+variants+compatibility, wantTotal)
 	}
 }
 

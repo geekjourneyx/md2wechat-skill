@@ -52,7 +52,7 @@ func TestLayoutDocumentationCountContract(t *testing.T) {
 		}
 		counts = append(counts, value)
 	}
-	if want := []int{68, 53, 3, 4, 60}; !equalInts(counts, want) {
+	if want := []int{77, 56, 3, 4, 63}; !equalInts(counts, want) {
 		t.Fatalf("layout count contract = %v, want %v", counts, want)
 	}
 	if counts[1]+counts[2]+counts[3] != counts[4] {
@@ -64,11 +64,11 @@ func TestLayoutDocumentationCountContract(t *testing.T) {
 
 	discoveryText := readDocumentationFile(t, "../../docs/DISCOVERY.md")
 	semanticCounts := map[string]int{
-		"recommended_scenario_count": 68,
-		"recommended_syntax_count":   53,
+		"recommended_scenario_count": 77,
+		"recommended_syntax_count":   56,
 		"compatibility_module_count": 3,
 		"base_enhancement_count":     4,
-		"render_syntax_count":        60,
+		"render_syntax_count":        63,
 	}
 	for key, value := range semanticCounts {
 		pattern := regexp.MustCompile(`"` + regexp.QuoteMeta(key) + `"\s*:\s*` + strconv.Itoa(value) + `\b`)
@@ -168,7 +168,7 @@ func TestLayoutDocumentationSeparatesLocalValidationFromRemoteConformance(t *tes
 	if !strings.Contains(agentGuide, "本地 catalog/schema") {
 		t.Error("docs/AGENT-GUIDE.md must state the local validation boundary")
 	}
-	dateStampedResult := regexp.MustCompile(`20\d\d-\d\d-\d\d[^\n]*80 pass`)
+	dateStampedResult := regexp.MustCompile(`20\d\d-\d\d-\d\d[^\n]*84 pass`)
 	for _, path := range []string{"../../docs/LAYOUT.md", "../../docs/SMOKE.md"} {
 		if dateStampedResult.MatchString(readDocumentationFile(t, path)) {
 			t.Errorf("%s must not embed a dated one-off conformance result", path)
