@@ -143,9 +143,9 @@ type LayoutMetadata struct {
 	InspiredBy string `yaml:"inspired_by,omitempty"`
 }
 
-// AgentContractSpec records the upstream authoring contract separately from
-// local validation mechanics. It is declarative discovery metadata: it never
-// selects a parser or changes rendering behavior.
+// AgentContractSpec is a pinned upstream-audit record. It does not control
+// parsing, validation, rendering, or public discovery; public authoring
+// guidance is derived from the canonical schema fields on LayoutSpec.
 type AgentContractSpec struct {
 	BodyFormat    string              `yaml:"body_format" json:"body_format"`
 	Required      []string            `yaml:"required" json:"required"`
@@ -221,7 +221,7 @@ type LayoutSpec struct {
 	ExampleAssertContains string               `yaml:"example_assert_contains,omitempty"`
 	Variants              []VariantSpec        `yaml:"variants,omitempty"`
 	Metadata              LayoutMetadata       `yaml:"metadata"`
-	AgentContract         *AgentContractSpec   `yaml:"agent_contract,omitempty" json:"agent_contract,omitempty"`
+	AgentContract         *AgentContractSpec   `yaml:"agent_contract,omitempty" json:"-"`
 }
 
 type ListFilter struct {

@@ -575,7 +575,7 @@ func validateFieldApplicability(spec *LayoutSpec) error {
 	for _, field := range declaredSpecFields(spec) {
 		seen := map[string]bool{}
 		for _, variant := range field.AppliesTo {
-			if !identities[variant] {
+			if variant != "one-line" && !identities[variant] {
 				return fmt.Errorf("field %q applies_to variant %q is not declared", field.Name, variant)
 			}
 			if seen[variant] {

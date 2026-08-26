@@ -727,7 +727,7 @@ func fieldAppliesToVariant(field FieldSpec, active *VariantSpec) bool {
 		return true
 	}
 	if active == nil {
-		return false
+		return containsString(field.AppliesTo, "one-line")
 	}
 	return containsString(field.AppliesTo, active.Name)
 }

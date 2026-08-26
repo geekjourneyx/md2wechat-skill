@@ -124,11 +124,7 @@ func TestAPILocalParameterMatrixUsesDiscoveryThemeAndExactSharedFields(t *testin
 	if err := themes.LoadThemes(); err != nil {
 		t.Fatal(err)
 	}
-	apiThemes := themes.ListAPIThemes()
-	if len(apiThemes) == 0 {
-		t.Fatal("theme discovery returned no API-selectable theme")
-	}
-	selected, err := themes.ResolveThemeForMode(ModeAPI, apiThemes[0])
+	selected, err := firstSelectableAPITheme(themes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,6 +191,18 @@ func TestAPILocalParameterMatrixUsesDiscoveryThemeAndExactSharedFields(t *testin
 			}
 		})
 	}
+}
+
+// firstSelectableAPITheme keeps transport tests independent of map iteration
+// and of non-selectable API catalog manifests such as api-collection.
+func firstSelectableAPITheme(themes *ThemeManager) (*Theme, error) {
+	for _, name := range themes.ListThemes() {
+		theme, err := themes.ResolveThemeForMode(ModeAPI, name)
+		if err == nil {
+			return theme, nil
+		}
+	}
+	return nil, fmt.Errorf("theme discovery returned no API-selectable theme")
 }
 
 func TestAPIConverterDoesNotRetryNonzeroContractResponse(t *testing.T) {

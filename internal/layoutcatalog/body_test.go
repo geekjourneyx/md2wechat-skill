@@ -912,3 +912,30 @@ func TestRenderRawBodyUsesPrimaryValidation(t *testing.T) {
 		t.Fatalf("Render() error = %v, want missing dialogue pair", err)
 	}
 }
+
+func TestSummaryCanonicalFieldsApplyOnlyToEffectiveBranch(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		name, markdown string
+		accepted       bool
+	}{
+		{name: "one line accepts highlight", markdown: ":::summary\nhighlight: One line\n:::", accepted: true},
+		{name: "three accepts title items and note", markdown: ":::summary\nvariant: three\ntitle: Three\nitems: one | two | three\nnote: Save this\n:::", accepted: true},
+		{name: "decision accepts decision fields", markdown: ":::summary\nvariant: decision\ntitle: Decide\nfit: Fit\nrecommendation: Choose\n:::", accepted: true},
+		{name: "save accepts title items and note", markdown: ":::summary\nvariant: save\ntitle: Save\nitems: one | two\nnote: Keep\n:::", accepted: true},
+		{name: "decision rejects one line highlight", markdown: ":::summary\nvariant: decision\nhighlight: ineffective\nrecommendation: Choose\n:::"},
+		{name: "three rejects decision recommendation", markdown: ":::summary\nvariant: three\nitems: one | two\nrecommendation: ineffective\n:::"},
+		{name: "save rejects legacy body", markdown: ":::summary\nvariant: save\nitems: one | two\nbody: ineffective\n:::"},
+		{name: "one line rejects items", markdown: ":::summary\nhighlight: One line\nitems: ineffective\n:::"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			report := c.Validate(tt.markdown)
+			if got := len(report.Errors) == 0; got != tt.accepted {
+				t.Fatalf("accepted=%v errors=%+v", got, report.Errors)
+			}
+		})
+	}
+}

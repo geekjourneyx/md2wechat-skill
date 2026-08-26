@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -20,11 +21,12 @@ import (
 )
 
 type e2eWitness struct {
-	Module          string
-	Variant         string
-	Markdown        string
-	Probe           string
-	ProbeInImageAlt bool
+	Module           string
+	Variant          string
+	EffectiveVariant string
+	Markdown         string
+	Probe            string
+	ProbeInImageAlt  bool
 }
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -38,9 +40,12 @@ type e2eSettings struct {
 	ExpectedBuildID     string
 	FieldContractSHA    string
 	FieldContractResult string
+	ConformanceMode     string
 }
 
 const layoutConformanceRequestTimeout = 30 * time.Second
+
+const pinnedUpstreamFieldContractSHA = "052346a43deb83d211471bb7b423318f6f6ff6c1"
 
 func layoutConformanceCatalog() (*layoutcatalog.Catalog, error) {
 	catalog := layoutcatalog.NewCatalog()
@@ -79,6 +84,13 @@ func loadE2ESettings() (e2eSettings, error) {
 		ExpectedBuildID:     strings.TrimSpace(os.Getenv("MD2WECHAT_API_BUILD_ID")),
 		FieldContractSHA:    strings.TrimSpace(os.Getenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_SHA")),
 		FieldContractResult: strings.TrimSpace(os.Getenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_RESULT")),
+		ConformanceMode:     strings.TrimSpace(os.Getenv("MD2WECHAT_LAYOUT_CONFORMANCE_MODE")),
+	}
+	if settings.ConformanceMode == "" {
+		settings.ConformanceMode = "smoke"
+	}
+	if settings.ConformanceMode != "smoke" && settings.ConformanceMode != "release" {
+		return e2eSettings{}, fmt.Errorf("invalid layout conformance mode %q", settings.ConformanceMode)
 	}
 	if settings.APIKey == "" {
 		return e2eSettings{}, fmt.Errorf("authentication failure: MD2WECHAT_API_KEY is not configured")
@@ -94,6 +106,14 @@ func loadE2ESettings() (e2eSettings, error) {
 	}
 	if settings.FieldContractResult == "failed" {
 		return e2eSettings{}, fmt.Errorf("upstream field-contract fixture failed at %s", settings.FieldContractSHA)
+	}
+	if settings.ConformanceMode == "release" {
+		if settings.FieldContractSHA == "" || settings.FieldContractResult != "passed" {
+			return e2eSettings{}, fmt.Errorf("release conformance requires passed upstream field-contract SHA/result evidence")
+		}
+		if settings.FieldContractSHA != pinnedUpstreamFieldContractSHA {
+			return e2eSettings{}, fmt.Errorf("release conformance must use pinned SHA %s, got %s", pinnedUpstreamFieldContractSHA, settings.FieldContractSHA)
+		}
 	}
 	return settings, nil
 }
@@ -233,9 +253,12 @@ func TestVariantConformanceRequiresExactRendererBranch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.module+"/"+tt.variant, func(t *testing.T) {
 			witness := e2eWitness{Module: tt.module, Variant: tt.variant, Probe: "Probe"}
+			if tt.module == "cta" && tt.variant == "trial" {
+				witness.Markdown = "points: one"
+			}
 			valid := fmt.Sprintf(`<section data-mpa-action-id="%s" %s="%s">Probe`, tt.module, tt.attribute, tt.value)
 			if tt.module == "cta" {
-				valid += `<span data-module-part="cta-title"></span><span data-module-part="cta-primary"></span><span data-module-part="cta-secondary"></span>`
+				valid = ctaSemanticFixture(tt.variant, true)
 			}
 			valid += `</section>`
 			if err := checkConformanceHTML(witness, valid); err != nil {
@@ -263,26 +286,117 @@ func TestSemanticConformanceRules(t *testing.T) {
 	}
 }
 
-func TestSemanticConformanceEnforcesHeroMastheadAndCTAThreeParts(t *testing.T) {
+func TestSemanticConformanceEnforcesHeroMastheadAndExactCTAVariantStructures(t *testing.T) {
 	if err := checkSemanticConformance(e2eWitness{Module: "hero", Variant: "masthead"}, `<section></section>`); err == nil {
 		t.Fatal("masthead without its structural part must fail")
 	}
 	if err := checkSemanticConformance(e2eWitness{Module: "hero", Variant: "masthead"}, `<section data-module-part="hero-masthead"></section>`); err != nil {
 		t.Fatal(err)
 	}
-	if err := checkSemanticConformance(e2eWitness{Module: "cta", Variant: "trial"}, `<section data-module-part="cta-title"></section>`); err == nil {
-		t.Fatal("CTA without all structural parts must fail")
+	valid := map[string]string{
+		"save-follow": `<section data-cta-variant="save-follow"><section data-module-part="cta-save-confirmation"></section><section data-module-part="cta-save-actions"><span data-cta-action="primary"></span><span data-cta-action="secondary"></span><span data-cta-action="tertiary"></span></section></section>`,
+		"consult":     `<section data-cta-variant="consult"><section data-module-part="cta-consult-layout"><section data-module-part="cta-consult-trust"></section><section data-module-part="cta-consult-primary"><span data-cta-action="primary"></span></section><section data-module-part="cta-consult-aux"><span data-cta-action="secondary"></span><span data-cta-action="tertiary"></span></section></section></section>`,
+		"trial":       `<section data-cta-variant="trial"><section data-module-part="cta-trial-benefits"></section><section data-module-part="cta-trial-primary"><span data-cta-action="primary"></span></section><section data-module-part="cta-trial-secondary"><span data-cta-action="secondary"></span><span data-cta-action="tertiary"></span></section></section>`,
 	}
-	if err := checkSemanticConformance(e2eWitness{Module: "cta", Variant: "trial"}, `<section data-module-part="cta-title"><span data-module-part="cta-primary"></span><span data-module-part="cta-secondary"></span></section>`); err != nil {
+	for variant, rendered := range valid {
+		witness := e2eWitness{Module: "cta", Variant: variant, Markdown: ":::cta\nvariant: " + variant + "\ntitle: Probe\npoints: one\n:::", Probe: "Probe"}
+		if err := checkSemanticConformance(witness, rendered); err != nil {
+			t.Fatalf("%s valid structure: %v", variant, err)
+		}
+	}
+	for _, rendered := range []string{
+		`<section data-cta-variant="save-follow"><section data-module-part="cta-save-actions"><span data-cta-action="primary"></span><span data-cta-action="secondary"></span><span data-cta-action="tertiary"></span></section></section>`,
+		`<section data-cta-variant="consult"><section data-module-part="cta-consult-layout"><section data-module-part="cta-consult-primary"><span data-cta-action="primary"></span></section><section data-module-part="cta-consult-aux"><span data-cta-action="secondary"></span><span data-cta-action="tertiary"></span></section></section></section>`,
+		`<section data-cta-variant="trial"><section data-module-part="cta-trial-primary"><span data-cta-action="primary"></span></section><section data-module-part="cta-trial-secondary"><span data-cta-action="secondary"></span><span data-cta-action="tertiary"></span></section></section>`,
+	} {
+		if err := checkSemanticConformance(e2eWitness{Module: "cta", Variant: "trial", Markdown: "points: one"}, rendered); err == nil {
+			t.Fatalf("CTA missing exact upstream structure must fail: %s", rendered)
+		}
+	}
+	for _, tt := range []struct {
+		name, variant, markdown, rendered string
+	}{
+		{
+			name:     "save follow rejects consult subtree",
+			variant:  "save-follow",
+			markdown: ":::cta\nvariant: save-follow\ntitle: Probe\n:::",
+			rendered: ctaSemanticFixture("save-follow", false) + `<section data-module-part="cta-consult-layout"></section>`,
+		},
+		{
+			name:     "consult rejects trial subtree",
+			variant:  "consult",
+			markdown: ":::cta\nvariant: consult\ntitle: Probe\n:::",
+			rendered: ctaSemanticFixture("consult", false) + `<section data-module-part="cta-trial-primary"></section>`,
+		},
+		{
+			name:     "trial without points rejects benefits subtree",
+			variant:  "trial",
+			markdown: ":::cta\nvariant: trial\ntitle: Probe\n:::",
+			rendered: ctaSemanticFixture("trial", true),
+		},
+		{
+			name:     "save follow rejects fourth action marker",
+			variant:  "save-follow",
+			markdown: ":::cta\nvariant: save-follow\ntitle: Probe\n:::",
+			rendered: strings.Replace(ctaSemanticFixture("save-follow", false), `</section></section>`, `<span data-cta-action="quaternary"></span></section></section>`, 1),
+		},
+		{
+			name:     "consult requires note marker when note is supplied",
+			variant:  "consult",
+			markdown: ":::cta\nvariant: consult\ntitle: Probe\nnote: Context\n:::",
+			rendered: ctaSemanticFixture("consult", false),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			witness := e2eWitness{Module: "cta", Variant: tt.variant, Markdown: tt.markdown, Probe: "Probe"}
+			if err := checkSemanticConformance(witness, tt.rendered); err == nil {
+				t.Fatal("CTA response with a non-variant upstream marker must fail")
+			}
+		})
+	}
+}
+
+func TestCanonicalCTAWitnessUsesCatalogDefaultForExactStructureChecks(t *testing.T) {
+	c, err := layoutConformanceCatalog()
+	if err != nil {
 		t.Fatal(err)
 	}
-	for _, html := range []string{
-		`<section data-module-part="cta-title"><span data-module-part="cta-primary"></span><span data-module-part="unrelated"></span></section>`,
-		`<section data-module-part="cta-title"><span data-module-part="cta-primary"></span><span data-module-part="cta-primary"></span></section>`,
-	} {
-		if err := checkSemanticConformance(e2eWitness{Module: "cta", Variant: "trial"}, html); err == nil {
-			t.Fatalf("CTA with missing exact named part must fail: %s", html)
+	spec, ok := c.Get("cta")
+	if !ok {
+		t.Fatal("cta catalog entry not found")
+	}
+	witnesses, err := witnessesForSpec(c, spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var canonical e2eWitness
+	for _, witness := range witnesses {
+		if witness.Variant == "" {
+			canonical = witness
+			break
 		}
+	}
+	if canonical.Module != "cta" {
+		t.Fatalf("canonical CTA witness = %+v", canonical)
+	}
+	defaultVariant := ""
+	for _, field := range spec.Fields.Optional {
+		if field.Name == "variant" {
+			defaultVariant = field.Default
+			break
+		}
+	}
+	if canonical.EffectiveVariant != defaultVariant {
+		t.Fatalf("canonical CTA effective variant = %q, want catalog selector default %q", canonical.EffectiveVariant, defaultVariant)
+	}
+	valid := strings.Replace(ctaSemanticFixture("save-follow", false), `</section></section>`, `<p data-module-part="cta-note"></p></section></section>`, 1)
+	valid = strings.Replace(valid, "Probe", canonical.Probe, 1)
+	if err := checkConformanceHTML(canonical, valid); err != nil {
+		t.Fatalf("canonical CTA default structure rejected: %v", err)
+	}
+	crossBranch := strings.Replace(valid, `<p data-module-part="cta-note"></p>`, `<section data-module-part="cta-consult-layout"></section><p data-module-part="cta-note"></p>`, 1)
+	if err := checkConformanceHTML(canonical, crossBranch); err == nil {
+		t.Fatal("canonical CTA witness accepted a cross-branch marker")
 	}
 }
 
@@ -476,6 +590,46 @@ func TestE2ESettingsValidateOptionalUpstreamFieldContractEvidence(t *testing.T) 
 	t.Setenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_RESULT", "failed")
 	if _, err := loadE2ESettings(); err == nil || !strings.Contains(err.Error(), "fixture failed") {
 		t.Fatalf("failed field contract error = %v", err)
+	}
+}
+
+func TestE2ESettingsRequirePassedUpstreamFieldContractEvidenceInReleaseMode(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("MD2WECHAT_API_KEY", "environment-key")
+	t.Setenv("MD2WECHAT_CLI_COMMIT", "cli-commit")
+	t.Setenv("MD2WECHAT_LAYOUT_CONFORMANCE_MODE", "release")
+	t.Setenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_SHA", "")
+	t.Setenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_RESULT", "")
+	if _, err := loadE2ESettings(); err == nil || !strings.Contains(err.Error(), "release conformance requires") {
+		t.Fatalf("missing release evidence error = %v", err)
+	}
+	t.Setenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_SHA", "edcde64")
+	t.Setenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_RESULT", "passed")
+	if _, err := loadE2ESettings(); err == nil || !strings.Contains(err.Error(), "must use pinned SHA") {
+		t.Fatalf("stale release SHA error = %v", err)
+	}
+	t.Setenv("MD2WECHAT_UPSTREAM_FIELD_CONTRACT_SHA", pinnedUpstreamFieldContractSHA)
+	if _, err := loadE2ESettings(); err != nil {
+		t.Fatalf("pinned release evidence rejected: %v", err)
+	}
+}
+
+func TestCompactPR1CompositionContainsAllRequiredStructures(t *testing.T) {
+	c, err := layoutConformanceCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	markdown := compactPR1CompositionMarkdown()
+	if report := c.Validate(markdown); len(report.Errors) != 0 {
+		t.Fatalf("compact composition does not validate: %+v", report.Errors)
+	}
+	for _, marker := range []string{
+		":::hero", ":::section-title", ":::epilogue", ":::summary", ":::cta", ":::closing",
+		"variant: marker", "variant: divider", "variant: numbered", "variant: frame", "variant: focus", "variant: vertical",
+	} {
+		if !strings.Contains(markdown, marker) {
+			t.Errorf("compact composition missing %q", marker)
+		}
 	}
 }
 
@@ -777,6 +931,18 @@ func TestCollectAllE2EWitnessesHasStable84WitnessContract(t *testing.T) {
 	if got := len(groups[0].Witnesses) + len(groups[1].Witnesses); got != 84 {
 		t.Fatalf("witness count = %d, want 84", got)
 	}
+	if got := len(groups[0].Witnesses); got != 81 {
+		t.Fatalf("recommended witness count = %d, want 81 (56 canonical + 25 non-default branches)", got)
+	}
+	if got := len(c.ListFiltered(layoutcatalog.ListFilter{Lifecycle: layoutcatalog.LifecycleRecommended})); got != 56 {
+		t.Fatalf("recommended canonical witness count = %d, want 56", got)
+	}
+	if got := len(groups[0].Witnesses) - len(c.ListFiltered(layoutcatalog.ListFilter{Lifecycle: layoutcatalog.LifecycleRecommended})); got != 25 {
+		t.Fatalf("recommended non-default branch witness count = %d, want 25", got)
+	}
+	if got := len(groups[1].Witnesses); got != 3 {
+		t.Fatalf("compatibility witness count = %d, want 3", got)
+	}
 }
 
 func TestLayoutConformanceHTTPClientHasTimeout(t *testing.T) {
@@ -828,7 +994,7 @@ func TestE2ELayoutConformance(t *testing.T) {
 			}
 		})
 	}
-	t.Logf("conformance target=%s cli_commit=%s", settings.BaseURL, settings.CLICommit)
+	t.Logf("conformance_target_normalized=%s cli_commit=%s", settings.BaseURL, settings.CLICommit)
 	if settings.FieldContractSHA != "" {
 		t.Logf("upstream_field_contract_sha=%s result=%s", settings.FieldContractSHA, settings.FieldContractResult)
 	}
@@ -860,17 +1026,7 @@ func TestE2ECompactLayoutBoundaryAndThemeProbes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	markdown := strings.Join([]string{
-		":::hero", "variant: masthead", "title: Compact theme probe", "symbol: spark-solid", ":::",
-		":::section-title", "variant: numbered", "index: 1234", "title: Boundary section", ":::",
-		":::cta", "variant: trial", "title: CTA probe", "points: one | two | three", ":::",
-		":::faq", "Q: Question?", "A: Answer.", "Q: Another?", "A: Another answer.", ":::",
-		":::notice", "fit | Fit | Body", "avoid | Avoid | Body", "risk | Risk | Body", "require | Require | Body", "note | Note | Body", ":::",
-		":::summary", "highlight: Omitted variant", ":::",
-		":::summary", "variant: three", "items: one | two | three", ":::",
-		":::summary", "variant: decision", "recommendation: Decide", ":::",
-		":::summary", "variant: save", "items: one | two | three", ":::",
-	}, "\n") + "\n"
+	markdown := compactPR1CompositionMarkdown()
 	if report := c.Validate(markdown); len(report.Errors) != 0 {
 		t.Fatalf("compact probe does not validate: %+v", report.Errors)
 	}
@@ -889,17 +1045,26 @@ func TestE2ECompactLayoutBoundaryAndThemeProbes(t *testing.T) {
 			}
 			for _, witness := range []e2eWitness{
 				{Module: "hero", Variant: "masthead", Probe: "Compact theme probe"},
-				{Module: "section-title", Variant: "numbered", Probe: "Boundary section"},
+				{Module: "section-title", Variant: "marker", Probe: "Marker section"},
+				{Module: "section-title", Variant: "divider", Probe: "Divider section"},
+				{Module: "section-title", Variant: "numbered", Probe: "Numbered section"},
+				{Module: "section-title", Variant: "frame", Probe: "Frame section"},
+				{Module: "section-title", Variant: "focus", Probe: "Focus section"},
+				{Module: "section-title", Variant: "vertical", Probe: "Vertical section"},
+				{Module: "epilogue", Probe: "Epilogue transition"},
+				{Module: "summary", Probe: "Compact summary"},
 				{Module: "cta", Variant: "trial", Probe: "CTA probe"},
+				{Module: "closing", Probe: "Quiet closing"},
 			} {
 				if err := checkConformanceHTML(witness, data.HTML); err != nil {
 					t.Fatal(err)
 				}
 			}
-			for _, module := range []string{"faq", "notice", "summary"} {
-				if strings.Contains(data.HTML, ":::"+module) {
-					t.Fatalf("%s raw fence remained", module)
-				}
+			if !strings.Contains(data.HTML, "Body evidence remains readable.") {
+				t.Fatal("compact composition response omitted plain body content")
+			}
+			if strings.Contains(data.HTML, ":::") {
+				t.Fatal("compact composition response retained a raw layout fence")
 			}
 		})
 	}
@@ -1031,10 +1196,14 @@ var variantBranchAttributes = map[string]string{
 
 func expectedVariantBranch(witness e2eWitness) (string, string, bool) {
 	attribute, ok := variantBranchAttributes[witness.Module]
-	if !ok || witness.Variant == "" {
+	variant := witness.Variant
+	if witness.Module == "cta" && witness.EffectiveVariant != "" {
+		variant = witness.EffectiveVariant
+	}
+	if !ok || variant == "" {
 		return "", "", false
 	}
-	value := witness.Variant
+	value := variant
 	if witness.Module == "infographic" && value == "mini-case" {
 		value = "micro-case"
 	}
@@ -1075,6 +1244,21 @@ func findDOMAttributeValueNodes(node *html.Node, name, value string) []*html.Nod
 		matches = append(matches, findDOMAttributeValueNodes(child, name, value)...)
 	}
 	return matches
+}
+
+func countDOMAttributes(node *html.Node, name string) int {
+	count := 0
+	if node.Type == html.ElementNode {
+		for _, attr := range node.Attr {
+			if attr.Key == name {
+				count++
+			}
+		}
+	}
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		count += countDOMAttributes(child, name)
+	}
+	return count
 }
 
 func visibleDOMText(node *html.Node) string {
@@ -1120,10 +1304,8 @@ func checkSemanticConformanceNode(witness e2eWitness, node *html.Node) error {
 		return fmt.Errorf("hero/masthead response missing data-module-part=%q", "hero-masthead")
 	}
 	if witness.Module == "cta" {
-		for _, part := range []string{"cta-title", "cta-primary", "cta-secondary"} {
-			if !hasDOMAttributeValue(node, "data-module-part", part) {
-				return fmt.Errorf("cta/%s response missing data-module-part=%q", witness.Variant, part)
-			}
+		if err := checkCTAConformanceNode(witness, node); err != nil {
+			return err
 		}
 	}
 	minimumImages := 0
@@ -1143,6 +1325,111 @@ func checkSemanticConformanceNode(witness e2eWitness, node *html.Node) error {
 		return fmt.Errorf("%s response has %d %s element(s), want at least %d", witness.Module, count, imageElement, minimumImages)
 	}
 	return nil
+}
+
+func checkCTAConformanceNode(witness e2eWitness, node *html.Node) error {
+	type actionGroup struct {
+		part    string
+		actions []string
+	}
+	type branchContract struct {
+		required  []actionGroup
+		forbidden []string
+	}
+	allBranchParts := []string{
+		"cta-save-confirmation", "cta-save-actions",
+		"cta-consult-layout", "cta-consult-trust", "cta-consult-primary", "cta-consult-aux",
+		"cta-trial-benefits", "cta-trial-primary", "cta-trial-secondary",
+	}
+	variant := witness.EffectiveVariant
+	if variant == "" {
+		variant = witness.Variant
+	}
+	contract := branchContract{}
+	switch variant {
+	case "save-follow":
+		contract.required = []actionGroup{{part: "cta-save-confirmation"}, {part: "cta-save-actions", actions: []string{"primary", "secondary", "tertiary"}}}
+	case "consult":
+		contract.required = []actionGroup{{part: "cta-consult-layout"}, {part: "cta-consult-trust"}, {part: "cta-consult-primary", actions: []string{"primary"}}, {part: "cta-consult-aux", actions: []string{"secondary", "tertiary"}}}
+	case "trial":
+		if strings.Contains(witness.Markdown, "points:") {
+			contract.required = append(contract.required, actionGroup{part: "cta-trial-benefits"})
+		} else {
+			contract.forbidden = append(contract.forbidden, "cta-trial-benefits")
+		}
+		contract.required = append(contract.required, actionGroup{part: "cta-trial-primary", actions: []string{"primary"}}, actionGroup{part: "cta-trial-secondary", actions: []string{"secondary", "tertiary"}})
+	default:
+		return fmt.Errorf("cta witness has unknown variant %q", variant)
+	}
+	if strings.Contains(witness.Markdown, "\nnote:") {
+		contract.required = append(contract.required, actionGroup{part: "cta-note"})
+	} else {
+		contract.forbidden = append(contract.forbidden, "cta-note")
+	}
+	requiredParts := make(map[string]bool, len(contract.required))
+	for _, group := range contract.required {
+		requiredParts[group.part] = true
+		parts := findDOMAttributeValueNodes(node, "data-module-part", group.part)
+		if len(parts) != 1 {
+			return fmt.Errorf("cta/%s response has %d data-module-part=%q nodes, want exactly 1", variant, len(parts), group.part)
+		}
+		for _, action := range group.actions {
+			if !hasDOMAttributeValue(parts[0], "data-cta-action", action) {
+				return fmt.Errorf("cta/%s response missing %s action in data-module-part=%q", variant, action, group.part)
+			}
+		}
+	}
+	for _, part := range allBranchParts {
+		if requiredParts[part] || slices.Contains(contract.forbidden, part) {
+			continue
+		}
+		contract.forbidden = append(contract.forbidden, part)
+	}
+	for _, part := range contract.forbidden {
+		if count := len(findDOMAttributeValueNodes(node, "data-module-part", part)); count != 0 {
+			return fmt.Errorf("cta/%s response unexpectedly has data-module-part=%q", variant, part)
+		}
+	}
+	if count := countDOMAttributes(node, "data-cta-action"); count != 3 {
+		return fmt.Errorf("cta/%s response has %d data-cta-action markers, want exactly 3", variant, count)
+	}
+	return nil
+}
+
+func ctaSemanticFixture(variant string, withPoints bool) string {
+	switch variant {
+	case "save-follow":
+		return `<section data-mpa-action-id="cta" data-cta-variant="save-follow">Probe<section data-module-part="cta-save-confirmation"></section><section data-module-part="cta-save-actions"><span data-cta-action="primary"></span><span data-cta-action="secondary"></span><span data-cta-action="tertiary"></span></section></section>`
+	case "consult":
+		return `<section data-mpa-action-id="cta" data-cta-variant="consult">Probe<section data-module-part="cta-consult-layout"><section data-module-part="cta-consult-trust"></section><section data-module-part="cta-consult-primary"><span data-cta-action="primary"></span></section><section data-module-part="cta-consult-aux"><span data-cta-action="secondary"></span><span data-cta-action="tertiary"></span></section></section></section>`
+	case "trial":
+		benefits := ""
+		if withPoints {
+			benefits = `<section data-module-part="cta-trial-benefits"></section>`
+		}
+		return `<section data-mpa-action-id="cta" data-cta-variant="trial">Probe` + benefits + `<section data-module-part="cta-trial-primary"><span data-cta-action="primary"></span></section><section data-module-part="cta-trial-secondary"><span data-cta-action="secondary"></span><span data-cta-action="tertiary"></span></section></section>`
+	default:
+		return ""
+	}
+}
+
+func compactPR1CompositionMarkdown() string {
+	return strings.Join([]string{
+		":::hero", "variant: masthead", "title: Compact theme probe", "symbol: spark-solid", ":::",
+		":::section-title", "variant: marker", "symbol: diamond-outline", "title: Marker section", ":::",
+		"Body evidence remains readable.",
+		":::section-title", "variant: divider", "symbol: spark-outline", "title: Divider section", ":::",
+		":::section-title", "variant: numbered", "index: 1234", "title: Numbered section", ":::",
+		":::section-title", "variant: frame", "title: Frame section", ":::",
+		":::section-title", "variant: focus", "symbol: double-circle", "title: Focus section", ":::",
+		":::section-title", "variant: vertical", "symbol: diamond-solid", "title: Vertical section", ":::",
+		":::faq", "Q: Question?", "A: Answer.", "Q: Another?", "A: Another answer.", ":::",
+		":::notice", "fit | Fit | Body", "avoid | Avoid | Body", "risk | Risk | Body", "require | Require | Body", "note | Note | Body", ":::",
+		":::epilogue", "title: Epilogue transition", ":::",
+		":::summary", "highlight: Compact summary", ":::",
+		":::cta", "variant: trial", "title: CTA probe", "points: one | two | three", ":::",
+		":::closing", "title: Quiet closing", ":::",
+	}, "\n") + "\n"
 }
 
 func countDOMElements(node *html.Node, element string) int {
@@ -1243,11 +1530,23 @@ func witnessesForSpec(c *layoutcatalog.Catalog, spec *layoutcatalog.LayoutSpec) 
 			return nil, fmt.Errorf("%s witness %q has no deterministic probe or explicit assertion", spec.Name, item.variant)
 		}
 		witnesses = append(witnesses, e2eWitness{
-			Module: spec.Name, Variant: item.variant, Markdown: rendered,
+			Module: spec.Name, Variant: item.variant, EffectiveVariant: canonicalSelectorDefault(spec, item.variant), Markdown: rendered,
 			Probe: probe, ProbeInImageAlt: probeInImageAlt,
 		})
 	}
 	return witnesses, nil
+}
+
+func canonicalSelectorDefault(spec *layoutcatalog.LayoutSpec, declaredVariant string) string {
+	if declaredVariant != "" || spec.Fields == nil {
+		return declaredVariant
+	}
+	for _, field := range spec.Fields.Optional {
+		if field.Name == "variant" && field.Default != "" {
+			return field.Default
+		}
+	}
+	return ""
 }
 
 // renderWitnessFromExample turns the catalog-owned executable example into the

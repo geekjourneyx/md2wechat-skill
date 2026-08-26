@@ -68,7 +68,18 @@ projections:
   - {syntax: stat-row, body_format: json_array, applicability: {}}
   - {syntax: steps, body_format: rows, applicability: {}}
   - {syntax: subscribe, body_format: fields, applicability: {}}
-  - {syntax: summary, body_format: fields, applicability: {}}
+  - syntax: summary
+    body_format: fields
+    applicability:
+      eyebrow: [one-line, three, decision, save]
+      highlight: [one-line]
+      title: [three, decision, save]
+      body: [one-line]
+      items: [three, save]
+      fit: [decision]
+      not_fit: [decision]
+      recommendation: [decision]
+      note: [three, save]
   - {syntax: svg-reveal, body_format: fields, applicability: {}}
   - {syntax: svg-swipe-gallery, body_format: markdown_images, applicability: {}}
   - {syntax: timeline, body_format: rows, applicability: {}}

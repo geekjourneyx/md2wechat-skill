@@ -105,7 +105,7 @@ func TestSchemaExtensionsExposeAgentInputAndFieldDefaults(t *testing.T) {
 	if !strings.Contains(string(encoded), `"defaults":{"symbol":"diamond-outline"}`) {
 		t.Fatalf("variant defaults missing from JSON: %s", encoded)
 	}
-	if !strings.Contains(string(encoded), `"agent_contract":{"body_format":"fields"`) || !strings.Contains(string(encoded), `"applicability":{}`) {
-		t.Fatalf("complete agent contract missing from layout-show JSON model: %s", encoded)
+	if strings.Contains(string(encoded), `"agent_contract"`) {
+		t.Fatalf("internal upstream-audit metadata leaked into layout-show JSON model: %s", encoded)
 	}
 }

@@ -46,7 +46,7 @@ type upstreamAgentContractProjection struct {
 }
 
 const upstreamAgentContractContentSHA256 = "c6ca6d8a26b1bc694a8cef72ff6c7d517366f4331bb7ee978dbdae5556636fbd"
-const upstreamAgentContractProjectionSHA256 = "f36e422df4e2f33beb9169079923cf6204ca8407204086f9f81f328a9ab15afe"
+const upstreamAgentContractProjectionSHA256 = "c6a70f2870102903a75269301999118419e5db2e9e8c7ff7dfd87cd4d7351b5d"
 
 func TestUpstreamAgentContractProjectionOracle(t *testing.T) {
 	data, err := os.ReadFile("testdata/upstream_agent_contract_projections.yaml")
