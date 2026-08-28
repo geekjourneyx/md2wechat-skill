@@ -36,6 +36,7 @@ fields:
       example: "是的，所有主题都会渲染这些模块。"
       value_type: string
   optional: []
+fields_compatibility_only: true
 body:
   min_items: 2
   allowed_prefixes: ["Q:", "A:"]

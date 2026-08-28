@@ -23,6 +23,9 @@ anti_pattern: |
   没有任何满足 3 列的行导致渲染失败；
   步骤序号不统一；
   说明写太短失去步骤的引导价值。
+opener:
+  caption: true
+  caption_default: 使用步骤
 rows:
   delimiter: "|"
   min_columns: 3

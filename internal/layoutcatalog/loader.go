@@ -117,6 +117,9 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if err := validateOpenerSpec(spec.Opener); err != nil {
 		return nil, err
 	}
+	if spec.OpenerCompatibilityOnly && spec.Opener == nil {
+		return nil, fmt.Errorf("opener_compatibility_only requires opener")
+	}
 	normalizeBodyFormat(&spec)
 	if !ValidBodyFormats[spec.BodyFormat] {
 		return nil, fmt.Errorf("invalid body_format %q", spec.BodyFormat)
@@ -146,6 +149,9 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if err != nil {
 		return nil, err
 	}
+	if spec.FieldsCompatibilityOnly && spec.Fields == nil {
+		return nil, fmt.Errorf("fields_compatibility_only requires fields")
+	}
 	if err := validateBodySpec(spec.Body, declaredFields, seenBodyFormats); err != nil {
 		return nil, err
 	}
@@ -157,6 +163,9 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	}
 	if err := validateRowsSpec(spec.Rows); err != nil {
 		return nil, err
+	}
+	if spec.RowsCompatibilityOnly && spec.Rows == nil {
+		return nil, fmt.Errorf("rows_compatibility_only requires rows")
 	}
 	if spec.Metadata.Author == "" || spec.Metadata.Provenance == "" {
 		return nil, fmt.Errorf("metadata.author and metadata.provenance are required")
@@ -271,6 +280,9 @@ func validateAgentContractMatchesSpec(spec *LayoutSpec) error {
 	for name, values := range spec.AgentContract.Enums {
 		field, ok := declaredAgentContractFields(spec)[name]
 		if !ok {
+			if abstractAgentEnumMatchesSpec(spec, name, values) {
+				continue
+			}
 			return fmt.Errorf("agent_contract enum %q is not declared by the canonical schema", name)
 		}
 		if !slices.Equal(values, field.Enum) {
@@ -282,6 +294,13 @@ func validateAgentContractMatchesSpec(spec *LayoutSpec) error {
 		return fmt.Errorf("agent_contract applicability %v differs from canonical schema applicability %v", spec.AgentContract.Applicability, wantApplicability)
 	}
 	return nil
+}
+
+func abstractAgentEnumMatchesSpec(spec *LayoutSpec, name string, values []string) bool {
+	if name == "format" && spec.BodyFormat == BodyFormatRows && spec.Rows != nil {
+		return true
+	}
+	return name == "separator" && spec.BodyFormat == BodyFormatLines && spec.Body != nil && slices.Equal(values, []string{spec.Body.Separator})
 }
 
 // declaredAgentContractFields collects schema inputs that can carry a public
@@ -453,7 +472,7 @@ func validateWitnessSpecs(spec *LayoutSpec, declaredFields map[string]bool) erro
 				return fmt.Errorf("variant %q required field %q is not declared", variant.Name, field)
 			}
 		}
-		for _, group := range variant.RequiredAny {
+		for _, group := range append(append([][]string{}, variant.RequiredAny...), variant.CompatibilityRequiredAny...) {
 			if len(group) == 0 {
 				return fmt.Errorf("variant %q required_any group must not be empty", variant.Name)
 			}
@@ -475,7 +494,7 @@ func validateFieldsSpec(fields *FieldsSpec) (map[string]bool, error) {
 	if fields == nil {
 		return declared, nil
 	}
-	for _, field := range append(append([]FieldSpec{}, fields.Required...), fields.Optional...) {
+	for _, field := range allFieldSpecs(fields) {
 		if strings.TrimSpace(field.Name) == "" {
 			return nil, fmt.Errorf("field name must not be empty")
 		}
@@ -491,7 +510,7 @@ func validateFieldsSpec(fields *FieldsSpec) (map[string]bool, error) {
 		declared[field.Name] = true
 	}
 	seenGroups := map[string]bool{}
-	for _, group := range fields.RequiredAny {
+	for _, group := range append(append([][]string{}, fields.RequiredAny...), fields.CompatibilityRequiredAny...) {
 		if len(group) == 0 {
 			return nil, fmt.Errorf("required_any group must not be empty")
 		}
@@ -806,6 +825,9 @@ func validateOpenerSpec(opener *OpenerSpec) error {
 	}
 	if opener.Caption && opener.ParamStyle == ParamStyleBracket {
 		return fmt.Errorf("opener caption and bracket param_style are mutually exclusive")
+	}
+	if opener.CaptionDefault != "" && !opener.Caption {
+		return fmt.Errorf("opener caption_default requires caption")
 	}
 	if opener.Caption && len(opener.Params) > 0 {
 		return fmt.Errorf("opener caption and opener params are mutually exclusive")

@@ -37,6 +37,7 @@ fields:
       example: thesis
     - name: eyebrow
       description: 标签词，定位信息图的角色
+      default: 文章信息图
       example: "视觉摘要"
     - name: subtitle
       description: 副标题，补充 title 的说明
@@ -63,12 +64,6 @@ fields:
       description: 强调色控制
       enum: [green, emerald, blue, sky, orange, amber, red, rose, "#RGB", "#RRGGBB"]
       default: theme-derived
-    - name: variant
-      description: 旧版视觉变体（兼容输入）
-      example: "centered"
-    - name: layout
-      description: 旧版布局控制（兼容输入）
-      example: "default"
     - name: items
       description: 列表项，用 | 分隔
       example: "第一点 | 第二点 | 第三点"
@@ -78,6 +73,13 @@ fields:
     - name: tradeoffs
       description: 取舍项，格式为 标签:值 并用 | 分隔
       example: "选择更多:更像自己 | 结构更稳:更少返工"
+  compatibility:
+    - name: variant
+      description: 旧版视觉变体（兼容输入）
+      example: "centered"
+    - name: layout
+      description: 旧版布局控制（兼容输入）
+      example: "default"
 variants:
   - name: thesis
     aliases: [statement, judgment, claim]

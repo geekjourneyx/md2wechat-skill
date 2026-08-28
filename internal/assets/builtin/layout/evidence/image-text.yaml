@@ -32,6 +32,7 @@ fields:
   optional:
     - name: layout
       enum: [left, right]
+      default: left
     - name: title
       description: 图文标题（title 或 body 至少填一个）
       example: "图和说明绑在一起，读者更容易跟上重点"
@@ -40,12 +41,14 @@ fields:
       example: "左边先讲结论，右边再放真实界面，减少来回对照的成本。"
     - name: eyebrow
       description: 标签词
+      default: 图文双栏
       example: "功能截图"
     - name: note
       description: 底部说明
       example: "适合教程拆解、产品介绍和案例说明"
     - name: alt
       description: 图片替代文字，提升可访问性
+      default: 图文双栏
       example: "图文双栏示例图片"
   required_any:
     - [title, body]

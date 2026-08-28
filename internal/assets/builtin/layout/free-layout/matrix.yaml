@@ -26,6 +26,7 @@ opener:
   param_style: tokens
   params:
     - name: headers
+      required: true
       description: 逗号分隔的表头
       example: "能力,基础版,专业版,企业版"
 rows:

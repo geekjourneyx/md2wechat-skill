@@ -1,5 +1,7 @@
 package layoutcatalog
 
+import "encoding/json"
+
 const SchemaVersion = "1"
 
 const (
@@ -93,7 +95,9 @@ type RowsSpec struct {
 type FieldsSpec struct {
 	Required                 []FieldSpec      `yaml:"required,omitempty"`
 	Optional                 []FieldSpec      `yaml:"optional,omitempty"`
+	Compatibility            []FieldSpec      `yaml:"compatibility,omitempty" json:"-"`
 	RequiredAny              [][]string       `yaml:"required_any,omitempty"`
+	CompatibilityRequiredAny [][]string       `yaml:"compatibility_required_any,omitempty" json:"-"`
 	RequiredWhenNoVariant    []string         `yaml:"required_when_no_variant,omitempty"`
 	RequiredAnyWhenNoVariant [][]string       `yaml:"required_any_when_no_variant,omitempty"`
 	OutputOrder              []string         `yaml:"output_order,omitempty"`
@@ -159,20 +163,22 @@ type AgentContractSpec struct {
 }
 
 type VariantSpec struct {
-	Name           string            `yaml:"name"`
-	Aliases        []string          `yaml:"aliases,omitempty"`
-	Description    string            `yaml:"description,omitempty"`
-	UseWhen        string            `yaml:"use_when"`
-	Defaults       map[string]string `yaml:"defaults,omitempty" json:"defaults,omitempty"`
-	Required       []string          `yaml:"required,omitempty"`
-	RequiredAny    [][]string        `yaml:"required_any,omitempty"`
-	Shapes         []FieldShapeSpec  `yaml:"shapes,omitempty"`
-	Example        string            `yaml:"example"`
-	AssertContains string            `yaml:"assert_contains,omitempty"`
+	Name                     string            `yaml:"name"`
+	Aliases                  []string          `yaml:"aliases,omitempty"`
+	Description              string            `yaml:"description,omitempty"`
+	UseWhen                  string            `yaml:"use_when"`
+	Defaults                 map[string]string `yaml:"defaults,omitempty" json:"defaults,omitempty"`
+	Required                 []string          `yaml:"required,omitempty"`
+	RequiredAny              [][]string        `yaml:"required_any,omitempty"`
+	CompatibilityRequiredAny [][]string        `yaml:"compatibility_required_any,omitempty" json:"-"`
+	Shapes                   []FieldShapeSpec  `yaml:"shapes,omitempty"`
+	Example                  string            `yaml:"example"`
+	AssertContains           string            `yaml:"assert_contains,omitempty"`
 }
 
 type ParamSpec struct {
 	Name        string   `yaml:"name"`
+	Required    bool     `yaml:"required,omitempty"`
 	Description string   `yaml:"description,omitempty"`
 	Enum        []string `yaml:"enum,omitempty"`
 	Default     string   `yaml:"default,omitempty"`
@@ -180,9 +186,10 @@ type ParamSpec struct {
 }
 
 type OpenerSpec struct {
-	Caption    bool        `yaml:"caption,omitempty"`
-	ParamStyle string      `yaml:"param_style,omitempty"`
-	Params     []ParamSpec `yaml:"params,omitempty"`
+	Caption        bool        `yaml:"caption,omitempty"`
+	CaptionDefault string      `yaml:"caption_default,omitempty"`
+	ParamStyle     string      `yaml:"param_style,omitempty"`
+	Params         []ParamSpec `yaml:"params,omitempty"`
 }
 
 type ParsedOpener struct {
@@ -194,34 +201,59 @@ type ParsedOpener struct {
 }
 
 type LayoutSpec struct {
-	SchemaVersion         string               `yaml:"schema_version"`
-	Name                  string               `yaml:"name"`
-	Lifecycle             string               `yaml:"lifecycle,omitempty"`
-	BodyFormat            string               `yaml:"body_format,omitempty" json:"body_format,omitempty"`
-	CompatibleBodyFormats []string             `yaml:"compatible_body_formats,omitempty" json:"compatible_body_formats,omitempty"`
-	Version               string               `yaml:"version"`
-	Since                 string               `yaml:"since,omitempty"`
-	Category              string               `yaml:"category"`
-	Serves                []string             `yaml:"serves"`
-	ContentTypes          []string             `yaml:"content_types,omitempty"`
-	Industry              []string             `yaml:"industry,omitempty"`
-	Tags                  []string             `yaml:"tags,omitempty"`
-	Position              string               `yaml:"position,omitempty"`
-	InputPositions        []AgentInputPosition `yaml:"input_positions,omitempty" json:"input_positions,omitempty"`
-	WhenToUse             string               `yaml:"when_to_use,omitempty"`
-	WhenNotToUse          string               `yaml:"when_not_to_use,omitempty"`
-	PairsWellWith         []string             `yaml:"pairs_well_with,omitempty"`
-	AvoidCombiningWith    []string             `yaml:"avoid_combining_with,omitempty"`
-	AntiPattern           string               `yaml:"anti_pattern,omitempty"`
-	Opener                *OpenerSpec          `yaml:"opener,omitempty"`
-	Fields                *FieldsSpec          `yaml:"fields,omitempty"`
-	Rows                  *RowsSpec            `yaml:"rows,omitempty"`
-	Body                  *BodySpec            `yaml:"body,omitempty"`
-	Example               string               `yaml:"example,omitempty"`
-	ExampleAssertContains string               `yaml:"example_assert_contains,omitempty"`
-	Variants              []VariantSpec        `yaml:"variants,omitempty"`
-	Metadata              LayoutMetadata       `yaml:"metadata"`
-	AgentContract         *AgentContractSpec   `yaml:"agent_contract,omitempty" json:"-"`
+	SchemaVersion           string               `yaml:"schema_version"`
+	Name                    string               `yaml:"name"`
+	Lifecycle               string               `yaml:"lifecycle,omitempty"`
+	BodyFormat              string               `yaml:"body_format,omitempty" json:"body_format,omitempty"`
+	CompatibleBodyFormats   []string             `yaml:"compatible_body_formats,omitempty" json:"compatible_body_formats,omitempty"`
+	Version                 string               `yaml:"version"`
+	Since                   string               `yaml:"since,omitempty"`
+	Category                string               `yaml:"category"`
+	Serves                  []string             `yaml:"serves"`
+	ContentTypes            []string             `yaml:"content_types,omitempty"`
+	Industry                []string             `yaml:"industry,omitempty"`
+	Tags                    []string             `yaml:"tags,omitempty"`
+	Position                string               `yaml:"position,omitempty"`
+	InputPositions          []AgentInputPosition `yaml:"input_positions,omitempty" json:"input_positions,omitempty"`
+	WhenToUse               string               `yaml:"when_to_use,omitempty"`
+	WhenNotToUse            string               `yaml:"when_not_to_use,omitempty"`
+	PairsWellWith           []string             `yaml:"pairs_well_with,omitempty"`
+	AvoidCombiningWith      []string             `yaml:"avoid_combining_with,omitempty"`
+	AntiPattern             string               `yaml:"anti_pattern,omitempty"`
+	Opener                  *OpenerSpec          `yaml:"opener,omitempty"`
+	OpenerCompatibilityOnly bool                 `yaml:"opener_compatibility_only,omitempty" json:"-"`
+	Fields                  *FieldsSpec          `yaml:"fields,omitempty"`
+	FieldsCompatibilityOnly bool                 `yaml:"fields_compatibility_only,omitempty" json:"-"`
+	Rows                    *RowsSpec            `yaml:"rows,omitempty"`
+	RowsCompatibilityOnly   bool                 `yaml:"rows_compatibility_only,omitempty" json:"-"`
+	Body                    *BodySpec            `yaml:"body,omitempty"`
+	Example                 string               `yaml:"example,omitempty"`
+	ExampleAssertContains   string               `yaml:"example_assert_contains,omitempty"`
+	Variants                []VariantSpec        `yaml:"variants,omitempty"`
+	Metadata                LayoutMetadata       `yaml:"metadata"`
+	AgentContract           *AgentContractSpec   `yaml:"agent_contract,omitempty" json:"-"`
+}
+
+func (spec LayoutSpec) MarshalJSON() ([]byte, error) {
+	type layoutSpecJSON LayoutSpec
+	opener := spec.Opener
+	if spec.OpenerCompatibilityOnly {
+		opener = nil
+	}
+	fields := spec.Fields
+	if spec.FieldsCompatibilityOnly {
+		fields = nil
+	}
+	rows := spec.Rows
+	if spec.RowsCompatibilityOnly {
+		rows = nil
+	}
+	return json.Marshal(struct {
+		layoutSpecJSON
+		Opener *OpenerSpec `json:"Opener,omitempty"`
+		Fields *FieldsSpec `json:"Fields,omitempty"`
+		Rows   *RowsSpec   `json:"Rows,omitempty"`
+	}{layoutSpecJSON: layoutSpecJSON(spec), Opener: opener, Fields: fields, Rows: rows})
 }
 
 type ListFilter struct {

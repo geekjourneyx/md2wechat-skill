@@ -45,6 +45,7 @@ rows:
       description: 旧版兼容问题列
     - name: answer
       description: 旧版兼容回答列
+rows_compatibility_only: true
 example: |
   :::faq[常见问题]
   Q: 这些模块只能在某一个主题里用吗？

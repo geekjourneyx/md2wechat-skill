@@ -34,7 +34,6 @@ opener:
       default: normal
     - name: columns
       description: 图集列数
-      enum: ["1", "2", "3", "4"]
       default: "3"
     - name: image_shape
       enum: [square, rounded, phone, poster, original]

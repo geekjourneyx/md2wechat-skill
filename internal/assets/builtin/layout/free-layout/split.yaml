@@ -27,6 +27,7 @@ opener:
   params:
     - name: ratio
       description: 左右两栏比例；省略时由渲染器使用默认 1:1
+      default: "1:1"
       example: "3:2"
 body:
   separator: "---"

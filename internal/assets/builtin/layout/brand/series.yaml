@@ -44,6 +44,7 @@ fields:
     - name: next
       description: 下一篇预告
       example: "下一篇：个人品牌模块怎么搭"
+  compatibility:
     - name: index
       description: 当前期在系列中的序号
       example: "07"

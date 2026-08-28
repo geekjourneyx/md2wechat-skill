@@ -39,7 +39,6 @@ fields:
     - name: symbol
       description: 可使用装饰符号的标题变体；默认 marker 使用 diamond-outline
       enum: [spark-solid, spark-outline, diamond-solid, diamond-outline, reference-mark, asterism, double-circle, circle, square-solid, square-outline, star, infinity]
-      default: diamond-outline
       applies_to: [marker, divider, focus, vertical]
       example: diamond-outline
     - name: index
@@ -52,6 +51,8 @@ fields:
 variants:
   - name: marker
     use_when: 用轻量标记开始一个正文主题
+    defaults:
+      symbol: diamond-outline
     required: [title]
   - name: divider
     use_when: 用分隔线清晰切开上下文

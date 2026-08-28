@@ -36,6 +36,7 @@ fields:
     - name: icon
       description: 图标 emoji（JSON key：icon，可省略，无则显示首字母）
       example: "🛠"
+  compatibility:
     - name: url
       description: 链接地址（渲染器当前不生成外部链接）
       example: "https://md2wechat.com"

@@ -36,6 +36,7 @@ fields:
     - name: unit
       description: 单位，渲染在数字后方字号更小（JSON key：unit，可省略）
       example: "人"
+  compatibility:
     - name: note
       description: 补充说明（JSON key：note，可省略）
       example: "环比上周"

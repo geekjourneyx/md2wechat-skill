@@ -23,6 +23,9 @@ anti_pattern: |
   每行少于 2 列导致渲染失败；
   序号不统一（有的用 01 有的用 1）；
   说明写太长变成正文而不是导览。
+opener:
+  caption: true
+  caption_default: 目录导航
 rows:
   delimiter: "|"
   min_columns: 2

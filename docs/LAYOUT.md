@@ -104,9 +104,9 @@ subtitle: 不是好不好看，是读者读不读得完
 | `json_object` | 一个 JSON 对象 | `definition`、`tweet` |
 | `json_array` | 一个 JSON 数组 | `stat-row`、`resource-list` |
 | `markdown_images` | Markdown 图片列表，可夹带允许的文本 | `gallery-grid`、`svg-swipe-gallery` |
-| `markdown_fields` | 重复字段组中允许 Markdown 图片 | `image-steps`、`figure-caption` |
+| `markdown_fields` | `key: value` 字段行，可按 schema 允许 Markdown 图片或重复组 | `callout`、`image-steps` |
 | `split` | 两段正文由模块 schema 指定的分隔线隔开 | `split` |
-| `lines` | 逐行条目，分隔符或前缀由 schema 约束 | `flow`、`callout` |
+| `lines` | 逐行条目，分隔符或前缀由 schema 约束 | `flow` |
 | `dialogue` | 成对前缀或具名说话人行 | `question`、`dialogue-pair` |
 
 `compatible_body_formats` 是旧正文仍可通过校验的兼容入口，不改变主推格式。例如 `question` 的主格式是 `dialogue`，同时接受旧的 `json_array`。
@@ -420,13 +420,13 @@ title: 公众号创作者正在经历什么
 
 **什么时候用**：有两种方案/时间点/方法需要横向对比时。
 
-**格式**：`维度 | A方描述 | B方描述 | 颜色`（也可 `维度 | 旧描述 | 新描述`）
+**格式**：`left-title | left-body | right-title | right-body`
 
 ```
 :::compare[效果对比]
-文章打开率 | 旧版排版 3.2% | 新版模块化排版 8.7% | accent
-读者完读率 | 41% | 79% | default
-制作时间 | 每篇 2小时 | 每篇 35分钟 | default
+旧版排版 | 文章打开率 3.2% | 模块化排版 | 文章打开率 8.7%
+手工制作 | 每篇约 2 小时 | 模块复用 | 每篇约 35 分钟
+风格漂移 | 每篇重新搭结构 | 稳定骨架 | 替换内容即可复用
 :::
 ```
 
@@ -513,7 +513,7 @@ note: 适合观点文、复盘、方案结论
 
 **什么时候用**：文章开头明确适合谁读、不适合谁读，帮读者快速判断。
 
-**字段**：`title` 为必填；`fit` 和 `avoid` 使用 `|` 分隔多项内容。
+**字段**：`fit` 和 `avoid` 至少填写一个，并使用 `|` 分隔多项内容；`title`、`subtitle` 可选。
 
 ```
 :::audience-fit
@@ -645,7 +645,7 @@ right_image: https://example.com/after.png
 
 **什么时候用**：操作教程，每步配一张截图。
 
-**格式**：`body_format: markdown_fields`。每组使用 `step` 和 `desc`，中间可放一张 Markdown 图片；图片可省略。可用 `{columns=2 caption_style=numbered}` 等参数。
+**格式**：`body_format: markdown_fields`。每组必须使用 `step`、`desc` 并提供 Markdown 图片。可用 `{columns=2 caption_style=numbered}` 等参数。
 
 ```
 :::image-steps{columns=2 caption_style=numbered}
@@ -740,7 +740,7 @@ A: 按 4 件事原则选，hero 1 个，CTA 1 个，不要堆。
 
 **什么时候用**：有操作性清单、检查事项时，比普通列表更有视觉重量。
 
-**格式**：`状态 | 描述 | 说明`（状态：`done`、`pending`、`warn`、`todo`）
+**格式**：`状态 | 描述 | 说明`（新内容状态只使用 `done`、`pending`、`warn`）
 
 ```
 :::checklist[发布前检查]
@@ -788,7 +788,7 @@ note: 适合章节末尾和观点文复盘
 
 **什么时候用**：有重要通知、政策变更、限时活动时。
 
-**格式**：`项目 | 条件 | 说明`，可在方括号中提供标题。
+**格式**：`tone | label | body | optional note`，可在方括号中提供标题。
 
 ```
 :::notice[适用说明]
@@ -815,8 +815,9 @@ risk | 风险 | 模块堆太多会抢正文 | 一篇文章保留 3 到 6 个重�
 ```
 :::author-card
 name: 极客旅程
+role: 内容系统研究者
 bio: 研究内容创作工具和 AI 工作流，专注公众号效率提升。
-avatar: https://example.com/avatar.jpg
+tags: AI 工具 | 内容系统 | 独立产品
 :::
 ```
 
@@ -885,23 +886,27 @@ tags: 公众号 | 品牌排版 | 内容系统
 
 **什么时候用**：需要突出提示、警告、成功确认或危险说明时，支持 4 种样式。
 
-**格式**：`:::callout 类型`（类型：`info` 默认、`warning`、`success`、`danger`）
+**格式**：块内使用 `type:`（`info` 默认、`warning`、`success`、`danger`）和 `body:`；不要把类型写在 opener 上。
 
 ```
 :::callout
-这是默认 info 样式，适合一般说明。
+type: info
+body: 这是默认 info 样式，适合一般说明。
 :::
 
-:::callout warning
-⚠️ 注意：高级排版模块仅在 API 模式下渲染，AI 模式不支持。
+:::callout
+type: warning
+body: ⚠️ 注意：高级排版模块仅在 API 模式下渲染，AI 模式不支持。
 :::
 
-:::callout success
-成功：layout validate 返回 0 errors，说明本地 catalog/schema 接受该语法。
+:::callout
+type: success
+body: 成功：layout validate 返回 0 errors，说明本地 catalog/schema 接受该语法。
 :::
 
-:::callout danger
-❌ 错误：不要用 --mode ai 时期望 :::module 模块渲染。
+:::callout
+type: danger
+body: ❌ 错误：不要用 --mode ai 时期望 :::module 模块渲染。
 :::
 ```
 
@@ -953,7 +958,7 @@ tags: 公众号 | 品牌排版 | 内容系统
 
 **什么时候用**：在正文段落中横向插入 2-4 个小指标时（比 metrics 更轻量）。
 
-**格式**：JSON 数组，每项包含 `label`、`value`，可选 `unit`、`note`
+**格式**：JSON 数组，每项包含 `label`、`value`，可选 `unit`
 
 ```
 :::stat-row
@@ -993,11 +998,11 @@ A: 不需要，照着字段填写就行。
 
 **什么时候用**：推荐工具、书单、链接集合时。
 
-**格式**：JSON 数组，key 是 `name`、`url`、`desc`（不是 `description`）、`icon`
+**格式**：JSON 数组，key 是 `name`、`desc`（不是 `description`）、`icon`
 
 ```
 :::resource-list
-[{"icon":"🛠","name":"md2wechat CLI","url":"https://github.com/geekjourneyx/md2wechat-skill","desc":"Markdown 转微信的命令行工具"},{"icon":"📖","name":"Layout 教程","url":"https://github.com/geekjourneyx/md2wechat-skill/blob/main/docs/LAYOUT.md","desc":"高级排版模块核心教程"}]
+[{"icon":"🛠","name":"md2wechat CLI","desc":"Markdown 转微信的命令行工具"},{"icon":"📖","name":"Layout 教程","desc":"高级排版模块核心教程"}]
 :::
 ```
 
@@ -1108,8 +1113,9 @@ avoid: 尚未形成固定内容方向的新手
 
 在手机上，读者决定读还是划走只需要 **3 秒钟**。
 
-:::callout warning
-大多数文章失败不是因为内容差，而是因为前 3 秒没有给读者理由继续读。
+:::callout
+type: warning
+body: 大多数文章失败不是因为内容差，而是因为前 3 秒没有给读者理由继续读。
 :::
 
 :::myth-fact
@@ -1152,9 +1158,9 @@ symbol: spark-outline
 :::
 
 :::compare[模块化前 vs 后]
-制作时间 | 每篇约 2 小时，手工堆样式 | 每篇约 35 分钟，用模块填内容 | accent
-完读率 | 行业平均 41% | 使用模块后平均 79% | default
-品牌识别度 | 每篇风格不一样 | 固定骨架，风格稳定 | default
+手工制作 | 每篇约 2 小时，反复堆样式 | 模块复用 | 每篇约 35 分钟，直接填内容
+普通长文 | 行业平均完读率 41% | 模块化长文 | 平均完读率 79%
+临时风格 | 每篇结构都不一样 | 固定骨架 | 品牌表达更稳定
 :::
 
 :::verdict

@@ -23,6 +23,9 @@ anti_pattern: |
   没有任何满足 3 列的行导致渲染失败；
   结果列写模糊定性而非具体数字；
   每行都用 accent 失去重点效果。
+opener:
+  caption: true
+  caption_default: 案例精选
 rows:
   delimiter: "|"
   min_columns: 3

@@ -448,22 +448,25 @@ subtitle: 这是副标题
 :::
 
 :::verdict
-content: 这篇文章的核心观点
-confidence: high
+title: 这篇文章的核心观点
+body: 先给出明确判断，再补充证据和边界。
 :::
 
-:::callout level=warning
-这是一个重要提示
+:::callout
+type: warning
+body: 这是一个重要提示
 :::
 
 :::quote
-content: 经典引用
-author: 引用来源
+quote: 经典引用
+source: 引用来源
 :::
 
 :::cta
 title: 如果这篇对你有启发
-action: 关注 / 分享 / 咨询
+primary: 关注
+secondary: 分享
+tertiary: 咨询
 :::
 ```
 

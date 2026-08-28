@@ -197,6 +197,415 @@ func TestBuiltinCatalogMatchesUpstreamAgentContracts(t *testing.T) {
 	}
 }
 
+// TestBuiltinPublicCanonicalSchemaMatchesUpstream proves that layout show's
+// author-facing schema matches the pinned upstream contract. AgentContract is
+// intentionally excluded: it is audit metadata, not public discovery.
+func TestBuiltinPublicCanonicalSchemaMatchesUpstream(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	projections := pinnedAgentContractProjectionsBySyntax(t)
+	for _, want := range readUpstreamAgentContracts(t).Contracts {
+		spec, ok := c.Get(want.Syntax)
+		if !ok {
+			t.Errorf("%s: missing recommended catalog entry", want.Syntax)
+			continue
+		}
+		spec = publicLayoutShowSpec(t, spec)
+		projection, ok := projections[want.Syntax]
+		if !ok {
+			t.Errorf("%s: missing pinned public projection", want.Syntax)
+			continue
+		}
+		if spec.BodyFormat != projection.BodyFormat {
+			t.Errorf("%s: public body_format = %q, want %q", want.Syntax, spec.BodyFormat, projection.BodyFormat)
+		}
+		var positions []string
+		for _, position := range spec.InputPositions {
+			positions = append(positions, string(position))
+		}
+		if !slices.Equal(positions, want.Input) {
+			t.Errorf("%s: public input_positions = %v, want %v", want.Syntax, positions, want.Input)
+		}
+		got := publicCanonicalControls(spec, want)
+		for name, control := range got {
+			membership := ""
+			if slices.Contains(want.Required, name) {
+				membership = "required"
+			} else if slices.Contains(want.Optional, name) {
+				membership = "optional"
+			}
+			if membership == "" {
+				t.Errorf("%s: public %s control %q is absent from upstream required/optional", want.Syntax, control.Location, name)
+				continue
+			}
+			if control.Membership != membership {
+				t.Errorf("%s: public %s control %q is %s, want %s", want.Syntax, control.Location, name, control.Membership, membership)
+			}
+			if enum := want.Enums[name]; !slices.Equal(control.Enum, enum) {
+				t.Errorf("%s: public %s enum %q = %v, want %v", want.Syntax, control.Location, name, control.Enum, enum)
+			}
+			if value, exists := want.Defaults[name]; exists {
+				if abstractSemanticDefault(name, value) {
+					if control.Default != "" {
+						t.Errorf("%s: public %s default %q = %q, but upstream default is semantic", want.Syntax, control.Location, name, control.Default)
+					}
+				} else if control.Default != value {
+					t.Errorf("%s: public %s default %q = %q, want %q", want.Syntax, control.Location, name, control.Default, value)
+				}
+			} else if control.Default != "" {
+				t.Errorf("%s: public %s default %q = %q, absent upstream", want.Syntax, control.Location, name, control.Default)
+			}
+			if applies := projection.Applicability[name]; !slices.Equal(control.AppliesTo, applies) {
+				t.Errorf("%s: public %s applicability %q = %v, want %v", want.Syntax, control.Location, name, control.AppliesTo, applies)
+			}
+		}
+		for _, name := range append(slices.Clone(want.Required), want.Optional...) {
+			if directlyRepresentableContractControl(spec, want, name) {
+				if _, ok := got[name]; !ok {
+					t.Errorf("%s: directly representable upstream control %q is missing from public canonical schema", want.Syntax, name)
+				}
+			}
+		}
+		comparePublicStructuralRequirements(t, spec, want)
+		comparePublicDefaults(t, spec, want, got)
+	}
+}
+
+func publicLayoutShowSpec(t *testing.T, spec *LayoutSpec) *LayoutSpec {
+	t.Helper()
+	encoded, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("%s: marshal public layout show spec: %v", spec.Name, err)
+	}
+	var public LayoutSpec
+	if err := json.Unmarshal(encoded, &public); err != nil {
+		t.Fatalf("%s: unmarshal public layout show spec: %v", spec.Name, err)
+	}
+	if public.AgentContract != nil {
+		t.Fatalf("%s: public layout show leaks hidden agent_contract", spec.Name)
+	}
+	return &public
+}
+
+type publicCanonicalControl struct {
+	Location, Membership string
+	Enum                 []string
+	Default              string
+	AppliesTo            []string
+}
+
+func publicCanonicalControls(spec *LayoutSpec, want upstreamAgentContract) map[string]publicCanonicalControl {
+	got := map[string]publicCanonicalControl{}
+	if formatSupportsDeclaredFields(spec.BodyFormat) && spec.Fields != nil && !spec.FieldsCompatibilityOnly {
+		for _, field := range spec.Fields.Required {
+			got[field.Name] = publicCanonicalControl{"Fields.Required", "required", field.Enum, field.Default, field.AppliesTo}
+		}
+		for _, field := range spec.Fields.Optional {
+			got[field.Name] = publicCanonicalControl{"Fields.Optional", "optional", field.Enum, field.Default, field.AppliesTo}
+		}
+	}
+	if spec.BodyFormat == BodyFormatRows && spec.Rows != nil && !spec.RowsCompatibilityOnly && !slices.Contains(want.Required, "rows") {
+		for i, field := range spec.Rows.Schema {
+			membership := "optional"
+			if i < spec.Rows.MinColumns {
+				membership = "required"
+			}
+			got[field.Name] = publicCanonicalControl{"Rows.Schema", membership, field.Enum, field.Default, field.AppliesTo}
+		}
+	}
+	if spec.Opener != nil && !spec.OpenerCompatibilityOnly {
+		if spec.Opener.Caption {
+			got["header-title"] = publicCanonicalControl{Location: "Opener.Caption", Membership: "optional", Default: spec.Opener.CaptionDefault}
+		}
+		for _, param := range spec.Opener.Params {
+			membership := "optional"
+			if param.Required {
+				membership = "required"
+			}
+			got[param.Name] = publicCanonicalControl{"Opener.Params", membership, param.Enum, param.Default, nil}
+		}
+	}
+	return got
+}
+
+func directlyRepresentableContractControl(spec *LayoutSpec, want upstreamAgentContract, name string) bool {
+	if name == "header-title" {
+		return true
+	}
+	if abstractSemanticRequirement(want.Syntax, name) {
+		return false
+	}
+	for _, input := range want.Input {
+		switch AgentInputPosition(input) {
+		case InputBodyKV, InputJSON:
+			return !strings.Contains(name, "-or-")
+		case InputHeaderAttrs:
+			if spec.Opener != nil {
+				for _, param := range spec.Opener.Params {
+					if param.Name == name {
+						return true
+					}
+				}
+			}
+		}
+	}
+	if spec.BodyFormat == BodyFormatRows && name != "rows" && name != "headers" {
+		return true
+	}
+	if spec.BodyFormat == BodyFormatMarkdownFields && name != "image" {
+		return true
+	}
+	return false
+}
+
+func abstractSemanticRequirement(syntax, name string) bool {
+	if name == "image" || name == "fit-or-avoid" || name == "title-or-body-or-next" ||
+		name == "title-or-body" || name == "left-body" || name == "right-body" ||
+		name == "nodes" || name == "rows" || name == "Q" || name == "A" ||
+		name == "U-or-E" || name == "nonempty-category" || strings.Contains(name, ".") {
+		return true
+	}
+	return syntax == "gallery-story" && (name == "title" || name == "body")
+}
+
+func abstractSemanticDefault(name, value string) bool {
+	return name == "link" && value == "plain-text" || name == "icon" && value == "uppercase-first-character"
+}
+
+func comparePublicStructuralRequirements(t *testing.T, spec *LayoutSpec, want upstreamAgentContract) {
+	t.Helper()
+	requireGroup := func(name string, group []string) {
+		if !slices.Contains(want.Required, name) || spec.Fields == nil {
+			return
+		}
+		for _, got := range spec.Fields.RequiredAny {
+			if slices.Equal(got, group) {
+				return
+			}
+		}
+		t.Errorf("%s: abstract required control %q is not represented by Fields.RequiredAny %v", want.Syntax, name, group)
+	}
+	requireGroup("fit-or-avoid", []string{"fit", "avoid"})
+	requireGroup("title-or-body-or-next", []string{"title", "body", "next"})
+	requireGroup("title-or-body", []string{"title", "body"})
+	controls := publicCanonicalControls(spec, want)
+	if slices.Contains(want.Required, "image") && controls["image"].Location == "" && (spec.Body == nil || spec.Body.MinImages < 1) {
+		t.Errorf("%s: abstract required image is not represented by Body.MinImages", want.Syntax)
+	}
+	if slices.Contains(want.Required, "nodes") && (spec.Body == nil || spec.Body.MinItems < 1) {
+		t.Errorf("%s: abstract required nodes are not represented by Body.MinItems", want.Syntax)
+	}
+	if (slices.Contains(want.Required, "Q") || slices.Contains(want.Required, "A")) &&
+		(spec.Body == nil || !slices.Contains(spec.Body.RequiredPairs, [2]string{"Q", "A"})) {
+		t.Errorf("%s: abstract Q/A requirement is not represented by Body.RequiredPairs", want.Syntax)
+	}
+	if controls["left-body"].Location == "" && controls["right-body"].Location == "" &&
+		(slices.Contains(want.Required, "left-body") || slices.Contains(want.Required, "right-body")) &&
+		(spec.BodyFormat != BodyFormatSplit || spec.Body == nil || spec.Body.Separator == "" || spec.Body.MinItems < 2) {
+		t.Errorf("%s: abstract split-body requirements are not represented by Body", want.Syntax)
+	}
+	if slices.Contains(want.Required, "rows") && (spec.Rows == nil || spec.Rows.MinColumns < 1 || len(spec.Rows.Schema) < spec.Rows.MinColumns) {
+		t.Errorf("%s: abstract rows requirement is not represented by Rows", want.Syntax)
+	}
+	if slices.Contains(want.Required, "U-or-E") && (spec.Body == nil || spec.Body.MinItems < 1 ||
+		!slices.Contains(spec.Body.AllowedPrefixes, "U:") || !slices.Contains(spec.Body.AllowedPrefixes, "E:")) {
+		t.Errorf("%s: abstract U-or-E requirement is not represented by Body", want.Syntax)
+	}
+	if slices.Contains(want.Required, "nonempty-category") && (spec.Fields == nil || len(spec.Fields.RequiredAny) == 0) {
+		t.Errorf("%s: abstract nonempty-category requirement is not represented by Fields.RequiredAny", want.Syntax)
+	}
+	for _, name := range want.Required {
+		if directlyRepresentableContractControl(spec, want, name) || abstractRequirementRepresented(spec, want, name, controls) {
+			continue
+		}
+		t.Errorf("%s: upstream abstract requirement %q has no explicit structural or audit-only classification", want.Syntax, name)
+	}
+}
+
+func abstractRequirementRepresented(spec *LayoutSpec, want upstreamAgentContract, name string, controls map[string]publicCanonicalControl) bool {
+	if controls[name].Location != "" {
+		return true
+	}
+	switch name {
+	case "fit-or-avoid":
+		return hasRequiredAny(spec.Fields, []string{"fit", "avoid"})
+	case "title-or-body-or-next":
+		return hasRequiredAny(spec.Fields, []string{"title", "body", "next"})
+	case "title-or-body":
+		return hasRequiredAny(spec.Fields, []string{"title", "body"})
+	case "image":
+		return spec.Body != nil && spec.Body.MinImages > 0
+	case "left-body", "right-body":
+		return spec.BodyFormat == BodyFormatSplit && spec.Body != nil && spec.Body.Separator != "" && spec.Body.MinItems >= 2
+	case "nodes":
+		return spec.Body != nil && spec.Body.MinItems > 0
+	case "rows":
+		return spec.Rows != nil && spec.Rows.MinColumns > 0
+	case "Q", "A":
+		return spec.Body != nil && slices.Contains(spec.Body.RequiredPairs, [2]string{"Q", "A"})
+	case "U-or-E":
+		return spec.Body != nil && spec.Body.MinItems > 0
+	case "nonempty-category":
+		return spec.Fields != nil && len(spec.Fields.RequiredAny) > 0
+	case "one-line.highlight":
+		return spec.Fields != nil && slices.Contains(spec.Fields.RequiredWhenNoVariant, "highlight")
+	case "three.items", "save.items":
+		return slices.Contains(variantRequired(spec.Variants, strings.TrimSuffix(name, ".items")), "items")
+	case "decision.fit-or-recommendation":
+		return slices.ContainsFunc(variantRequiredAny(spec.Variants, "decision"), func(group []string) bool {
+			return slices.Equal(group, []string{"fit", "recommendation"})
+		})
+	case "title", "body":
+		return want.Syntax == "gallery-story"
+	default:
+		return false
+	}
+}
+
+func hasRequiredAny(fields *FieldsSpec, want []string) bool {
+	if fields == nil {
+		return false
+	}
+	return slices.ContainsFunc(fields.RequiredAny, func(group []string) bool { return slices.Equal(group, want) })
+}
+
+func variantRequired(variants []VariantSpec, name string) []string {
+	for _, variant := range variants {
+		if variant.Name == name {
+			return variant.Required
+		}
+	}
+	return nil
+}
+
+func variantRequiredAny(variants []VariantSpec, name string) [][]string {
+	for _, variant := range variants {
+		if variant.Name == name {
+			return variant.RequiredAny
+		}
+	}
+	return nil
+}
+
+func comparePublicDefaults(t *testing.T, spec *LayoutSpec, want upstreamAgentContract, controls map[string]publicCanonicalControl) {
+	t.Helper()
+	for name, value := range want.Defaults {
+		if _, ok := controls[name]; ok || abstractSemanticDefault(name, value) || abstractOracleDefault(name) {
+			continue
+		}
+		variant, field, dotted := strings.Cut(name, ".")
+		if dotted && field != "actions" {
+			if got := variantDefaults(spec.Variants, variant)[field]; got != value {
+				t.Errorf("%s: public variant default %s = %q, want %q", want.Syntax, name, got, value)
+			}
+			continue
+		}
+		if dotted && field == "actions" {
+			defaults := variantDefaults(spec.Variants, variant)
+			got := strings.Join([]string{defaults["primary"], defaults["secondary"], defaults["tertiary"]}, "/")
+			if got != value {
+				t.Errorf("%s: public variant actions default %s = %q, want %q", want.Syntax, name, got, value)
+			}
+			continue
+		}
+		t.Errorf("%s: upstream default %q=%q has no direct or explicit abstract public classification", want.Syntax, name, value)
+	}
+	for _, variant := range spec.Variants {
+		for field, value := range variant.Defaults {
+			if want.Defaults[variant.Name+"."+field] == value {
+				continue
+			}
+			actions := want.Defaults[variant.Name+".actions"]
+			if actions != "" && slices.Contains(strings.Split(actions, "/"), value) {
+				continue
+			}
+			t.Errorf("%s: public variant default %s.%s=%q is absent upstream", want.Syntax, variant.Name, field, value)
+		}
+	}
+}
+
+func abstractOracleDefault(name string) bool {
+	return name == "caps" || strings.HasPrefix(name, "max-") || strings.HasPrefix(name, "unknown-") ||
+		strings.HasPrefix(name, "omitted-") || strings.HasSuffix(name, "-out-of-range") || name == "proof-without-source"
+}
+
+func TestBuiltinPublicCanonicalSchemaOmitsIgnoredLegacyInputs(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	contracts := map[string]upstreamAgentContract{}
+	for _, contract := range readUpstreamAgentContracts(t).Contracts {
+		contracts[contract.Syntax] = contract
+	}
+	tests := []struct {
+		name, location, field string
+	}{
+		{name: "toolbox", location: "Rows.Schema", field: "url"},
+		{name: "quote-card", location: "Fields.Optional", field: "author"},
+		{name: "infographic", location: "Fields.Optional", field: "variant"},
+		{name: "infographic", location: "Fields.Optional", field: "layout"},
+		{name: "callout", location: "Opener.Params", field: "variant"},
+	}
+	for _, tt := range tests {
+		spec, ok := c.Get(tt.name)
+		if !ok {
+			t.Fatalf("missing catalog entry %q", tt.name)
+		}
+		spec = publicLayoutShowSpec(t, spec)
+		want := contracts[tt.name]
+		for name, control := range publicCanonicalControls(spec, want) {
+			if name == tt.field && control.Location == tt.location {
+				t.Errorf("%s: public %s leaks ignored/legacy control %q", tt.name, tt.location, tt.field)
+			}
+		}
+	}
+}
+
+func TestBuiltinCanonicalExamplesUseOnlyPublicSchema(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, spec := range c.ListFiltered(ListFilter{Lifecycle: LifecycleRecommended}) {
+		lines := strings.Split(strings.TrimSpace(spec.Example), "\n")
+		opener, err := parseBlockOpener(lines[0])
+		if err != nil {
+			t.Errorf("%s: parse canonical opener: %v", spec.Name, err)
+			continue
+		}
+		if spec.OpenerCompatibilityOnly && (opener.RawParams != "" || len(opener.Params) != 0) {
+			t.Errorf("%s: canonical example uses compatibility-only opener", spec.Name)
+		}
+		body, err := witnessBody(lines)
+		if err != nil {
+			t.Errorf("%s: parse canonical body: %v", spec.Name, err)
+			continue
+		}
+		facts, issues := parseBodyFacts(spec, spec.BodyFormat, body)
+		if len(issues) != 0 {
+			t.Errorf("%s: parse canonical facts: %v", spec.Name, issues)
+			continue
+		}
+		if spec.Fields != nil {
+			for _, field := range spec.Fields.Compatibility {
+				if len(facts.fieldValues[field.Name]) != 0 {
+					t.Errorf("%s: canonical example uses compatibility-only field %q", spec.Name, field.Name)
+				}
+			}
+		}
+		if spec.BodyFormat == BodyFormatRows && spec.Rows != nil && !spec.RowsCompatibilityOnly && !slices.Contains(spec.AgentContract.Required, "rows") {
+			for i, row := range facts.rows {
+				if len(row) > len(spec.Rows.Schema) {
+					t.Errorf("%s: canonical row %d has %d cells, public schema has %d", spec.Name, i+1, len(row), len(spec.Rows.Schema))
+				}
+			}
+		}
+	}
+}
+
 func TestPinnedProjectionRejectsCoordinatedRuntimeAndAgentContractDrift(t *testing.T) {
 	base := func() *LayoutSpec {
 		return &LayoutSpec{
@@ -468,7 +877,7 @@ func TestFreeLayoutModuleContracts(t *testing.T) {
 		"split": {
 			format: BodyFormatSplit, category: "free-layout", lifecycle: LifecycleRecommended,
 			opener: &OpenerSpec{ParamStyle: ParamStyleBracket, Params: []ParamSpec{
-				{Name: "ratio", Description: "左右两栏比例；省略时由渲染器使用默认 1:1", Example: "3:2"},
+				{Name: "ratio", Description: "左右两栏比例；省略时由渲染器使用默认 1:1", Default: "1:1", Example: "3:2"},
 			}},
 			body:     &BodySpec{Separator: "---", MinItems: 2},
 			metadata: LayoutMetadata{Author: "md2wechat", Provenance: "builtin", InspiredBy: "advanced-layout-modules-guide.md#split"},
@@ -477,14 +886,14 @@ func TestFreeLayoutModuleContracts(t *testing.T) {
 		"flow": {
 			format: BodyFormatLines, category: "free-layout", lifecycle: LifecycleRecommended,
 			opener:   &OpenerSpec{Caption: true},
-			body:     &BodySpec{MinItems: 1},
+			body:     &BodySpec{MinItems: 1, Separator: "→"},
 			metadata: LayoutMetadata{Author: "md2wechat", Provenance: "builtin", InspiredBy: "advanced-layout-modules-guide.md#flow"},
 			example:  flowGuideSnippet,
 		},
 		"matrix": {
 			format: BodyFormatRows, category: "free-layout", lifecycle: LifecycleRecommended,
 			opener: &OpenerSpec{ParamStyle: ParamStyleTokens, Params: []ParamSpec{
-				{Name: "headers", Description: "逗号分隔的表头", Example: "能力,基础版,专业版,企业版"},
+				{Name: "headers", Required: true, Description: "逗号分隔的表头", Example: "能力,基础版,专业版,企业版"},
 			}},
 			rows: &RowsSpec{Delimiter: "|", MinColumns: 2, Schema: []FieldSpec{
 				{Name: "dimension", Description: "对比维度"},
@@ -588,7 +997,7 @@ func TestNewImageModuleContracts(t *testing.T) {
 			params: []imageModuleParamContract{
 				{name: "variant", enum: []string{"clean", "card"}, defaultValue: "clean"},
 				{name: "density", enum: []string{"compact", "normal", "airy"}, defaultValue: "normal"},
-				{name: "columns", enum: []string{"1", "2", "3", "4"}, defaultValue: "3"},
+				{name: "columns", defaultValue: "3"},
 				{name: "image_shape", enum: []string{"square", "rounded", "phone", "poster", "original"}, defaultValue: "square"},
 				{name: "caption_style", enum: []string{"none", "minimal", "numbered", "label"}, defaultValue: "minimal"},
 				{name: "accent", enum: []string{"brand", "muted", "contrast"}, defaultValue: "brand"},
@@ -615,7 +1024,7 @@ func TestNewImageModuleContracts(t *testing.T) {
 			format: BodyFormatMarkdownImages, category: "evidence", lifecycle: LifecycleRecommended, minImages: 1,
 			paramStyle: ParamStyleBraces,
 			params: []imageModuleParamContract{
-				{name: "columns", enum: []string{"1", "2", "3", "4"}, defaultValue: "2"},
+				{name: "columns", defaultValue: "2"},
 				{name: "image_shape", enum: []string{"square", "rounded", "phone", "poster", "original"}, defaultValue: "phone"},
 				{name: "variant", enum: []string{"clean", "card"}, defaultValue: "clean"},
 				{name: "wechat_safe_level", enum: []string{"strict", "normal"}, defaultValue: "normal"}, {name: "title"},
@@ -868,8 +1277,6 @@ func TestListFilteredDefaultsToRecommended(t *testing.T) {
 }
 
 func TestBuiltinRecommendedModuleSetMatchesUpstream(t *testing.T) {
-	t.Skip("catalog projection is implemented in Tasks 3-4")
-
 	c := NewCatalog()
 	if err := c.Load(); err != nil {
 		t.Fatal(err)
@@ -1038,10 +1445,10 @@ func TestKnownDriftContractsAreCalibrated(t *testing.T) {
 	}{
 		"hero":           {required: []string{"title"}},
 		"audience-fit":   {any: [][]string{{"fit", "avoid"}}},
-		"verdict":        {any: [][]string{{"title", "body"}}},
+		"verdict":        {required: []string{"title"}},
 		"bridge":         {any: [][]string{{"title", "body", "next"}}},
-		"manifesto":      {any: [][]string{{"title", "believe"}}},
-		"quote":          {any: [][]string{{"quote", "text"}}},
+		"manifesto":      {required: []string{"title"}},
+		"quote":          {required: []string{"quote"}},
 		"image-text":     {required: []string{"image"}, any: [][]string{{"title", "body"}}},
 		"image-annotate": {required: []string{"image", "point"}},
 		"author-card":    {required: []string{"name"}},
@@ -1086,6 +1493,9 @@ func TestKnownDriftContractsAreCalibrated(t *testing.T) {
 	wantOpener := &OpenerSpec{ParamStyle: ParamStyleToken, Params: []ParamSpec{{Name: "variant", Enum: []string{"info", "warning", "success", "danger"}}}}
 	if !reflect.DeepEqual(callout.Opener, wantOpener) {
 		t.Errorf("callout opener = %#v, want %#v", callout.Opener, wantOpener)
+	}
+	if !callout.OpenerCompatibilityOnly {
+		t.Error("callout legacy opener must be hidden from canonical discovery")
 	}
 }
 
@@ -1137,8 +1547,11 @@ func TestTitleAndClosureCatalogContracts(t *testing.T) {
 			}
 			switch name {
 			case "hero":
-				if got := fieldByName(spec.Fields.Optional, "symbol"); !slices.Equal(got.AppliesTo, []string{"masthead"}) || got.Default != "spark-solid" {
+				if got := fieldByName(spec.Fields.Optional, "symbol"); !slices.Equal(got.AppliesTo, []string{"masthead"}) || got.Default != "" {
 					t.Fatalf("masthead symbol = %#v", got)
+				}
+				if got := variantDefaults(spec.Variants, "masthead"); !reflect.DeepEqual(got, map[string]string{"symbol": "spark-solid"}) {
+					t.Fatalf("masthead defaults = %#v", got)
 				}
 				for _, field := range []string{"kicker", "points", "image", "tags"} {
 					if got := fieldByName(spec.Fields.Optional, field).AppliesTo; !slices.Equal(got, []string{"editorial", "briefing", "story"}) {
@@ -1146,13 +1559,14 @@ func TestTitleAndClosureCatalogContracts(t *testing.T) {
 					}
 				}
 			case "section-title":
-				if got := fieldByName(spec.Fields.Optional, "symbol"); !slices.Equal(got.AppliesTo, []string{"marker", "divider", "focus", "vertical"}) || got.Default != "diamond-outline" {
+				if got := fieldByName(spec.Fields.Optional, "symbol"); !slices.Equal(got.AppliesTo, []string{"marker", "divider", "focus", "vertical"}) || got.Default != "" {
 					t.Fatalf("section symbol = %#v", got)
 				}
 				if got := fieldByName(spec.Fields.Optional, "index"); !slices.Equal(got.AppliesTo, []string{"numbered"}) || got.MinRunes != 1 || got.MaxRunes != 4 {
 					t.Fatalf("numbered index = %#v", got)
 				}
 				for variant, wantDefaults := range map[string]map[string]string{
+					"marker":   {"symbol": "diamond-outline"},
 					"divider":  {"symbol": "spark-outline"},
 					"focus":    {"symbol": "double-circle"},
 					"vertical": {"symbol": "diamond-solid"},
@@ -1168,14 +1582,15 @@ func TestTitleAndClosureCatalogContracts(t *testing.T) {
 				if got := spec.Fields.Shapes; len(got) != 1 || got[0].Field != "points" || got[0].MaxParts != 3 {
 					t.Fatalf("points shape = %#v", got)
 				}
-				for field, wantDefault := range map[string]string{"primary": "收藏这篇", "secondary": "关注更新", "tertiary": "转给同事"} {
-					if got := fieldByName(spec.Fields.Optional, field).Default; got != wantDefault {
-						t.Fatalf("%s default = %q, want %q", field, got, wantDefault)
+				for _, field := range []string{"primary", "secondary", "tertiary"} {
+					if got := fieldByName(spec.Fields.Optional, field).Default; got != "" {
+						t.Fatalf("%s global default = %q, want empty", field, got)
 					}
 				}
 				for variant, wantDefaults := range map[string]map[string]string{
-					"consult": {"primary": "回复「排版」", "secondary": "查看案例", "tertiary": "收藏这篇"},
-					"trial":   {"primary": "试一版高级稿", "secondary": "查看工作流", "tertiary": "获取 API Key"},
+					"save-follow": {"primary": "收藏这篇", "secondary": "关注更新", "tertiary": "转给同事"},
+					"consult":     {"primary": "回复「排版」", "secondary": "查看案例", "tertiary": "收藏这篇"},
+					"trial":       {"primary": "试一版高级稿", "secondary": "查看工作流", "tertiary": "获取 API Key"},
 				} {
 					if got := variantDefaults(spec.Variants, variant); !reflect.DeepEqual(got, wantDefaults) {
 						t.Fatalf("%s defaults = %#v, want %#v", variant, got, wantDefaults)

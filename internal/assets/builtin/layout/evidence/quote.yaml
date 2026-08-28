@@ -24,30 +24,23 @@ anti_pattern: |
   引用内容太长超过 3 句话；
   source 写成空字符串导致显示问题。
 fields:
-  required: []
-  required_any:
-    - [quote, text]
+  required:
+    - name: quote
+      description: 引用正文
+      example: "模块不是为了让页面更满，而是为了让读者更快找到判断、证据和下一步。"
   optional:
     - name: variant
       description: 引用结构变体
       enum: [light, brand, proof]
       default: light
       example: light
-    - name: quote
-      description: 引用正文（quote 或 text 至少填一个）
-      example: "模块不是为了让页面更满，而是为了让读者更快找到判断、证据和下一步。"
-    - name: text
-      description: 引用正文别名（quote 或 text 至少填一个）
-      example: "模块不是为了让页面更满，而是为了让读者更快找到判断、证据和下一步。"
     - name: eyebrow
       description: 标签词，定位引用的角色
+      default: 观点强调
       example: "核心观点"
     - name: source
       description: 来源说明（作者名或文章名）
       example: "内容设计原则"
-    - name: author
-      description: 作者名称
-      example: "内容设计团队"
     - name: brand
       description: 品牌名称
       example: md2wechat
@@ -63,35 +56,46 @@ fields:
     - name: note
       description: 底部说明
       example: "适合金句、访谈摘录、文章结论"
-    - name: tone
-      description: "样式：accent 使用强调样式，默认为普通样式"
-      enum: [accent, default]
-      example: "accent"
     - name: image
       description: 辅助图片 URL 或 Markdown 图片
       example: "https://example.com/quote.png"
+    - name: image_alt
+      description: 辅助图片替代文字
+      example: "引用场景"
+  compatibility:
+    - name: text
+      description: 引用正文别名
+      example: "模块不是为了让页面更满，而是为了让读者更快找到判断、证据和下一步。"
+    - name: author
+      description: 作者名称
+      example: "内容设计团队"
+    - name: tone
+      description: "旧版样式选择"
+      enum: [accent, default]
+      example: "accent"
     - name: img
       description: image 的兼容别名
       example: "https://example.com/quote.png"
     - name: cover
       description: image 的兼容别名
       example: "https://example.com/quote.png"
-    - name: image_alt
-      description: 辅助图片替代文字
-      example: "引用场景"
     - name: alt
       description: image_alt 的兼容别名
       example: "引用场景"
+  compatibility_required_any:
+    - [quote, text]
 variants:
   - name: light
     aliases: [default, plain]
     use_when: 需要轻量突出一句引用
-    required_any:
+    required: [quote]
+    compatibility_required_any:
       - [quote, text]
   - name: brand
     aliases: [accent]
     use_when: 需要突出品牌主张
-    required_any:
+    required: [quote]
+    compatibility_required_any:
       - [quote, text]
     example: |
       :::quote
@@ -102,8 +106,8 @@ variants:
   - name: proof
     aliases: [evidence]
     use_when: 需要展示有来源的证据引用
-    required: [source]
-    required_any:
+    required: [source, quote]
+    compatibility_required_any:
       - [quote, text]
     example: |
       :::quote

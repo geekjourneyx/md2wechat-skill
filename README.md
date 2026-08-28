@@ -188,7 +188,8 @@ subtitle: 为什么读者愿意继续读下去
 :::
 
 :::callout
-高级排版模块只在 API 模式渲染。
+type: info
+body: 高级排版模块只在 API 模式渲染。
 :::
 ```
 

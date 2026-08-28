@@ -253,6 +253,85 @@ func TestLayoutShowJSONReturnsSpec(t *testing.T) {
 	}
 }
 
+func TestLayoutShowJSONReturnsCanonicalAuthoringSchema(t *testing.T) {
+	oldJSON := jsonOutput
+	t.Cleanup(func() {
+		jsonOutput = oldJSON
+		layoutcatalog.ResetDefaultCatalogForTests()
+	})
+	jsonOutput = true
+	layoutcatalog.ResetDefaultCatalogForTests()
+
+	show := func(name string) map[string]any {
+		t.Helper()
+		stdout := captureStdout(t, func() {
+			if err := layoutShowCmd.RunE(layoutShowCmd, []string{name}); err != nil {
+				t.Fatalf("layout show %s: %v", name, err)
+			}
+		})
+		var response struct {
+			Data struct {
+				Spec map[string]any `json:"spec"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(stdout, &response); err != nil {
+			t.Fatalf("decode layout show %s: %v\n%s", name, err, stdout)
+		}
+		return response.Data.Spec
+	}
+	fieldNames := func(spec map[string]any, membership string) []string {
+		t.Helper()
+		fields, _ := spec["Fields"].(map[string]any)
+		items, _ := fields[membership].([]any)
+		names := make([]string, 0, len(items))
+		for _, item := range items {
+			field, _ := item.(map[string]any)
+			name, _ := field["Name"].(string)
+			names = append(names, name)
+		}
+		return names
+	}
+
+	toolbox := show("toolbox")
+	rows := toolbox["Rows"].(map[string]any)
+	schema := rows["Schema"].([]any)
+	if len(schema) != 3 || strings.Contains(toolbox["Example"].(string), "http") {
+		t.Fatalf("toolbox canonical rows/example still advertises a fourth URL cell: %#v", toolbox)
+	}
+	if got := fieldNames(show("quote-card"), "Optional"); !slices.Equal(got, []string{"source"}) {
+		t.Fatalf("quote-card optional fields = %v, want [source]", got)
+	}
+	if got := fieldNames(show("infographic"), "Optional"); slices.Contains(got, "variant") || slices.Contains(got, "layout") {
+		t.Fatalf("infographic canonical optional fields leak legacy selectors: %v", got)
+	}
+	callout := show("callout")
+	if _, ok := callout["Opener"]; ok {
+		t.Fatalf("callout canonical discovery exposes legacy token opener: %#v", callout["Opener"])
+	}
+	if got := fieldNames(callout, "Required"); !slices.Equal(got, []string{"body"}) {
+		t.Fatalf("callout required fields = %v, want [body]", got)
+	}
+	if got := fieldNames(callout, "Optional"); !slices.Equal(got, []string{"type"}) {
+		t.Fatalf("callout optional fields = %v, want [type]", got)
+	}
+	for _, tt := range []struct {
+		name, hidden string
+	}{
+		{name: "faq", hidden: "Rows"},
+		{name: "question", hidden: "Fields"},
+		{name: "flow", hidden: "Fields"},
+		{name: "timeline", hidden: "Fields"},
+	} {
+		if value, ok := show(tt.name)[tt.hidden]; ok {
+			t.Fatalf("%s canonical discovery exposes compatibility-only %s: %#v", tt.name, tt.hidden, value)
+		}
+	}
+	epilogue := show("epilogue")
+	if avoid, ok := epilogue["AvoidCombiningWith"].([]any); !ok || len(avoid) != 0 {
+		t.Fatalf("epilogue avoid_combining_with = %#v, want empty", epilogue["AvoidCombiningWith"])
+	}
+}
+
 func TestLayoutListCompatibilityIsolation(t *testing.T) {
 	oldJSON := jsonOutput
 	oldFilters := layoutListFilters

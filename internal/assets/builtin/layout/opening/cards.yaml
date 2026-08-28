@@ -23,6 +23,9 @@ anti_pattern: |
   每行少于 3 列导致渲染失败；
   风格字段写错（只允许 accent 或 default）；
   把所有内容塞进一张卡片而不是分开。
+opener:
+  caption: true
+  caption_default: 模块列表
 rows:
   delimiter: "|"
   min_columns: 3

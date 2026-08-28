@@ -23,6 +23,9 @@ anti_pattern: |
   没有任何有效事项导致渲染失败；
   状态列写错（只允许 done/pending/warn）；
   每条都写 done 失去检查列表的意义。
+opener:
+  caption: true
+  caption_default: 检查清单
 rows:
   delimiter: "|"
   min_columns: 2

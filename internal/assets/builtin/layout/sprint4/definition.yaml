@@ -35,6 +35,7 @@ fields:
   optional:
     - name: termLabel
       description: 术语标签说明（JSON key：termLabel，可省略）
+      default: 术语
       example: "术语"
 
 example: |

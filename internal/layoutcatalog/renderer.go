@@ -107,7 +107,7 @@ func (c *Catalog) renderBlock(name string, input RenderInput, order openerParamO
 func validateRenderInputFields(spec *LayoutSpec, fields map[string]any) error {
 	allowed := map[string]bool{}
 	if spec.Fields != nil {
-		for _, field := range append(append([]FieldSpec{}, spec.Fields.Required...), spec.Fields.Optional...) {
+		for _, field := range allFieldSpecs(spec.Fields) {
 			allowed[field.Name] = true
 		}
 	}
@@ -214,6 +214,13 @@ func renderJSONFields(spec *LayoutSpec, vars map[string]any, bodyKind, opener st
 			}
 			setJSONField(obj, f.Name, parseJSONFieldValue(val))
 		}
+		for _, f := range spec.Fields.Compatibility {
+			val, ok := lookupString(vars, f.Name)
+			if !ok || val == "" {
+				continue
+			}
+			setJSONField(obj, f.Name, parseJSONFieldValue(val))
+		}
 	}
 
 	var body any = obj
@@ -275,7 +282,7 @@ func renderRows(spec *LayoutSpec, vars map[string]any, opener string) (string, e
 }
 
 func orderedFieldSpecs(fields *FieldsSpec) []FieldSpec {
-	declared := append(append([]FieldSpec{}, fields.Required...), fields.Optional...)
+	declared := allFieldSpecs(fields)
 	if len(fields.OutputOrder) == 0 {
 		return declared
 	}

@@ -27,7 +27,6 @@ opener:
   params:
     - name: columns
       description: 截图列数
-      enum: ["1", "2", "3", "4"]
       default: "2"
     - name: image_shape
       description: 移动端截图外观提示

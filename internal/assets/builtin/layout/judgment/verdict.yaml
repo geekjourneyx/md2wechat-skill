@@ -24,25 +24,27 @@ anti_pattern: |
   title 写成中性的陈述而非判断；
   缺少 eyebrow 时不会显示标签（默认显示"最终判断"）。
 fields:
-  required: []
-  required_any:
-    - [title, body]
-  optional:
+  required:
     - name: title
-      description: 判断主标题，写一句鲜明的立场（title 或 body 至少填一个）
+      description: 判断主标题，写一句鲜明的立场
       example: "真正的护城河不是模块数量，而是品牌表达系统"
+  optional:
     - name: body
       description: 判断说明，展开 title 的核心论据（title 或 body 至少填一个）
       example: "模块必须解决新的阅读任务，否则只是换皮。"
     - name: eyebrow
       description: 标签词，默认显示"最终判断"
+      default: 最终判断
       example: "最终判断"
     - name: note
       description: 底部补充说明
       example: "适合观点文、复盘、方案结论"
+  compatibility:
     - name: meta
       description: 底部元信息，与 note 一起作为说明显示
       example: "2026-01-01"
+  compatibility_required_any:
+    - [title, body]
 example: |
   :::verdict
   eyebrow: 最终判断

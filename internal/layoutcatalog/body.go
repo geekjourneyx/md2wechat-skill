@@ -3,6 +3,7 @@ package layoutcatalog
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -171,17 +172,20 @@ func isDeclaredField(fields *FieldsSpec, name string) bool {
 	if fields == nil {
 		return false
 	}
-	for _, field := range fields.Required {
-		if field.Name == name {
-			return true
-		}
-	}
-	for _, field := range fields.Optional {
+	for _, field := range allFieldSpecs(fields) {
 		if field.Name == name {
 			return true
 		}
 	}
 	return false
+}
+
+func allFieldSpecs(fields *FieldsSpec) []FieldSpec {
+	if fields == nil {
+		return nil
+	}
+	declared := append(append([]FieldSpec{}, fields.Required...), fields.Optional...)
+	return append(declared, fields.Compatibility...)
 }
 
 func parseRowsBody(spec *LayoutSpec, body []string) (bodyFacts, []bodyValidationIssue) {
@@ -468,7 +472,7 @@ func resolveDefaultVariant(fields *FieldsSpec, variants []VariantSpec) *VariantS
 func validateUnknownStructuredFields(fields *FieldsSpec, types map[string][]string) []bodyValidationIssue {
 	declared := map[string]bool{}
 	if fields != nil {
-		for _, field := range append(append([]FieldSpec{}, fields.Required...), fields.Optional...) {
+		for _, field := range allFieldSpecs(fields) {
 			declared[field.Name] = true
 		}
 	}
@@ -503,11 +507,11 @@ func isDeclaredFieldContainer(declared map[string]bool, name string) bool {
 func validateVariantFields(variant VariantSpec, values map[string][]string) []bodyValidationIssue {
 	var issues []bodyValidationIssue
 	for _, name := range variant.Required {
-		if !hasNonEmptyValue(values[name]) {
+		if !hasNonEmptyValue(values[name]) && !compatibilityRequirementSatisfied(variant.CompatibilityRequiredAny, name, values) {
 			issues = append(issues, bodyValidationIssue{field: name, message: fmt.Sprintf("variant %s requires field %s", variant.Name, name), cause: ErrMissingRequiredField})
 		}
 	}
-	for _, group := range variant.RequiredAny {
+	for _, group := range append(append([][]string{}, variant.RequiredAny...), variant.CompatibilityRequiredAny...) {
 		found := false
 		for _, name := range group {
 			if hasNonEmptyValue(values[name]) {
@@ -647,12 +651,20 @@ func validateFields(fields *FieldsSpec, variants []VariantSpec, values, types ma
 		}
 		value := lastNonEmptyValue(values[field.Name])
 		if value == "" {
+			if compatibilityRequirementSatisfied(fields.CompatibilityRequiredAny, field.Name, values) {
+				continue
+			}
 			issues = append(issues, bodyValidationIssue{field: field.Name, message: "required field missing", cause: ErrMissingRequiredField})
 			continue
 		}
 		issues = append(issues, validateFieldValue(field, variants, value, lastNonEmptyValue(types[field.Name]), active)...)
 	}
 	for _, field := range fields.Optional {
+		if len(values[field.Name]) > 0 {
+			issues = append(issues, validateFieldValue(field, variants, lastNonEmptyValue(values[field.Name]), lastNonEmptyValue(types[field.Name]), active)...)
+		}
+	}
+	for _, field := range fields.Compatibility {
 		if len(values[field.Name]) > 0 {
 			issues = append(issues, validateFieldValue(field, variants, lastNonEmptyValue(values[field.Name]), lastNonEmptyValue(types[field.Name]), active)...)
 		}
@@ -690,6 +702,20 @@ func validateFields(fields *FieldsSpec, variants []VariantSpec, values, types ma
 	}
 	issues = append(issues, validateFieldShapes(fields.Shapes, values)...)
 	return issues
+}
+
+func compatibilityRequirementSatisfied(groups [][]string, required string, values map[string][]string) bool {
+	for _, group := range groups {
+		if !slices.Contains(group, required) {
+			continue
+		}
+		for _, name := range group {
+			if hasNonEmptyValue(values[name]) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func validateFieldValue(field FieldSpec, variants []VariantSpec, value, actualType string, active *VariantSpec) []bodyValidationIssue {

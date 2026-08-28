@@ -36,6 +36,7 @@ fields:
       description: 标注说明
     - name: eyebrow
       description: 标签词
+      default: 图片解读卡
       example: "图片解读"
     - name: title
       description: 图片解读标题

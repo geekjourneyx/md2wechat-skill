@@ -39,6 +39,7 @@ opener:
   params:
     - name: variant
       enum: [info, warning, success, danger]
+opener_compatibility_only: true
 body:
   min_items: 1
 example: |

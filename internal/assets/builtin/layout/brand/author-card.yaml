@@ -44,6 +44,7 @@ fields:
     - name: link
       description: 展示链接（纯文字，不渲染成按钮）
       example: "md2wechat.com"
+  compatibility:
     - name: avatar
       description: 头像图片 URL
       example: "https://example.com/avatar.png"

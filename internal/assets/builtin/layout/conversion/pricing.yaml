@@ -23,6 +23,9 @@ anti_pattern: |
   没有任何满足 3 列的行导致渲染失败；
   功能列用逗号分隔（应用 / 分隔，会自动拆成列表）；
   价格列格式不统一（应统一使用货币符号）。
+opener:
+  caption: true
+  caption_default: 方案选择
 rows:
   delimiter: "|"
   min_columns: 3

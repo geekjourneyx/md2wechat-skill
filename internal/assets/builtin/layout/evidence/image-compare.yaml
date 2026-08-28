@@ -34,6 +34,7 @@ fields:
   optional:
     - name: eyebrow
       description: 标签词
+      default: 左右对比图
       example: "前后对比"
     - name: title
       description: 对比标题，说明对比的核心结论

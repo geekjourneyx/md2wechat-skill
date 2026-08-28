@@ -25,11 +25,13 @@ anti_pattern: |
 opener:
   caption: true
 fields:
-  optional:
+  compatibility:
     - name: separator
       enum: ["→"]
+fields_compatibility_only: true
 body:
   min_items: 1
+  separator: "→"
 example: |
   :::flow[Agent 发布流程]
   草稿输入 → 结构判断 → 模块选择 → 视觉校准 → 发布检查

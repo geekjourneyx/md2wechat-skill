@@ -84,7 +84,8 @@ source: geekjourney
 :::
 
 :::callout
-排版的本质：让读者用最少精力获取最大价值。
+type: info
+body: 排版的本质：让读者用最少精力获取最大价值。
 :::
 
 :::definition

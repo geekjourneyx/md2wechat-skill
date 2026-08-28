@@ -42,15 +42,12 @@ fields:
       example: "三分钟上手，立刻开始"
     - name: primary
       description: 主要行动文案
-      default: 收藏这篇
       example: "保存灵感"
     - name: secondary
       description: 次要行动文案
-      default: 关注更新
       example: "直接套用"
     - name: tertiary
       description: 第三行动文案
-      default: 转给同事
       example: "继续体验"
     - name: points
       description: 试用分支的要点，用 | 分隔，最多三项
@@ -63,6 +60,10 @@ fields:
 variants:
   - name: save-follow
     use_when: 结尾引导收藏或关注
+    defaults:
+      primary: 收藏这篇
+      secondary: 关注更新
+      tertiary: 转给同事
     required: [title]
   - name: consult
     use_when: 结尾引导咨询

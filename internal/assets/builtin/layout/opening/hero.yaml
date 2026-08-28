@@ -65,7 +65,6 @@ fields:
     - name: symbol
       description: masthead 标题装饰符号
       enum: [spark-solid, spark-outline, diamond-solid, diamond-outline, reference-mark, asterism, double-circle, circle, square-solid, square-outline, star, infinity]
-      default: spark-solid
       applies_to: [masthead]
       example: spark-solid
   output_order: [variant, eyebrow, meta, kicker, title, subtitle, points, image, symbol, brand, tags]
@@ -93,6 +92,8 @@ variants:
       :::
   - name: masthead
     use_when: 极简开场只保留标题、摘要和装饰符号
+    defaults:
+      symbol: spark-solid
     required: [title]
     example: |
       :::hero

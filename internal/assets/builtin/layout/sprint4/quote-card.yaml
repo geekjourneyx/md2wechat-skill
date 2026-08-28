@@ -31,7 +31,9 @@ fields:
   optional:
     - name: source
       description: 来源说明（JSON key：source）
+      default: 佚名
       example: "内容设计原则"
+  compatibility:
     - name: author
       description: 作者姓名（JSON key：author，与 source 互补）
       example: "极客旅程"
