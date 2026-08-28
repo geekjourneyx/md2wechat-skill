@@ -710,13 +710,13 @@ func TestDeterministicWitnessProbe(t *testing.T) {
 		{name: "image alt", format: layoutcatalog.BodyFormatMarkdownImages, markdown: ":::demo\n![Image probe](https://example.com/a.png)\n:::\n", want: "Image probe"},
 		{name: "split", format: layoutcatalog.BodyFormatSplit, markdown: ":::demo\nSplit probe\n---\nright\n:::\n", want: "Split probe"},
 		{name: "lines", format: layoutcatalog.BodyFormatLines, markdown: ":::demo\nLine probe\n:::\n", want: "Line probe"},
-		{name: "dialogue", format: layoutcatalog.BodyFormatDialogue, markdown: ":::demo\nA: Dialogue probe\n:::\n", want: "A: Dialogue probe"},
+		{name: "dialogue", format: layoutcatalog.BodyFormatDialogue, markdown: ":::demo\n甲：Dialogue https://example.com\n:::\n", want: "Dialogue https://example.com"},
 	}
 	testedFormats := make(map[string]bool, len(tests))
 	for _, tt := range tests {
 		testedFormats[tt.format] = true
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := deterministicWitnessProbe(tt.format, tt.markdown)
+			got, err := deterministicWitnessProbe(&layoutcatalog.LayoutSpec{BodyFormat: tt.format}, tt.markdown)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -732,6 +732,70 @@ func TestDeterministicWitnessProbe(t *testing.T) {
 	}
 	if len(testedFormats) != len(layoutcatalog.ValidBodyFormats) {
 		t.Fatalf("probe formats = %v, valid formats = %v", testedFormats, layoutcatalog.ValidBodyFormats)
+	}
+}
+
+func TestCatalogControlFieldsAreNotVisibleWitnessProbes(t *testing.T) {
+	c, err := layoutConformanceCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		module string
+		want   string
+	}{
+		{module: "faq", want: "这些模块只能在某一个主题里用吗？"},
+		{module: "notice", want: "适合"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.module, func(t *testing.T) {
+			spec, ok := c.Get(tt.module)
+			if !ok {
+				t.Fatalf("catalog module %q not found", tt.module)
+			}
+			witnesses, err := witnessesForSpec(c, spec)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := witnesses[0].Probe; got != tt.want {
+				t.Fatalf("probe = %q, want visible payload %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDeterministicRowsProbeSkipsSchemaEnumControls(t *testing.T) {
+	spec := &layoutcatalog.LayoutSpec{
+		BodyFormat: layoutcatalog.BodyFormatRows,
+		Rows: &layoutcatalog.RowsSpec{
+			Delimiter: ";",
+			Schema: []layoutcatalog.FieldSpec{
+				{Name: "tone", Enum: []string{"fit", "risk"}},
+				{Name: "label"},
+				{Name: "body"},
+			},
+		},
+	}
+	got, err := deterministicWitnessProbe(spec, ":::demo\nfit ; Visible label ; Body\n:::\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "Visible label" {
+		t.Fatalf("probe = %q, want first non-control row cell", got)
+	}
+}
+
+func TestNoticeConformanceRequiresSemanticToneAndVisiblePayload(t *testing.T) {
+	witness := e2eWitness{
+		Module:   "notice",
+		Markdown: ":::notice\nfit | 适合 | 正文\n:::\n",
+		Probe:    "适合",
+	}
+	if err := checkConformanceHTML(witness, `<section data-mpa-action-id="notice">适合</section>`); err == nil {
+		t.Fatal("notice without semantic tone evidence unexpectedly conformed")
+	}
+	if err := checkConformanceHTML(witness, `<section data-mpa-action-id="notice"><p data-notice-tone="fit">适合</p></section>`); err != nil {
+		t.Fatalf("notice with visible payload and semantic tone should conform: %v", err)
 	}
 }
 
@@ -1303,6 +1367,11 @@ func checkSemanticConformanceNode(witness e2eWitness, node *html.Node) error {
 	if witness.Module == "hero" && witness.Variant == "masthead" && !hasDOMAttributeValue(node, "data-module-part", "hero-masthead") {
 		return fmt.Errorf("hero/masthead response missing data-module-part=%q", "hero-masthead")
 	}
+	if witness.Module == "notice" {
+		if err := checkNoticeToneConformanceNode(witness, node); err != nil {
+			return err
+		}
+	}
 	if witness.Module == "cta" {
 		if err := checkCTAConformanceNode(witness, node); err != nil {
 			return err
@@ -1323,6 +1392,33 @@ func checkSemanticConformanceNode(witness e2eWitness, node *html.Node) error {
 	}
 	if count := countDOMElements(node, imageElement); count < minimumImages {
 		return fmt.Errorf("%s response has %d %s element(s), want at least %d", witness.Module, count, imageElement, minimumImages)
+	}
+	return nil
+}
+
+func checkNoticeToneConformanceNode(witness e2eWitness, node *html.Node) error {
+	body, err := firstWitnessBody(witness.Markdown)
+	if err != nil {
+		return fmt.Errorf("notice witness body: %w", err)
+	}
+	seen := map[string]bool{}
+	for _, line := range body {
+		line = strings.TrimSpace(strings.TrimRight(line, "\r"))
+		if line == "" {
+			continue
+		}
+		tone, _, ok := strings.Cut(line, "|")
+		tone = strings.TrimSpace(tone)
+		if !ok || tone == "" || seen[tone] {
+			continue
+		}
+		seen[tone] = true
+		if !hasDOMAttributeValue(node, "data-notice-tone", tone) {
+			return fmt.Errorf("notice response missing data-notice-tone=%q", tone)
+		}
+	}
+	if len(seen) == 0 {
+		return fmt.Errorf("notice witness has no semantic tone controls")
 	}
 	return nil
 }
@@ -1414,22 +1510,38 @@ func ctaSemanticFixture(variant string, withPoints bool) string {
 }
 
 func compactPR1CompositionMarkdown() string {
+	block := func(lines ...string) string { return strings.Join(lines, "\n") }
 	return strings.Join([]string{
-		":::hero", "variant: masthead", "title: Compact theme probe", "symbol: spark-solid", ":::",
-		":::section-title", "variant: marker", "symbol: diamond-outline", "title: Marker section", ":::",
+		block(":::hero", "variant: masthead", "title: Compact theme probe", "symbol: spark-solid", ":::"),
+		block(":::section-title", "variant: marker", "symbol: diamond-outline", "title: Marker section", ":::"),
 		"Body evidence remains readable.",
-		":::section-title", "variant: divider", "symbol: spark-outline", "title: Divider section", ":::",
-		":::section-title", "variant: numbered", "index: 1234", "title: Numbered section", ":::",
-		":::section-title", "variant: frame", "title: Frame section", ":::",
-		":::section-title", "variant: focus", "symbol: double-circle", "title: Focus section", ":::",
-		":::section-title", "variant: vertical", "symbol: diamond-solid", "title: Vertical section", ":::",
-		":::faq", "Q: Question?", "A: Answer.", "Q: Another?", "A: Another answer.", ":::",
-		":::notice", "fit | Fit | Body", "avoid | Avoid | Body", "risk | Risk | Body", "require | Require | Body", "note | Note | Body", ":::",
-		":::epilogue", "title: Epilogue transition", ":::",
-		":::summary", "highlight: Compact summary", ":::",
-		":::cta", "variant: trial", "title: CTA probe", "points: one | two | three", ":::",
-		":::closing", "title: Quiet closing", ":::",
-	}, "\n") + "\n"
+		block(":::section-title", "variant: divider", "symbol: spark-outline", "title: Divider section", ":::"),
+		block(":::section-title", "variant: numbered", "index: 1234", "title: Numbered section", ":::"),
+		block(":::section-title", "variant: frame", "title: Frame section", ":::"),
+		block(":::section-title", "variant: focus", "symbol: double-circle", "title: Focus section", ":::"),
+		block(":::section-title", "variant: vertical", "symbol: diamond-solid", "title: Vertical section", ":::"),
+		block(":::faq", "Q: Question?", "A: Answer.", "Q: Another?", "A: Another answer.", ":::"),
+		block(":::notice", "fit | Fit | Body", "avoid | Avoid | Body", "risk | Risk | Body", "require | Require | Body", "note | Note | Body", ":::"),
+		block(":::epilogue", "title: Epilogue transition", ":::"),
+		block(":::summary", "highlight: Compact summary", ":::"),
+		block(":::cta", "variant: trial", "title: CTA probe", "points: one | two | three", ":::"),
+		block(":::closing", "title: Quiet closing", ":::"),
+	}, "\n\n") + "\n"
+}
+
+func TestCompactPR1CompositionSeparatesMarkdownBlocks(t *testing.T) {
+	markdown := compactPR1CompositionMarkdown()
+	for _, want := range []string{
+		":::\n\n:::section-title",
+		":::\n\nBody evidence remains readable.\n\n:::section-title",
+	} {
+		if !strings.Contains(markdown, want) {
+			t.Errorf("compact composition missing Markdown block boundary %q", want)
+		}
+	}
+	if strings.Contains(markdown, ":::\n:::section-title") {
+		t.Fatal("compact composition joins layout fences without a blank-line boundary")
+	}
 }
 
 func countDOMElements(node *html.Node, element string) int {
@@ -1520,7 +1632,7 @@ func witnessesForSpec(c *layoutcatalog.Catalog, spec *layoutcatalog.LayoutSpec) 
 		probeInImageAlt := false
 		if probe == "" {
 			var err error
-			probe, err = deterministicWitnessProbe(spec.BodyFormat, item.markdown)
+			probe, err = deterministicWitnessProbe(spec, item.markdown)
 			if err != nil {
 				return nil, fmt.Errorf("%s witness %q probe: %w", spec.Name, item.variant, err)
 			}
@@ -1606,12 +1718,12 @@ func witnessOpenerParams(raw string) (map[string]string, error) {
 	return params, nil
 }
 
-func deterministicWitnessProbe(format, markdown string) (string, error) {
+func deterministicWitnessProbe(spec *layoutcatalog.LayoutSpec, markdown string) (string, error) {
 	body, err := firstWitnessBody(markdown)
 	if err != nil {
 		return "", err
 	}
-	switch format {
+	switch spec.BodyFormat {
 	case layoutcatalog.BodyFormatFields, layoutcatalog.BodyFormatMarkdownFields:
 		for _, line := range body {
 			key, value, ok := strings.Cut(strings.TrimSpace(strings.TrimRight(line, "\r")), ":")
@@ -1631,8 +1743,19 @@ func deterministicWitnessProbe(format, markdown string) (string, error) {
 			if line == "" {
 				continue
 			}
-			cell, _, _ := strings.Cut(line, "|")
-			return strings.TrimSpace(cell), nil
+			delimiter := "|"
+			if spec.Rows != nil && spec.Rows.Delimiter != "" {
+				delimiter = spec.Rows.Delimiter
+			}
+			cells := strings.Split(line, delimiter)
+			for i, cell := range cells {
+				if spec.Rows != nil && i < len(spec.Rows.Schema) && len(spec.Rows.Schema[i].Enum) != 0 {
+					continue
+				}
+				if cell = strings.TrimSpace(cell); cell != "" {
+					return cell, nil
+				}
+			}
 		}
 	case layoutcatalog.BodyFormatMarkdownImages:
 		for _, line := range body {
@@ -1641,7 +1764,23 @@ func deterministicWitnessProbe(format, markdown string) (string, error) {
 				return strings.TrimSpace(match[1]), nil
 			}
 		}
-	case layoutcatalog.BodyFormatSplit, layoutcatalog.BodyFormatLines, layoutcatalog.BodyFormatDialogue:
+	case layoutcatalog.BodyFormatDialogue:
+		for _, line := range body {
+			line = strings.TrimSpace(strings.TrimRight(line, "\r"))
+			if line == "" {
+				continue
+			}
+			separatorIndex := strings.Index(line, ":")
+			separatorWidth := len(":")
+			if fullWidth := strings.Index(line, "："); separatorIndex < 0 || (fullWidth >= 0 && fullWidth < separatorIndex) {
+				separatorIndex = fullWidth
+				separatorWidth = len("：")
+			}
+			if separatorIndex >= 0 {
+				return strings.TrimSpace(line[separatorIndex+separatorWidth:]), nil
+			}
+		}
+	case layoutcatalog.BodyFormatSplit, layoutcatalog.BodyFormatLines:
 		for _, line := range body {
 			line = strings.TrimSpace(strings.TrimRight(line, "\r"))
 			if line != "" && line != "---" {
@@ -1649,7 +1788,7 @@ func deterministicWitnessProbe(format, markdown string) (string, error) {
 			}
 		}
 	default:
-		return "", fmt.Errorf("unsupported body format %q", format)
+		return "", fmt.Errorf("unsupported body format %q", spec.BodyFormat)
 	}
 	return "", nil
 }
