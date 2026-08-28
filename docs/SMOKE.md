@@ -10,7 +10,7 @@
 
 > 说明：本文档只记录验证结论和关键观察，不记录敏感凭证、草稿 ID、素材 ID。
 
-> v3.3.0 release candidate boundary: Gate B against the current production endpoint failed at 2026-08-25T15:41Z. The 84-witness description below remains the required conformance contract, not a claim that this candidate has passed live API proof. Historical smoke evidence is not rewritten by this note.
+> v3.3.0 release boundary: Gate B passed against `https://www.md2wechat.cn/api/convert`; the run was observed at 2026-08-28T03:41:50Z and its report completed at 2026-08-28T03:41:51Z. Evidence `/tmp/md2wechat-layout-conformance-v3.3.0-a9e0a08-main-deployed.jsonl` binds CLI commit `a9e0a08870aa1f55f995b32f2fc554da48ca87dd` to upstream main `0e7027616dd1654802cf11615f6ba8bd23e539ae`, with all 84 individual witnesses and all six compact-theme probes green. The endpoint exposed no recognized remote build identity, so this is target-and-time production evidence, not remote commit evidence; local `layout validate` alone remains insufficient. Historical smoke evidence is not rewritten by this note.
 
 ---
 
@@ -32,7 +32,7 @@
 make e2e-layout
 ```
 
-该目标与 API 模式 `convert` 共用同一端点解析：默认完整 URL 是 `https://www.md2wechat.cn/api/convert`，并对 `MD2WECHAT_BASE_URL` / 配置文件值统一补全 `/api/convert`。发布模式（默认）必须同时提供已通过的上游字段契约证据：`MD2WECHAT_UPSTREAM_FIELD_CONTRACT_SHA=052346a43deb83d211471bb7b423318f6f6ff6c1` 与 `MD2WECHAT_UPSTREAM_FIELD_CONTRACT_RESULT=passed`；缺任一项或 SHA 不匹配即失败。仅本地或 staging 冒烟可显式设置 `MD2WECHAT_LAYOUT_CONFORMANCE_MODE=smoke`，并可用 `MD2WECHAT_BASE_URL` 覆盖目标。凭证从 `~/.config/md2wechat/config.yaml` 的 `api.md2wechat_key` 读取，`MD2WECHAT_API_KEY` 可覆盖配置文件。API key 只进入 `X-API-Key` 请求头，不会出现在命令行、JSONL 报告或测试日志中。
+该目标与 API 模式 `convert` 共用同一端点解析：默认完整 URL 是 `https://www.md2wechat.cn/api/convert`，并对 `MD2WECHAT_BASE_URL` / 配置文件值统一补全 `/api/convert`。发布模式（默认）必须同时提供已通过的上游字段契约证据：`MD2WECHAT_UPSTREAM_FIELD_CONTRACT_SHA=0e7027616dd1654802cf11615f6ba8bd23e539ae` 与 `MD2WECHAT_UPSTREAM_FIELD_CONTRACT_RESULT=passed`；缺任一项或 SHA 不匹配即失败。仅本地或 staging 冒烟可显式设置 `MD2WECHAT_LAYOUT_CONFORMANCE_MODE=smoke`，并可用 `MD2WECHAT_BASE_URL` 覆盖目标。凭证从 `~/.config/md2wechat/config.yaml` 的 `api.md2wechat_key` 读取，`MD2WECHAT_API_KEY` 可覆盖配置文件。API key 只进入 `X-API-Key` 请求头，不会出现在命令行、JSONL 报告或测试日志中。
 
 报告默认写入 `/tmp/md2wechat-layout-conformance.jsonl`，可通过 `LAYOUT_CONFORMANCE_OUTPUT` 改路径。脚本为 Go 测试设置六分钟总时限；请求串行执行，且仅网络/5xx 短暂失败会最多重试两次。它会运行 84 个 witness conformance，以及一个覆盖 `default`、`apple`、`cyber`、`bytedance`、`sports`、`chinese` 的紧凑边界/组合探针。84 个 witness 由 56 个 canonical、25 个结构不同的 non-default branch 和 3 个 compatibility witness 组成；任一 module marker、稳定正文、精确 variant 分支属性、语义 DOM 约束或原始 fence 不一致都会失败。
 

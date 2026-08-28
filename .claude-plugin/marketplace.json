@@ -9,7 +9,7 @@
       "name": "md2wechat",
       "source": "./",
       "description": "Convert Markdown articles to WeChat Official Account HTML, diagnose local readiness, discover and validate advanced layouts, generate previews, and optionally upload drafts.",
-      "version": "3.2.0",
+      "version": "3.3.0",
       "author": {
         "name": "geekjourneyx"
       },

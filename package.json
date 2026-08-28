@@ -1,6 +1,6 @@
 {
   "name": "@geekjourneyx/md2wechat",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "Install the md2wechat CLI from the matching GitHub Release bundle.",
   "license": "SEE LICENSE IN LICENSE",
   "repository": {

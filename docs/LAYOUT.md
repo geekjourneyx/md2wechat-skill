@@ -771,7 +771,7 @@ warn | 链接和说明单独检查 | 避免手机里出现跳读和看不清
 
 **什么时候用**：章节复盘或文章结尾。根据读者需要选择一句话、三点、决策或收藏清单。
 
-**必填规则**：默认/`legacy` 需要 `highlight`；`three` 和 `save` 需要 `items`；`decision` 需要 `fit` 或 `recommendation`。
+**必填规则**：新内容省略 `variant` 使用 canonical 默认分支，并提供 `highlight`；不要显式选择 `legacy`，它只服务旧稿兼容。`three` 和 `save` 需要 `items`；`decision` 需要 `fit` 或 `recommendation`。
 
 ```
 :::summary
