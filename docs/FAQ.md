@@ -889,7 +889,7 @@ md2wechat layout show hero --json      # full spec with fields and example
 
 计数口径分别是 77 个场景条目、56 个默认推荐语法名、3 个兼容模块、4 个基础增强能力和 63 项渲染层语法能力。77 不是 `layout list` 的条目数：同一语法名可承载多个场景或结构变体。`layout show --json` 的 schema 定义合法性，canonical example 和结构不同的 variant examples 是可执行参考。
 
-新内容按 `input_positions` → primary `body_format` 与 `Opener` / `Fields` / `Rows` / `Body` → canonical `Variants[].Name` → canonical `Example` 的顺序读取。`CompatibleBodyFormats` 与 `Variants[].Aliases` 只用于旧稿兼容，不能作为新内容选择。
+新内容按 `input_positions` → primary `body_format` 与 `Opener` / `Fields` / `Rows` / `Body` → canonical `Variants[].Name` → canonical `Example` 的顺序读取。`compatible_body_formats` 与 `Variants[].Aliases` 只用于旧稿兼容，不能作为新内容选择。
 
 When the user has not chosen a theme or module, use discovery output as facts and let the Agent decide from the article and Brand Profile. The CLI does not parse Brand Profile; Agents should read `~/.config/md2wechat/brand.md` themselves, choose a compatible theme from `themes list --json`, inspect module schemas with `layout show`, and render only the modules they can fill correctly.
 

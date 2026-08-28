@@ -133,7 +133,7 @@ subtitle: 不是好不好看，是读者读不读得完
 3. canonical `Variants[].Name`，只选择这些规范变体；
 4. canonical `Example`，作为可执行起点。
 
-`CompatibleBodyFormats` 和 `Variants[].Aliases` 是只读兼容事实：它们只帮助迁移旧稿，**不得**作为新内容的选择项。`layout validate` 只接受本地 catalog/schema；目标 API 是否实际支持 renderer，仍以一次 API `convert` 或发布 conformance 为准。
+`compatible_body_formats` 和 `Variants[].Aliases` 是只读兼容事实：它们只帮助迁移旧稿，**不得**作为新内容的选择项。`layout validate` 只接受本地 catalog/schema；目标 API 是否实际支持 renderer，仍以一次 API `convert` 或发布 conformance 为准。
 
 ---
 

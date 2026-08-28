@@ -111,7 +111,7 @@ md2wechat layout list --lifecycle compatibility --json  # 仅旧稿迁移
 
 **⚠️ 重要约束**：高级排版语法（`:::module` ... `:::` 语法）**仅在 API 模式**下渲染。使用 `--mode ai` 时，排版语法会被当作普通段落输出。
 
-选择模块后，按固定顺序读取 `layout show <name> --json`：`input_positions` → primary `body_format` 与对应 `Opener`、`Fields` / `Rows` / `Body` → canonical `Variants[].Name` → canonical `Example`。`CompatibleBodyFormats` 与 `Variants[].Aliases` 只记录旧稿兼容性，不得用来选择新内容。
+选择模块后，按固定顺序读取 `layout show <name> --json`：`input_positions` → primary `body_format` 与对应 `Opener`、`Fields` / `Rows` / `Body` → canonical `Variants[].Name` → canonical `Example`。`compatible_body_formats` 与 `Variants[].Aliases` 只记录旧稿兼容性，不得用来选择新内容。
 
 ---
 
@@ -266,7 +266,7 @@ md2wechat layout show callout --json
 printf '%s\n' '重要提示' | md2wechat layout render callout --body-file - --json
 ```
 
-读取 `layout list --json` / `layout show --json` 的 primary `body_format` 决定正文写法：`fields` / `rows` / `json_object` / `json_array` / `markdown_images` / `markdown_fields` / `split` / `lines` / `dialogue`。Schema 决定合法性；优先复用 canonical `Example`，只有结构不同的分支才选 canonical `Variants[].Name` 的 `Example`。`CompatibleBodyFormats` 和 `Variants[].Aliases` 是只读兼容事实，不能为新内容选择。复杂正文用 `--body-file`，不要拼成大量 `--var`。兼容模块仅用于旧稿迁移。
+读取 `layout list --json` / `layout show --json` 的 primary `body_format` 决定正文写法：`fields` / `rows` / `json_object` / `json_array` / `markdown_images` / `markdown_fields` / `split` / `lines` / `dialogue`。Schema 决定合法性；优先复用 canonical `Example`，只有结构不同的分支才选 canonical `Variants[].Name` 的 `Example`。`compatible_body_formats` 和 `Variants[].Aliases` 是只读兼容事实，不能为新内容选择。复杂正文用 `--body-file`，不要拼成大量 `--var`。兼容模块仅用于旧稿迁移。
 
 ---
 

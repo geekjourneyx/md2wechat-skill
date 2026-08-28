@@ -184,7 +184,7 @@ func TestLayoutDocumentationKeepsPR1AuthoringBoundary(t *testing.T) {
 		"`Opener` 与 `Fields` / `Rows` / `Body`",
 		"canonical `Variants[].Name`",
 		"canonical `Example`",
-		"`CompatibleBodyFormats` 和 `Variants[].Aliases`",
+		"`compatible_body_formats` 和 `Variants[].Aliases`",
 		"普通 `##` / `###` heading 足以组织绝大多数正文",
 		"可选 `epilogue` → 可选 `summary` → 至多一个 `cta` → 可选 `closing`",
 	} {

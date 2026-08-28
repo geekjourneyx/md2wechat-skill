@@ -76,7 +76,7 @@ md2wechat layout render <name> --var KEY=VALUE         # render syntax block
 md2wechat layout validate --file article.md --json     # validate syntax in file
 ```
 
-Counts use distinct dimensions: 77 recommended source scenarios, 56 recommended syntax names, 3 compatibility modules, 4 base enhancements, and 63 render-layer syntax capabilities. Read a selected `layout show` in this order: `input_positions`, primary `body_format` plus `Opener` / `Fields` / `Rows` / `Body`, canonical `Variants[].Name`, then canonical `Example`; `CompatibleBodyFormats` and `Variants[].Aliases` are migration-only compatibility facts.
+Counts use distinct dimensions: 77 recommended source scenarios, 56 recommended syntax names, 3 compatibility modules, 4 base enhancements, and 63 render-layer syntax capabilities. Read a selected `layout show` in this order: `input_positions`, primary `body_format` plus `Opener` / `Fields` / `Rows` / `Body`, canonical `Variants[].Name`, then canonical `Example`; `compatible_body_formats` and `Variants[].Aliases` are migration-only compatibility facts.
 
 **重要约束**：高级排版模块使用通用 `:::name` 语法，仅在 **API 模式**下渲染；`block` 是保留语法名，不是通用占位符。
 - `convert`（默认）= API 模式，模块正常渲染

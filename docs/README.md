@@ -24,6 +24,7 @@
 - [配置指南](CONFIG.md)
 - [微信凭证与 IP 白名单指南](WECHAT-CREDENTIALS.md)：包含高级版 API 固定出口配置
 - [能力发现与 Prompt Catalog](DISCOVERY.md)
+- [Agent 使用指南](AGENT-GUIDE.md)
 - [公众号标题建议](TITLE_SUGGEST.md)
 - [Agent 图片计划模式](AGENT_IMAGE_GEN.md)：当前 Agent 运行时暴露 Image Gen 时的 `--plan --json` 工作流
 - [示例配置](examples/config.yaml.example)

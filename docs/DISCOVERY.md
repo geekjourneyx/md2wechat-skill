@@ -444,7 +444,7 @@ md2wechat layout validate --stdin --json < article.md
 
 layout 内置 catalog 是唯一事实源，不读取用户目录、项目目录或环境变量中的模块 YAML。`layout list --json` 会在模块摘要中显示 `body_format`；`layout show --json` 会显示完整 schema、canonical `Example` 和结构不同的 `Variants[].Example`。Schema 定义合法输入；Example 是经过验证的可执行 witness，应复用而不是手猜语法。正文格式共有 `fields` / `rows` / `json_object` / `json_array` / `markdown_images` / `markdown_fields` / `split` / `lines` / `dialogue` 九种；`compatible_body_formats` 只表示模块仍接受的旧正文格式。
 
-新内容的固定读取顺序是：`input_positions` → primary `body_format` 与对应 `Opener`、`Fields` / `Rows` / `Body` → canonical `Variants[].Name` → canonical `Example`。`CompatibleBodyFormats` 和 `Variants[].Aliases` 都是只读 compatibility facts，只用于理解旧稿，不能作为新内容的选择项。
+新内容的固定读取顺序是：`input_positions` → primary `body_format` 与对应 `Opener`、`Fields` / `Rows` / `Body` → canonical `Variants[].Name` → canonical `Example`。`compatible_body_formats` 和 `Variants[].Aliases` 都是只读 compatibility facts，只用于理解旧稿，不能作为新内容的选择项。
 
 默认 `layout list --json` 只返回 recommended lifecycle。旧稿迁移时才运行 `layout list --lifecycle compatibility --json`；不要把 `dialogue`、`gallery`、`longimage` 推荐给新稿。复杂正文使用 `layout render <name> --body-file <path>`（或 `--body-file -` 从 stdin 读取），opener 参数用可重复的 `--param KEY=VALUE`，方括号 caption 用 `--caption`。
 

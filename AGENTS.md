@@ -63,7 +63,7 @@ AI 模式（`--mode ai`）不解析 `:::name` 高级排版块，这些块将以�
 
 真实 conformance 必须证明 84 个 witness（56 个 recommended canonical、25 个结构不同的 non-default branch、3 个 compatibility）都由目标 API 语义渲染：响应成功、模块 marker 与稳定内容存在、原始 `:::name` fence 不残留。`layout validate` 成功不等于远端 renderer 已部署。
 
-新内容读取 `layout show` 时，依次读取 `input_positions`、primary `body_format` 与对应 `Opener`/`Fields`/`Rows`/`Body`、canonical `Variants[].Name`、canonical `Example`。`CompatibleBodyFormats` 和 `Variants[].Aliases` 只读且只服务旧稿兼容，不得作为新内容选择。
+新内容读取 `layout show` 时，依次读取 `input_positions`、primary `body_format` 与对应 `Opener`/`Fields`/`Rows`/`Body`、canonical `Variants[].Name`、canonical `Example`。`compatible_body_formats` 和 `Variants[].Aliases` 只读且只服务旧稿兼容，不得作为新内容选择。
 
 ## Verification Order
 
