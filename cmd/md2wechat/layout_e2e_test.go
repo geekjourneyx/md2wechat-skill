@@ -742,6 +742,35 @@ func TestCompactPR1CompositionWitnessesCoverFAQNoticeAndSummaryBranches(t *testi
 	}
 }
 
+func TestCompactPR1CompositionBindsCTAWitnessToSubmittedPoints(t *testing.T) {
+	c, err := layoutConformanceCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	markdown, witnesses, err := compactPR1Composition(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const submittedCTA = ":::cta\nvariant: trial\ntitle: CTA probe\npoints: one | two | three\n:::"
+	for _, witness := range witnesses {
+		if witness.Module != "cta" || witness.Variant != "trial" {
+			continue
+		}
+		if witness.Markdown != submittedCTA {
+			t.Fatalf("compact CTA witness Markdown = %q, want exact submitted block %q", witness.Markdown, submittedCTA)
+		}
+		if !strings.Contains(markdown, witness.Markdown) {
+			t.Fatal("compact CTA witness is not bound to the submitted composition")
+		}
+		if err := checkSemanticConformance(witness, ctaSemanticFixture("trial", true)); err != nil {
+			t.Fatalf("compact CTA witness rejected submitted points branch: %v", err)
+		}
+		return
+	}
+	t.Fatal("compact trial CTA witness not found")
+}
+
 func TestCompactSummaryOmittedVariantDoesNotInventRendererBranch(t *testing.T) {
 	c, err := layoutConformanceCatalog()
 	if err != nil {
@@ -1740,7 +1769,7 @@ func compactPR1Composition(c *layoutcatalog.Catalog) (string, []e2eWitness, erro
 		{Module: "summary", Variant: "three", Markdown: summaryThree, Probe: "Compact three summary"},
 		{Module: "summary", Variant: "decision", Markdown: summaryDecision, Probe: "Compact decision summary"},
 		{Module: "summary", Variant: "save", Markdown: summarySave, Probe: "Compact save summary"},
-		{Module: "cta", Variant: "trial", Probe: "CTA probe"},
+		{Module: "cta", Variant: "trial", Markdown: cta, Probe: "CTA probe"},
 		{Module: "closing", Probe: "Quiet closing"},
 	}
 	return markdown, witnesses, nil
