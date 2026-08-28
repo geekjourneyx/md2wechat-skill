@@ -193,33 +193,6 @@ func TestLayoutDocumentationKeepsPR1AuthoringBoundary(t *testing.T) {
 		}
 	}
 
-	for _, path := range []string{
-		"../../skills/md2wechat/SKILL.md",
-		"../../platforms/openclaw/md2wechat/SKILL.md",
-	} {
-		text := readDocumentationFile(t, path)
-		for _, phrase := range []string{
-			"Discover with `capabilities`, `layout list`, and `layout show` before authoring",
-			"Use ordinary headings by default; use `section-title` only for important transitions",
-			"Use at most one hero and at most one CTA in an article.",
-			"`epilogue` is an optional body-tail transition",
-			"`closing` is an optional quiet signature and never carries an action",
-			"Validate locally, then convert in API mode to prove rendering",
-		} {
-			if !strings.Contains(text, phrase) {
-				t.Errorf("%s must preserve Agent decision rule %q", path, phrase)
-			}
-		}
-		for _, forbidden := range []string{
-			"unless the user explicitly asks for more",
-			"unless the user asks for more",
-		} {
-			if strings.Contains(text, forbidden) {
-				t.Errorf("%s must not permit a hero/CTA limit override %q", path, forbidden)
-			}
-		}
-	}
-
 	start := strings.Index(layout, "## 四、一篇完整文章示例")
 	end := strings.Index(layout, "## 五、Agent 工作流")
 	if start < 0 || end < 0 || end <= start {

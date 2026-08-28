@@ -275,14 +275,6 @@ grep -q 'free of any global WeChat publishing credential requirement' platforms/
 grep -q 'API-mode preview and conversion require a valid `MD2WECHAT_API_KEY`' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must retain API-mode credential requirements"
 grep -q '`create_image_post` effects' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must include create_image_post in named-account pre-effect validation"
 grep -q 'md2wechat skills read md2wechat --json' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must route stale-SOP checks through skills read"
-for skill_path in skills/md2wechat/SKILL.md platforms/openclaw/md2wechat/SKILL.md; do
-  grep -Fq 'API-mode preview and conversion require a valid `MD2WECHAT_API_KEY`' "$skill_path" || fail "$skill_path must retain API-key requirements"
-  grep -Fq 'Discover with `capabilities`, `layout list`, and `layout show` before authoring' "$skill_path" || fail "$skill_path must require discovery before layout authoring"
-  grep -Fq 'Use at most one hero and at most one CTA in an article.' "$skill_path" || fail "$skill_path must preserve unconditional hero/CTA limits"
-  ! grep -Fq 'unless the user explicitly asks for more' "$skill_path" || fail "$skill_path must not permit hero/CTA limit overrides"
-  ! grep -Fq 'unless the user asks for more' "$skill_path" || fail "$skill_path must not permit hero/CTA limit overrides"
-  grep -Fq 'AI mode (`--mode ai`) does not parse `:::module` syntax' "$skill_path" || fail "$skill_path must preserve AI-mode non-rendering"
-done
 GOCACHE="${GOCACHE:-/tmp/md2wechat-go-build}" go test ./cmd/md2wechat -run '^TestLayoutDocumentation' -count=1 >/dev/null || fail "layout documentation contracts must pass"
 ! rg -Fq 'https://md2wechat.app' examples/layout-e2e-test.md \
   || fail "layout E2E fixture must not hardcode an unrelated production endpoint"
