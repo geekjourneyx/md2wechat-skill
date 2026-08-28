@@ -665,7 +665,7 @@ func TestCompactPR1CompositionWitnessesCoverFAQNoticeAndSummaryBranches(t *testi
 		`<p data-notice-tone="require">Compact require notice</p>` +
 		`<p data-notice-tone="note">Compact note notice</p>` +
 		`</section>` +
-		`<section data-mpa-action-id="summary" data-summary-variant="one-line">Compact one-line summary</section>` +
+		`<section data-mpa-action-id="summary" data-summary-variant="legacy">Compact one-line summary</section>` +
 		`<section data-mpa-action-id="summary" data-summary-variant="three">Compact three summary</section>` +
 		`<section data-mpa-action-id="summary" data-summary-variant="decision">Compact decision summary</section>` +
 		`<section data-mpa-action-id="summary" data-summary-variant="save">Compact save summary</section>`
@@ -707,9 +707,13 @@ func TestCompactPR1CompositionWitnessesCoverFAQNoticeAndSummaryBranches(t *testi
 			t.Errorf("notice witness delimiter = %q, want catalog delimiter %q", witness.RowDelimiter, notice.Rows.Delimiter)
 		}
 		if witness.Module == "summary" {
-			attribute, _, ok := expectedVariantBranch(witness)
-			if !ok || attribute != "data-summary-variant" {
-				t.Errorf("%s witness lacks exact summary branch evidence", key)
+			attribute, _, hasBranch := expectedVariantBranch(witness)
+			hasSelector := strings.Contains(witness.Markdown, "\nvariant:")
+			switch {
+			case hasSelector && (!hasBranch || attribute != "data-summary-variant"):
+				t.Errorf("%s explicit witness lacks exact summary branch evidence", key)
+			case !hasSelector && hasBranch:
+				t.Errorf("%s selector-free witness invented summary branch evidence", key)
 			}
 		}
 		if err := checkConformanceHTML(witness, validHTML); err != nil {
@@ -735,6 +739,53 @@ func TestCompactPR1CompositionWitnessesCoverFAQNoticeAndSummaryBranches(t *testi
 			t.Fatalf("notice without note tone marker error = %v", err)
 		}
 		break
+	}
+}
+
+func TestCompactSummaryOmittedVariantDoesNotInventRendererBranch(t *testing.T) {
+	c, err := layoutConformanceCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, witnesses, err := compactPR1Composition(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var omitted e2eWitness
+	for _, witness := range witnesses {
+		if witness.Module == "summary" && witness.Probe == "Compact one-line summary" {
+			omitted = witness
+			break
+		}
+	}
+	if omitted.Markdown == "" {
+		t.Fatal("compact omitted-variant summary witness not found")
+	}
+	if strings.Contains(omitted.Markdown, "\nvariant:") {
+		t.Fatalf("omitted summary submitted an explicit variant selector: %q", omitted.Markdown)
+	}
+	if attribute, value, ok := expectedVariantBranch(omitted); ok {
+		t.Fatalf("omitted summary invented renderer branch %s=%q", attribute, value)
+	}
+
+	valid := `<section data-mpa-action-id="summary" data-summary-variant="legacy"><strong>Compact one-line summary</strong></section>`
+	if err := checkConformanceHTML(omitted, valid); err != nil {
+		t.Fatalf("selector-free summary rejected valid renderer subtree: %v", err)
+	}
+	for _, tt := range []struct {
+		name string
+		html string
+	}{
+		{name: "module marker missing", html: `<section>Compact one-line summary</section>`},
+		{name: "probe outside module subtree", html: `<p>Compact one-line summary</p><section data-mpa-action-id="summary">Other summary</section>`},
+		{name: "raw fence retained globally", html: valid + `<p>:::summary</p>`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := checkConformanceHTML(omitted, tt.html); err == nil {
+				t.Fatal("invalid selector-free summary response unexpectedly conformed")
+			}
+		})
 	}
 }
 
@@ -1685,7 +1736,7 @@ func compactPR1Composition(c *layoutcatalog.Catalog) (string, []e2eWitness, erro
 		{Module: "notice", Markdown: notice, Probe: "Compact require notice", RowDelimiter: delimiter},
 		{Module: "notice", Markdown: notice, Probe: "Compact note notice", RowDelimiter: delimiter},
 		{Module: "epilogue", Probe: "Epilogue transition"},
-		{Module: "summary", Variant: "one-line", Markdown: summaryOneLine, Probe: "Compact one-line summary"},
+		{Module: "summary", Markdown: summaryOneLine, Probe: "Compact one-line summary"},
 		{Module: "summary", Variant: "three", Markdown: summaryThree, Probe: "Compact three summary"},
 		{Module: "summary", Variant: "decision", Markdown: summaryDecision, Probe: "Compact decision summary"},
 		{Module: "summary", Variant: "save", Markdown: summarySave, Probe: "Compact save summary"},
