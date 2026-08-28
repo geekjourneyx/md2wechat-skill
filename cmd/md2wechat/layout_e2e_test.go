@@ -27,6 +27,7 @@ type e2eWitness struct {
 	Markdown         string
 	Probe            string
 	ProbeInImageAlt  bool
+	RowDelimiter     string
 }
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -619,17 +620,121 @@ func TestCompactPR1CompositionContainsAllRequiredStructures(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	markdown := compactPR1CompositionMarkdown()
+	markdown, _, err := compactPR1Composition(c)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if report := c.Validate(markdown); len(report.Errors) != 0 {
 		t.Fatalf("compact composition does not validate: %+v", report.Errors)
 	}
 	for _, marker := range []string{
 		":::hero", ":::section-title", ":::epilogue", ":::summary", ":::cta", ":::closing",
 		"variant: marker", "variant: divider", "variant: numbered", "variant: frame", "variant: focus", "variant: vertical",
+		"highlight: Compact one-line summary",
+		"variant: three", "title: Compact three summary",
+		"variant: decision", "title: Compact decision summary",
+		"variant: save", "title: Compact save summary",
 	} {
 		if !strings.Contains(markdown, marker) {
 			t.Errorf("compact composition missing %q", marker)
 		}
+	}
+	if got := strings.Count(markdown, ":::summary\n"); got != 4 {
+		t.Fatalf("compact composition summary block count = %d, want 4 distinct branches", got)
+	}
+}
+
+func TestCompactPR1CompositionWitnessesCoverFAQNoticeAndSummaryBranches(t *testing.T) {
+	c, err := layoutConformanceCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	notice, ok := c.Get("notice")
+	if !ok || notice.Rows == nil || notice.Rows.Delimiter == "" {
+		t.Fatal("notice catalog row delimiter not found")
+	}
+	markdown, witnesses, err := compactPR1Composition(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	validHTML := `<section data-mpa-action-id="faq">Compact FAQ question? Compact FAQ answer.</section>` +
+		`<section data-mpa-action-id="notice">` +
+		`<p data-notice-tone="fit">Compact fit notice</p>` +
+		`<p data-notice-tone="avoid">Compact avoid notice</p>` +
+		`<p data-notice-tone="risk">Compact risk notice</p>` +
+		`<p data-notice-tone="require">Compact require notice</p>` +
+		`<p data-notice-tone="note">Compact note notice</p>` +
+		`</section>` +
+		`<section data-mpa-action-id="summary" data-summary-variant="one-line">Compact one-line summary</section>` +
+		`<section data-mpa-action-id="summary" data-summary-variant="three">Compact three summary</section>` +
+		`<section data-mpa-action-id="summary" data-summary-variant="decision">Compact decision summary</section>` +
+		`<section data-mpa-action-id="summary" data-summary-variant="save">Compact save summary</section>`
+	want := map[string]bool{
+		"faq/Compact FAQ question?":        true,
+		"faq/Compact FAQ answer.":          true,
+		"notice/Compact fit notice":        true,
+		"notice/Compact avoid notice":      true,
+		"notice/Compact risk notice":       true,
+		"notice/Compact require notice":    true,
+		"notice/Compact note notice":       true,
+		"summary/Compact one-line summary": true,
+		"summary/Compact three summary":    true,
+		"summary/Compact decision summary": true,
+		"summary/Compact save summary":     true,
+	}
+	seen := map[string]bool{}
+	for _, witness := range witnesses {
+		if witness.Module != "faq" && witness.Module != "notice" && witness.Module != "summary" {
+			continue
+		}
+		key := witness.Module + "/" + witness.Probe
+		if !want[key] {
+			t.Errorf("unexpected compact semantic witness %q", key)
+			continue
+		}
+		if seen[key] {
+			t.Errorf("duplicate compact semantic witness %q", key)
+			continue
+		}
+		seen[key] = true
+		if witness.Markdown == "" || !strings.Contains(markdown, strings.TrimSpace(witness.Markdown)) {
+			t.Errorf("%s witness is not bound to its submitted compact block", key)
+		}
+		if witness.Module == "faq" && (strings.HasPrefix(witness.Probe, "Q:") || strings.HasPrefix(witness.Probe, "A:")) {
+			t.Errorf("FAQ witness probe must be visible payload, got %q", witness.Probe)
+		}
+		if witness.Module == "notice" && witness.RowDelimiter != notice.Rows.Delimiter {
+			t.Errorf("notice witness delimiter = %q, want catalog delimiter %q", witness.RowDelimiter, notice.Rows.Delimiter)
+		}
+		if witness.Module == "summary" {
+			attribute, _, ok := expectedVariantBranch(witness)
+			if !ok || attribute != "data-summary-variant" {
+				t.Errorf("%s witness lacks exact summary branch evidence", key)
+			}
+		}
+		if err := checkConformanceHTML(witness, validHTML); err != nil {
+			t.Errorf("%s witness rejected valid compact DOM: %v", key, err)
+		}
+	}
+	missing := make([]string, 0)
+	for key := range want {
+		if !seen[key] {
+			missing = append(missing, key)
+		}
+	}
+	slices.Sort(missing)
+	if len(missing) != 0 {
+		t.Fatalf("compact semantic witnesses missing %v", missing)
+	}
+	missingNoteHTML := strings.Replace(validHTML, `<p data-notice-tone="note">Compact note notice</p>`, `Compact note notice`, 1)
+	for _, witness := range witnesses {
+		if witness.Module != "notice" {
+			continue
+		}
+		if err := checkConformanceHTML(witness, missingNoteHTML); err == nil || !strings.Contains(err.Error(), `data-notice-tone="note"`) {
+			t.Fatalf("notice without note tone marker error = %v", err)
+		}
+		break
 	}
 }
 
@@ -787,15 +892,40 @@ func TestDeterministicRowsProbeSkipsSchemaEnumControls(t *testing.T) {
 
 func TestNoticeConformanceRequiresSemanticToneAndVisiblePayload(t *testing.T) {
 	witness := e2eWitness{
-		Module:   "notice",
-		Markdown: ":::notice\nfit | 适合 | 正文\n:::\n",
-		Probe:    "适合",
+		Module:       "notice",
+		Markdown:     ":::notice\nfit | 适合 | 正文\n:::\n",
+		Probe:        "适合",
+		RowDelimiter: "|",
 	}
 	if err := checkConformanceHTML(witness, `<section data-mpa-action-id="notice">适合</section>`); err == nil {
 		t.Fatal("notice without semantic tone evidence unexpectedly conformed")
 	}
 	if err := checkConformanceHTML(witness, `<section data-mpa-action-id="notice"><p data-notice-tone="fit">适合</p></section>`); err != nil {
 		t.Fatalf("notice with visible payload and semantic tone should conform: %v", err)
+	}
+}
+
+func TestNoticeConformanceUsesCatalogDeclaredRowDelimiter(t *testing.T) {
+	c, err := layoutConformanceCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	spec, ok := c.Get("notice")
+	if !ok || spec.Rows == nil {
+		t.Fatal("notice row catalog entry not found")
+	}
+	spec.Rows.Delimiter = ";"
+	spec.Example = ":::notice\nfit ; Visible label ; Visible body\n:::\n"
+
+	witnesses, err := witnessesForSpec(c, spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(witnesses) != 1 {
+		t.Fatalf("notice witness count = %d, want 1", len(witnesses))
+	}
+	if err := checkConformanceHTML(witnesses[0], `<section data-mpa-action-id="notice"><p data-notice-tone="fit">Visible label</p></section>`); err != nil {
+		t.Fatalf("catalog-delimited notice should conform: %v", err)
 	}
 }
 
@@ -1090,7 +1220,10 @@ func TestE2ECompactLayoutBoundaryAndThemeProbes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	markdown := compactPR1CompositionMarkdown()
+	markdown, witnesses, err := compactPR1Composition(c)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if report := c.Validate(markdown); len(report.Errors) != 0 {
 		t.Fatalf("compact probe does not validate: %+v", report.Errors)
 	}
@@ -1107,19 +1240,7 @@ func TestE2ECompactLayoutBoundaryAndThemeProbes(t *testing.T) {
 			if data.Theme != theme || data.FontSize != "medium" || data.BackgroundType != "none" {
 				t.Fatalf("parameter echo = %+v", data)
 			}
-			for _, witness := range []e2eWitness{
-				{Module: "hero", Variant: "masthead", Probe: "Compact theme probe"},
-				{Module: "section-title", Variant: "marker", Probe: "Marker section"},
-				{Module: "section-title", Variant: "divider", Probe: "Divider section"},
-				{Module: "section-title", Variant: "numbered", Probe: "Numbered section"},
-				{Module: "section-title", Variant: "frame", Probe: "Frame section"},
-				{Module: "section-title", Variant: "focus", Probe: "Focus section"},
-				{Module: "section-title", Variant: "vertical", Probe: "Vertical section"},
-				{Module: "epilogue", Probe: "Epilogue transition"},
-				{Module: "summary", Probe: "Compact summary"},
-				{Module: "cta", Variant: "trial", Probe: "CTA probe"},
-				{Module: "closing", Probe: "Quiet closing"},
-			} {
+			for _, witness := range witnesses {
 				if err := checkConformanceHTML(witness, data.HTML); err != nil {
 					t.Fatal(err)
 				}
@@ -1397,6 +1518,9 @@ func checkSemanticConformanceNode(witness e2eWitness, node *html.Node) error {
 }
 
 func checkNoticeToneConformanceNode(witness e2eWitness, node *html.Node) error {
+	if witness.RowDelimiter == "" {
+		return fmt.Errorf("notice witness has no catalog row delimiter")
+	}
 	body, err := firstWitnessBody(witness.Markdown)
 	if err != nil {
 		return fmt.Errorf("notice witness body: %w", err)
@@ -1407,7 +1531,7 @@ func checkNoticeToneConformanceNode(witness e2eWitness, node *html.Node) error {
 		if line == "" {
 			continue
 		}
-		tone, _, ok := strings.Cut(line, "|")
+		tone, _, ok := strings.Cut(line, witness.RowDelimiter)
 		tone = strings.TrimSpace(tone)
 		if !ok || tone == "" || seen[tone] {
 			continue
@@ -1509,28 +1633,77 @@ func ctaSemanticFixture(variant string, withPoints bool) string {
 	}
 }
 
-func compactPR1CompositionMarkdown() string {
+func compactPR1Composition(c *layoutcatalog.Catalog) (string, []e2eWitness, error) {
+	noticeSpec, ok := c.Get("notice")
+	if !ok || noticeSpec.Rows == nil || noticeSpec.Rows.Delimiter == "" {
+		return "", nil, fmt.Errorf("notice catalog row delimiter not found")
+	}
+	delimiter := noticeSpec.Rows.Delimiter
 	block := func(lines ...string) string { return strings.Join(lines, "\n") }
-	return strings.Join([]string{
-		block(":::hero", "variant: masthead", "title: Compact theme probe", "symbol: spark-solid", ":::"),
-		block(":::section-title", "variant: marker", "symbol: diamond-outline", "title: Marker section", ":::"),
-		"Body evidence remains readable.",
-		block(":::section-title", "variant: divider", "symbol: spark-outline", "title: Divider section", ":::"),
-		block(":::section-title", "variant: numbered", "index: 1234", "title: Numbered section", ":::"),
-		block(":::section-title", "variant: frame", "title: Frame section", ":::"),
-		block(":::section-title", "variant: focus", "symbol: double-circle", "title: Focus section", ":::"),
-		block(":::section-title", "variant: vertical", "symbol: diamond-solid", "title: Vertical section", ":::"),
-		block(":::faq", "Q: Question?", "A: Answer.", "Q: Another?", "A: Another answer.", ":::"),
-		block(":::notice", "fit | Fit | Body", "avoid | Avoid | Body", "risk | Risk | Body", "require | Require | Body", "note | Note | Body", ":::"),
-		block(":::epilogue", "title: Epilogue transition", ":::"),
-		block(":::summary", "highlight: Compact summary", ":::"),
-		block(":::cta", "variant: trial", "title: CTA probe", "points: one | two | three", ":::"),
-		block(":::closing", "title: Quiet closing", ":::"),
+	row := func(cells ...string) string { return strings.Join(cells, " "+delimiter+" ") }
+
+	hero := block(":::hero", "variant: masthead", "title: Compact theme probe", "symbol: spark-solid", ":::")
+	markerSection := block(":::section-title", "variant: marker", "symbol: diamond-outline", "title: Marker section", ":::")
+	dividerSection := block(":::section-title", "variant: divider", "symbol: spark-outline", "title: Divider section", ":::")
+	numberedSection := block(":::section-title", "variant: numbered", "index: 1234", "title: Numbered section", ":::")
+	frameSection := block(":::section-title", "variant: frame", "title: Frame section", ":::")
+	focusSection := block(":::section-title", "variant: focus", "symbol: double-circle", "title: Focus section", ":::")
+	verticalSection := block(":::section-title", "variant: vertical", "symbol: diamond-solid", "title: Vertical section", ":::")
+	faq := block(":::faq", "Q: Compact FAQ question?", "A: Compact FAQ answer.", "Q: Secondary compact FAQ question?", "A: Secondary compact FAQ answer.", ":::")
+	notice := block(":::notice",
+		row("fit", "Compact fit notice", "Fit body evidence."),
+		row("avoid", "Compact avoid notice", "Avoid body evidence."),
+		row("risk", "Compact risk notice", "Risk body evidence."),
+		row("require", "Compact require notice", "Require body evidence."),
+		row("note", "Compact note notice", "Note body evidence."),
+		":::")
+	epilogue := block(":::epilogue", "title: Epilogue transition", ":::")
+	summaryOneLine := block(":::summary", "highlight: Compact one-line summary", ":::")
+	summaryThree := block(":::summary", "variant: three", "title: Compact three summary", "items: Three alpha | Three beta | Three gamma", ":::")
+	summaryDecision := block(":::summary", "variant: decision", "title: Compact decision summary", "recommendation: Choose the calibrated contract.", ":::")
+	summarySave := block(":::summary", "variant: save", "title: Compact save summary", "items: Save alpha | Save beta | Save gamma", ":::")
+	cta := block(":::cta", "variant: trial", "title: CTA probe", "points: one | two | three", ":::")
+	closing := block(":::closing", "title: Quiet closing", ":::")
+
+	markdown := strings.Join([]string{
+		hero, markerSection, "Body evidence remains readable.", dividerSection, numberedSection, frameSection, focusSection, verticalSection,
+		faq, notice, epilogue, summaryOneLine, summaryThree, summaryDecision, summarySave, cta, closing,
 	}, "\n\n") + "\n"
+	witnesses := []e2eWitness{
+		{Module: "hero", Variant: "masthead", Probe: "Compact theme probe"},
+		{Module: "section-title", Variant: "marker", Probe: "Marker section"},
+		{Module: "section-title", Variant: "divider", Probe: "Divider section"},
+		{Module: "section-title", Variant: "numbered", Probe: "Numbered section"},
+		{Module: "section-title", Variant: "frame", Probe: "Frame section"},
+		{Module: "section-title", Variant: "focus", Probe: "Focus section"},
+		{Module: "section-title", Variant: "vertical", Probe: "Vertical section"},
+		{Module: "faq", Markdown: faq, Probe: "Compact FAQ question?"},
+		{Module: "faq", Markdown: faq, Probe: "Compact FAQ answer."},
+		{Module: "notice", Markdown: notice, Probe: "Compact fit notice", RowDelimiter: delimiter},
+		{Module: "notice", Markdown: notice, Probe: "Compact avoid notice", RowDelimiter: delimiter},
+		{Module: "notice", Markdown: notice, Probe: "Compact risk notice", RowDelimiter: delimiter},
+		{Module: "notice", Markdown: notice, Probe: "Compact require notice", RowDelimiter: delimiter},
+		{Module: "notice", Markdown: notice, Probe: "Compact note notice", RowDelimiter: delimiter},
+		{Module: "epilogue", Probe: "Epilogue transition"},
+		{Module: "summary", Variant: "one-line", Markdown: summaryOneLine, Probe: "Compact one-line summary"},
+		{Module: "summary", Variant: "three", Markdown: summaryThree, Probe: "Compact three summary"},
+		{Module: "summary", Variant: "decision", Markdown: summaryDecision, Probe: "Compact decision summary"},
+		{Module: "summary", Variant: "save", Markdown: summarySave, Probe: "Compact save summary"},
+		{Module: "cta", Variant: "trial", Probe: "CTA probe"},
+		{Module: "closing", Probe: "Quiet closing"},
+	}
+	return markdown, witnesses, nil
 }
 
 func TestCompactPR1CompositionSeparatesMarkdownBlocks(t *testing.T) {
-	markdown := compactPR1CompositionMarkdown()
+	c, err := layoutConformanceCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	markdown, _, err := compactPR1Composition(c)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, want := range []string{
 		":::\n\n:::section-title",
 		":::\n\nBody evidence remains readable.\n\n:::section-title",
@@ -1643,10 +1816,17 @@ func witnessesForSpec(c *layoutcatalog.Catalog, spec *layoutcatalog.LayoutSpec) 
 		}
 		witnesses = append(witnesses, e2eWitness{
 			Module: spec.Name, Variant: item.variant, EffectiveVariant: canonicalSelectorDefault(spec, item.variant), Markdown: rendered,
-			Probe: probe, ProbeInImageAlt: probeInImageAlt,
+			Probe: probe, ProbeInImageAlt: probeInImageAlt, RowDelimiter: rowsDelimiter(spec),
 		})
 	}
 	return witnesses, nil
+}
+
+func rowsDelimiter(spec *layoutcatalog.LayoutSpec) string {
+	if spec.Rows == nil {
+		return ""
+	}
+	return spec.Rows.Delimiter
 }
 
 func canonicalSelectorDefault(spec *layoutcatalog.LayoutSpec, declaredVariant string) string {
