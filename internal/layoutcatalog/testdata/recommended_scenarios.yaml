@@ -1,6 +1,6 @@
-source_commit: 052346a43deb83d211471bb7b423318f6f6ff6c1
+source_commit: 0e7027616dd1654802cf11615f6ba8bd23e539ae
 source_file: lib/advanced-module-groups.ts
-source_sha256: eafb8d4167a079a602b9a5fb4ac25c68bbfd9f3d1cb8115808136dada116b437
+source_sha256: ca78e6c32617ef380fa665f5817049bc9d6d6b502bfd841d42977050dd707756
 guide_only_recommended_syntax:
   - figure-caption
   - gallery-grid

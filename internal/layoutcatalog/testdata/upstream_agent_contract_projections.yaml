@@ -2,7 +2,7 @@
 # normalized agent-contract fixture is kept byte-for-byte pinned to the
 # upstream test source; this projection pins the PR1 guide's canonical body
 # representation and variant-only field applicability independently.
-source_commit: 052346a43deb83d211471bb7b423318f6f6ff6c1
+source_commit: 0e7027616dd1654802cf11615f6ba8bd23e539ae
 source_files:
   - __tests__/fixtures/advanced-layout-agent-contract.ts
   - advanced-layout-modules-guide.md

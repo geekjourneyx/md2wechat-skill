@@ -46,7 +46,7 @@ type e2eSettings struct {
 
 const layoutConformanceRequestTimeout = 30 * time.Second
 
-const pinnedUpstreamFieldContractSHA = "052346a43deb83d211471bb7b423318f6f6ff6c1"
+const pinnedUpstreamFieldContractSHA = "0e7027616dd1654802cf11615f6ba8bd23e539ae"
 
 func layoutConformanceCatalog() (*layoutcatalog.Catalog, error) {
 	catalog := layoutcatalog.NewCatalog()

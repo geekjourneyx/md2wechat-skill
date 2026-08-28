@@ -4,7 +4,7 @@ set -euo pipefail
 MD2WECHAT_CLI_COMMIT="${MD2WECHAT_CLI_COMMIT:-$(git rev-parse HEAD)}"
 output="${LAYOUT_CONFORMANCE_OUTPUT:-/tmp/md2wechat-layout-conformance.jsonl}"
 mode="${MD2WECHAT_LAYOUT_CONFORMANCE_MODE:-release}"
-pinned_field_contract_sha="052346a43deb83d211471bb7b423318f6f6ff6c1"
+pinned_field_contract_sha="0e7027616dd1654802cf11615f6ba8bd23e539ae"
 
 if [[ "$mode" == "release" ]]; then
   : "${MD2WECHAT_UPSTREAM_FIELD_CONTRACT_SHA:?release conformance requires MD2WECHAT_UPSTREAM_FIELD_CONTRACT_SHA}"
