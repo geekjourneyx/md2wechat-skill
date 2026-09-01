@@ -163,7 +163,16 @@ md2wechat generate_infographic --article article.md --preset infographic-claude-
 
 完整 preset 清单、用途和默认画幅以 `prompts list/show --json` 为准，文档只保留代表性示例。
 
-支持 Volcengine、ModelScope、OpenRouter、OpenAI、Gemini 等服务。配置见 [docs/IMAGE_PROVISIONERS.md](docs/IMAGE_PROVISIONERS.md)。
+支持 Volcengine、ModelScope、OpenRouter、OpenAI、Gemini、MiniMax 等服务。配置见 [docs/IMAGE_PROVISIONERS.md](docs/IMAGE_PROVISIONERS.md)。
+
+需要在生成结果中保持同一人物形象时，可以用 MiniMax 的主体参考（图生图）：
+
+```bash
+md2wechat generate_image "保持同一人物形象的秋日封面" \
+  --subject-reference "https://cdn.example.com/portrait.png"
+```
+
+`--subject-reference` 只支持 `minimax` provider 的 `image-01` 模型，参考图必须是可公开访问的 `http(s)` 图片 URL。
 
 使用宿主 Agent 的 Image Gen：
 

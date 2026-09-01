@@ -50,6 +50,12 @@ Run the smallest useful discovery set:
   md2wechat prompts list --kind image --json
   ```
 
+- Subject-reference (image-to-image) capability before using `--subject-reference`:
+  ```bash
+  md2wechat providers show minimax --json
+  ```
+  Read `supports_subject_reference` on the provider and on each entry of `supported_models`. Only the `minimax` provider and its `image-01` model accept `--subject-reference`, and the reference must be a publicly reachable `http(s)` portrait image URL; inline data URLs and local paths are rejected. Unsupported provider/model combinations fail immediately with `CONFIG_INVALID`, so do not retry them as generation failures.
+
 - Title suggestion prompt selection:
   ```bash
   md2wechat prompts list --kind title --json

@@ -12,6 +12,210 @@ import (
 	"github.com/geekjourneyx/md2wechat-skill/internal/promptcatalog"
 )
 
+type fakeSubjectReferenceProcessor struct {
+	*fakeImageProcessor
+	prompt    string
+	reference string
+	result    *image.GenerateAndUploadResult
+}
+
+func (f *fakeSubjectReferenceProcessor) GenerateAndUploadWithSubject(prompt, subjectReference string) (*image.GenerateAndUploadResult, error) {
+	f.prompt = prompt
+	f.reference = subjectReference
+	return f.result, nil
+}
+
+func TestRunGenerateImageWithSubjectReference(t *testing.T) {
+	oldCfg := cfg
+	oldNewImageProcessor := newImageProcessor
+	t.Cleanup(func() {
+		cfg = oldCfg
+		newImageProcessor = oldNewImageProcessor
+	})
+	cfg = &config.Config{
+		WechatAppID: "appid", WechatSecret: "secret", ImageAPIKey: "image-key",
+		ImageProvider: "minimax", ImageModel: "image-01",
+	}
+	processor := &fakeSubjectReferenceProcessor{
+		fakeImageProcessor: &fakeImageProcessor{},
+		result:             &image.GenerateAndUploadResult{MediaID: "media-subject"},
+	}
+	newImageProcessor = func() imageProcessor { return processor }
+
+	if err := runGenerateImageWithInput(generateImageInput{
+		RawPrompt:        "Keep the portrait identity",
+		SubjectReference: "https://cdn.example/portrait.png",
+	}); err != nil {
+		t.Fatalf("runGenerateImageWithInput() error = %v", err)
+	}
+	if processor.prompt != "Keep the portrait identity" {
+		t.Fatalf("prompt = %q", processor.prompt)
+	}
+	if processor.reference != "https://cdn.example/portrait.png" {
+		t.Fatalf("reference = %q", processor.reference)
+	}
+}
+
+// TestRunGenerateImageSubjectReferenceUsesProviderMetadata asserts the CLI
+// rejects --subject-reference from provider metadata. The runtime processor
+// always implements the subject-reference method, so an interface assertion
+// alone would let unsupported providers fail late as IMAGE_GENERATE_FAILED.
+func TestRunGenerateImageSubjectReferenceUsesProviderMetadata(t *testing.T) {
+	cases := []struct {
+		name     string
+		provider string
+		model    string
+		override string
+		wantText string
+	}{
+		{name: "unsupported_provider", provider: "openai", model: "gpt-image-2", wantText: "provider openai does not support"},
+		{name: "default_provider", provider: "", wantText: "provider openai does not support"},
+		{name: "unsupported_model", provider: "minimax", model: "image-01-live", wantText: "model image-01-live does not support"},
+		{name: "unsupported_model_override", provider: "minimax", model: "image-01", override: "image-01-live", wantText: "model image-01-live does not support"},
+		{name: "unknown_model", provider: "minimax", model: "image-99", wantText: "model image-99 does not support"},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			oldCfg := cfg
+			oldNewImageProcessor, oldNewImageProcessorWithConfig := newImageProcessor, newImageProcessorWithConfig
+			t.Cleanup(func() {
+				cfg = oldCfg
+				newImageProcessor = oldNewImageProcessor
+				newImageProcessorWithConfig = oldNewImageProcessorWithConfig
+			})
+			cfg = &config.Config{
+				WechatAppID: "appid", WechatSecret: "secret", ImageAPIKey: "image-key",
+				ImageProvider: testCase.provider, ImageModel: testCase.model,
+			}
+			processor := &fakeSubjectReferenceProcessor{
+				fakeImageProcessor: &fakeImageProcessor{},
+				result:             &image.GenerateAndUploadResult{MediaID: "media-subject"},
+			}
+			newImageProcessor = func() imageProcessor { return processor }
+			newImageProcessorWithConfig = func(*config.Config) imageProcessor { return processor }
+
+			err := runGenerateImageWithInput(generateImageInput{
+				RawPrompt:        "Keep the portrait identity",
+				SubjectReference: "https://cdn.example/portrait.png",
+				Model:            testCase.override,
+			})
+			if err == nil {
+				t.Fatal("expected --subject-reference to be rejected")
+			}
+			if !strings.Contains(err.Error(), testCase.wantText) {
+				t.Fatalf("error = %v, want it to mention %q", err, testCase.wantText)
+			}
+			cliErr, ok := extractCLIError(err)
+			if !ok {
+				t.Fatalf("error %v is not a *cliError", err)
+			}
+			if cliErr.Code != codeConfigInvalid {
+				t.Fatalf("error code = %q, want %q", cliErr.Code, codeConfigInvalid)
+			}
+			if processor.reference != "" {
+				t.Fatalf("processor must not be called, got reference %q", processor.reference)
+			}
+		})
+	}
+}
+
+// TestRunGenerateImageRejectsInvalidSubjectReferenceURLs keeps unusable
+// references out of the provider call and reports them as invalid configuration.
+func TestRunGenerateImageRejectsInvalidSubjectReferenceURLs(t *testing.T) {
+	cases := []struct {
+		name      string
+		reference string
+	}{
+		{name: "data_url", reference: "data:image/jpeg;base64,QUJD"},
+		{name: "local_path", reference: "/tmp/portrait.png"},
+		{name: "relative_path", reference: "portrait.png"},
+		{name: "unsupported_scheme", reference: "ftp://cdn.example/portrait.png"},
+		{name: "missing_host", reference: "https://"},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			oldCfg := cfg
+			oldNewImageProcessor, oldNewImageProcessorWithConfig := newImageProcessor, newImageProcessorWithConfig
+			t.Cleanup(func() {
+				cfg = oldCfg
+				newImageProcessor = oldNewImageProcessor
+				newImageProcessorWithConfig = oldNewImageProcessorWithConfig
+			})
+			cfg = &config.Config{
+				WechatAppID: "appid", WechatSecret: "secret", ImageAPIKey: "image-key",
+				ImageProvider: "minimax", ImageModel: "image-01",
+			}
+			newImageProcessor = func() imageProcessor {
+				t.Fatal("processor must not be built for an invalid subject reference")
+				return nil
+			}
+			newImageProcessorWithConfig = func(*config.Config) imageProcessor {
+				t.Fatal("processor must not be built for an invalid subject reference")
+				return nil
+			}
+
+			err := runGenerateImageWithInput(generateImageInput{
+				RawPrompt:        "Keep the portrait identity",
+				SubjectReference: testCase.reference,
+			})
+			cliErr, ok := extractCLIError(err)
+			if !ok {
+				t.Fatalf("error %v is not a *cliError", err)
+			}
+			if cliErr.Code != codeConfigInvalid {
+				t.Fatalf("error code = %q, want %q", cliErr.Code, codeConfigInvalid)
+			}
+		})
+	}
+}
+
+// TestRunGenerateImageSubjectReferenceHonoursSizeAndModelOverrides checks the
+// runtime config copy used when --size is combined with --subject-reference.
+func TestRunGenerateImageSubjectReferenceHonoursSizeAndModelOverrides(t *testing.T) {
+	oldCfg := cfg
+	oldNewImageProcessor, oldNewImageProcessorWithConfig := newImageProcessor, newImageProcessorWithConfig
+	t.Cleanup(func() {
+		cfg = oldCfg
+		newImageProcessor = oldNewImageProcessor
+		newImageProcessorWithConfig = oldNewImageProcessorWithConfig
+	})
+	cfg = &config.Config{
+		WechatAppID: "appid", WechatSecret: "secret", ImageAPIKey: "image-key",
+		ImageProvider: "minimax", ImageModel: "image-01-live",
+	}
+	processor := &fakeSubjectReferenceProcessor{
+		fakeImageProcessor: &fakeImageProcessor{},
+		result:             &image.GenerateAndUploadResult{MediaID: "media-subject"},
+	}
+	var runtimeCfg *config.Config
+	newImageProcessor = func() imageProcessor { return processor }
+	newImageProcessorWithConfig = func(candidate *config.Config) imageProcessor {
+		runtimeCfg = candidate
+		return processor
+	}
+
+	if err := runGenerateImageWithInput(generateImageInput{
+		RawPrompt:        "Keep the portrait identity",
+		SubjectReference: "https://cdn.example/portrait.png",
+		Model:            "image-01",
+		Size:             "1024x768",
+	}); err != nil {
+		t.Fatalf("runGenerateImageWithInput() error = %v", err)
+	}
+	if runtimeCfg == nil {
+		t.Fatal("expected a runtime config copy for the size override")
+	}
+	if runtimeCfg.ImageSize != "1024x768" || runtimeCfg.ImageModel != "image-01" {
+		t.Fatalf("runtime config size/model = %q/%q", runtimeCfg.ImageSize, runtimeCfg.ImageModel)
+	}
+	if cfg.ImageSize != "" || cfg.ImageModel != "image-01-live" {
+		t.Fatalf("global config was mutated: size %q model %q", cfg.ImageSize, cfg.ImageModel)
+	}
+	if processor.reference != "https://cdn.example/portrait.png" {
+		t.Fatalf("reference = %q", processor.reference)
+	}
+}
+
 func TestResolveGenerateImagePromptRendersPlanVisualAssetPresets(t *testing.T) {
 	promptcatalog.ResetDefaultCatalogForTests()
 	t.Cleanup(promptcatalog.ResetDefaultCatalogForTests)

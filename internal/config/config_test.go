@@ -483,6 +483,56 @@ api:
 	}
 }
 
+func TestLoadWithDefaultsAppliesMiniMaxImageDefaults(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	content := strings.TrimSpace(`
+api:
+  image_provider: "minimax"
+`)
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	cfg, err := LoadWithDefaults(path)
+	if err != nil {
+		t.Fatalf("LoadWithDefaults() error = %v", err)
+	}
+	if cfg.ImageAPIBase != "https://api.minimax.io" {
+		t.Fatalf("ImageAPIBase = %q", cfg.ImageAPIBase)
+	}
+	if cfg.ImageModel != "image-01" {
+		t.Fatalf("ImageModel = %q", cfg.ImageModel)
+	}
+	if cfg.ImageSize != "1:1" {
+		t.Fatalf("ImageSize = %q", cfg.ImageSize)
+	}
+}
+
+func TestLoadWithDefaultsKeepsMiniMaxChinaEndpointOverride(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	content := strings.TrimSpace(`
+api:
+  image_provider: "minimax"
+  image_base_url: "https://api.minimaxi.com"
+`)
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	cfg, err := LoadWithDefaults(path)
+	if err != nil {
+		t.Fatalf("LoadWithDefaults() error = %v", err)
+	}
+	if cfg.ImageAPIBase != "https://api.minimaxi.com" {
+		t.Fatalf("ImageAPIBase = %q, want the configured China endpoint", cfg.ImageAPIBase)
+	}
+	if cfg.ImageModel != "image-01" {
+		t.Fatalf("ImageModel = %q", cfg.ImageModel)
+	}
+}
+
 func TestConfigErrorFormatting(t *testing.T) {
 	err := (&ConfigError{
 		Field:   "WechatSecret",

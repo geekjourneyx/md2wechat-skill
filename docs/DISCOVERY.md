@@ -144,6 +144,7 @@ md2wechat providers list --json
 md2wechat providers show openai --json
 md2wechat providers show openrouter --json
 md2wechat providers show volcengine --json
+md2wechat providers show minimax --json
 ```
 
 `providers list --json` 只返回选择下一条命令所需的轻量元数据：
@@ -152,6 +153,7 @@ md2wechat providers show volcengine --json
 - `aliases`
 - `description`
 - `supports_size`
+- `supports_subject_reference`
 - `current`
 - `configured`
 
@@ -163,16 +165,21 @@ md2wechat providers show volcengine --json
 - `default_model`
 - `supported_models`
 
+`supported_models` 中的每个模型也会带上 `supports_subject_reference`，用于判断哪些模型可以配合 `--subject-reference` 使用。
+
 因此，Agent 应先用 `list` 选择 provider，只在准备配置或调用具体 provider 时读取 `show`，避免在枚举阶段加载完整模型表。
 
 当前内置支持的图片 provider：
 
 - `openai`
+- `minimax`
 - `tuzi`
 - `modelscope` / `ms`
 - `openrouter` / `or`
 - `gemini` / `google`
 - `volcengine` / `volc`
+
+其中只有 `minimax` 的 `supports_subject_reference` 为 `true`，对应模型为 `image-01`。
 
 ## 主题发现
 
