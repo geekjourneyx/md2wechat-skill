@@ -597,6 +597,8 @@ md2wechat config show --format json
 
 如果是 MiniMax，错误信息里会带上上游 `base_resp.status_code`：`1004` / `2049` 是 API Key 问题，`1002` 是限流，`1008` 是余额不足，`1026` 是提示词命中内容安全策略，`2013` 是参数错误。全球站与国内站的 `image_base_url` 不同，分别是 `https://api.minimax.io` 和 `https://api.minimaxi.com`。
 
+MiniMax status code `1027` indicates that generated output was blocked by content safety policy and maps to `safety_blocked`.
+
 然后再试最小命令：
 
 ```bash

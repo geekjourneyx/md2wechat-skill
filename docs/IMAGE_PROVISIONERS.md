@@ -672,5 +672,6 @@ MiniMax 返回的 `base_resp.status_code` 会映射到上面的错误代码，�
 | `1002` | `rate_limit` |
 | `1008` | `payment_required` |
 | `1026` | `safety_blocked` |
+| `1027` | `safety_blocked` |
 | `2013` | `bad_request` |
 | 其他非 0 值 | `api_error` |

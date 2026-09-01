@@ -297,6 +297,14 @@ func (p *MiniMaxProvider) apiError(code int, statusMsg string, original error) e
 			Hint:     "Reword the prompt to comply with the content policy",
 			Original: original,
 		}
+	case 1027:
+		return &GenerateError{
+			Provider: p.Name(),
+			Code:     "safety_blocked",
+			Message:  withUpstream("MiniMax flagged sensitive content in the generated output"),
+			Hint:     "Revise the prompt or requested subject to comply with the content policy",
+			Original: original,
+		}
 	case 2013:
 		return &GenerateError{
 			Provider: p.Name(),

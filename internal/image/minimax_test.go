@@ -285,6 +285,7 @@ func TestMiniMaxMapsAPIStatusCodes(t *testing.T) {
 		{statusCode: 1002, wantCode: "rate_limit"},
 		{statusCode: 1008, wantCode: "payment_required"},
 		{statusCode: 1026, wantCode: "safety_blocked"},
+		{statusCode: 1027, wantCode: "safety_blocked"},
 		{statusCode: 2013, wantCode: "bad_request"},
 		{statusCode: 1039, wantCode: "api_error"},
 	}
@@ -306,6 +307,23 @@ func TestMiniMaxMapsAPIStatusCodes(t *testing.T) {
 				t.Fatalf("error message %q must preserve the upstream status code", genErr.Message)
 			}
 		})
+	}
+}
+
+func TestMiniMaxMapsSensitiveOutputStatus(t *testing.T) {
+	provider := newTestMiniMaxProvider(t, &config.Config{ImageAPIKey: "image-key"}, func(*http.Request) (*http.Response, error) {
+		return jsonResponse(http.StatusOK, `{"base_resp":{"status_code":1027,"status_msg":"sensitive output"}}`), nil
+	})
+	_, err := provider.Generate(context.Background(), "prompt")
+	genErr := miniMaxGenerateError(t, err)
+	if genErr.Code != "safety_blocked" {
+		t.Fatalf("error code = %q, want safety_blocked", genErr.Code)
+	}
+	if !strings.Contains(genErr.Message, "generated output") {
+		t.Fatalf("error message = %q, want output-specific detail", genErr.Message)
+	}
+	if !strings.Contains(genErr.Hint, "subject") {
+		t.Fatalf("error hint = %q, want subject guidance", genErr.Hint)
 	}
 }
 
