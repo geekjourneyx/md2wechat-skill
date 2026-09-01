@@ -506,7 +506,7 @@ api:
 - 图片 prompt 里的 `default_aspect_ratio` 是 preset 的语义默认画幅，用于渲染 prompt 与默认视觉比例
 - 对于 Gemini / OpenRouter 这类支持比例格式的 provider，`api.image_size` 可以直接写成 `16:9`、`3:4`、`21:9`
 - 对于 Volcengine Ark 当前接入，`api.image_size` 使用尺寸等级，例如 `2K`、`3K`；如果省略，当前默认值是 `2K`
-- `api.image_base_url` 对 OpenAI、TuZi、ModelScope、OpenRouter、Volcengine 生效；Gemini 直连模式当前固定走官方 Go SDK backend，不读取该配置
+- `api.image_base_url` 对 OpenAI、MiniMax、TuZi、ModelScope、OpenRouter、Volcengine 生效；Gemini 直连模式当前固定走官方 Go SDK backend，不读取该配置
 
 ---
 

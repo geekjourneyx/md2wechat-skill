@@ -122,6 +122,13 @@ func runGenerateImageWithInput(input generateImageInput) error {
 		return runGenerateImagePlan(input)
 	}
 
+	subjectReference := strings.TrimSpace(input.SubjectReference)
+	if subjectReference != "" {
+		if err := ensureSubjectReferenceSupported(input.Model, subjectReference); err != nil {
+			return err
+		}
+	}
+
 	if err := prepareWeChatSideEffect(); err != nil {
 		return err
 	}
@@ -133,13 +140,6 @@ func runGenerateImageWithInput(input generateImageInput) error {
 	prompt, err := resolveGenerateImagePrompt(input)
 	if err != nil {
 		return newCLIError(codeConfigInvalid, err.Error())
-	}
-
-	subjectReference := strings.TrimSpace(input.SubjectReference)
-	if subjectReference != "" {
-		if err := ensureSubjectReferenceSupported(input.Model, subjectReference); err != nil {
-			return err
-		}
 	}
 
 	processor := resolveImageProcessor(input.Model)

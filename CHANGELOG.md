@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2026-09-01
+
+### Added
+- Added MiniMax image generation with global and China endpoint support, discoverable `image-01` / `image-01-live` models, and provider-aware defaults for `generate_image`, `generate_cover`, and `generate_infographic`.
+- Added `--subject-reference` for keeping the same person across generated images with MiniMax `image-01`. Pass a publicly reachable `http(s)` portrait URL; unsupported providers, models, local paths, and data URLs fail locally with `CONFIG_INVALID` before a generation request is sent.
+- Exposed `supports_subject_reference` in `providers list --json`, `providers show minimax --json`, and per-model discovery so Agents can select this capability without guessing.
+
+### Fixed
+- Mapped MiniMax authentication, rate-limit, balance, parameter, prompt-safety, and generated-output safety responses to stable image error categories while preserving the upstream status code and message for troubleshooting.
+
 ## [3.3.0] - 2026-08-28
 
 ### Changed

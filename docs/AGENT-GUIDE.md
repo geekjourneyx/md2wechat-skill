@@ -61,7 +61,7 @@ md2wechat themes list --json
 
 当需要选择主题，或 Brand Profile / 用户指令指定了主题时，Agent 必须读取 `type` 和 `selectable`：API 模式只能选择 `type: api` 且 `selectable: true` 的主题；AI 模式只能选择 `type: ai` 且 `selectable: true` 的主题。使用 `md2wechat themes show <theme_name> --json` 查看单个主题的详细配置。
 
-### 1.3 查看可用图片 Provider（6+ 个）
+### 1.3 查看可用图片 Provider（7 个）
 
 ```bash
 md2wechat providers list --json
@@ -69,6 +69,7 @@ md2wechat providers list --json
 
 仅在图片生成、封面、信息图或 provider 选择任务中使用。列出所有支持的图片生成 provider：
 - `openai` — OpenAI GPT Image / DALL·E
+- `minimax` — MiniMax 图片生成与 `image-01` 主体参考
 - `tuzi` — 图子 AI
 - `modelscope` / `ms` — ModelScope
 - `openrouter` / `or` — OpenRouter
@@ -76,6 +77,8 @@ md2wechat providers list --json
 - `volcengine` / `volc` — 火山引擎
 
 使用 `md2wechat providers show <provider_name> --json` 查看单个 provider 需要的配置和支持的模型。
+
+使用 `--subject-reference` 前先运行 `md2wechat providers show minimax --json`，读取 provider 和 `supported_models` 中的 `supports_subject_reference`。当前只有 `minimax` 的 `image-01` 接受该参数，参考图必须是可公开访问的 `http(s)` URL；本地路径和 data URL 会被拒绝。
 
 ### 1.4 查看 Prompt 模板库
 
@@ -767,4 +770,4 @@ JSON envelope 格式（v1）：
 
 ---
 
-*最后更新：与 md2wechat v3.3.0 同步*
+*最后更新：与 md2wechat v3.4.0 同步*

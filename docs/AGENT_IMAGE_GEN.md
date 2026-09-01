@@ -105,7 +105,7 @@ md2wechat generate_image \
 选择直接 provider 路径，如果：
 
 - 你已经配置 `IMAGE_API_KEY` 或 `api.image_key`。
-- 你希望 md2wechat 直接请求 OpenAI、Volcengine、ModelScope、OpenRouter、Gemini 等 provider。
+- 你希望 md2wechat 直接请求 OpenAI、MiniMax、Volcengine、ModelScope、OpenRouter、Gemini 等 provider。
 - 你要让 CLI 完成生成、上传或草稿创建的自动流程。
 
 选择 Agent 图片计划路径，如果：
