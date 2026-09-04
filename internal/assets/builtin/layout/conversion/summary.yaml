@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: conversion
+input_positions: [body-kv]
 serves: [memorability, readability]
 content_types: [opinion, tutorial, report]
 industry: [general]
@@ -19,7 +20,7 @@ when_not_to_use: |
 pairs_well_with: [verdict, cta, subscribe]
 avoid_combining_with: []
 anti_pattern: |
-  默认或 legacy 缺少 highlight 导致渲染失败；
+  默认缺少 highlight 导致渲染失败；
   highlight 写成描述性语句而非判断；
   body 写太长变成第二个正文段落。
 fields:
@@ -28,44 +29,45 @@ fields:
   optional:
     - name: variant
       description: 总结结构变体
-      enum: [legacy, three, decision, save]
-      example: legacy
+      enum: [three, decision, save]
+      example: three
     - name: eyebrow
       description: 标签词
+      applies_to: [one-line, three, decision, save]
       example: "一句话总结"
     - name: highlight
       description: 一句话总结
+      applies_to: [one-line]
       example: "先把结构搭稳，再让主题接管气质"
     - name: title
       description: 摘要标题
+      applies_to: [three, decision, save]
       example: "发布前带走三点"
     - name: body
       description: 展开说明
+      applies_to: [one-line]
       example: "同一篇内容切换主题时，重点仍然清楚。"
     - name: items
       description: 总结项，用 | 分隔
+      applies_to: [three, save]
       example: "结构先于风格 | 模块服务阅读 | 主题定义气质"
     - name: fit
       description: 适合项，用 | 分隔
+      applies_to: [decision]
       example: "需要稳定发布的人 | 需要复用结构的人"
     - name: not_fit
       description: 不适合项，用 | 分隔
+      applies_to: [decision]
       example: "只写短讯的人"
     - name: recommendation
       description: 决策建议
+      applies_to: [decision]
       example: "先校准契约，再扩展模块。"
     - name: note
       description: 补充说明
+      applies_to: [three, save]
       example: "收藏后按清单执行"
 variants:
-  - name: legacy
-    use_when: 只需一句话总结
-    required: [highlight]
-    example: |
-      :::summary
-      variant: legacy
-      highlight: 先把结构搭稳，再让主题接管气质
-      :::
   - name: three
     aliases: [points]
     use_when: 需要列出三点总结
@@ -104,6 +106,63 @@ example: |
   highlight: 先把结构搭稳，再让主题接管气质
   body: 这样同一篇内容切到不同主题时，重点和节奏仍然清楚。
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - one-line.highlight
+    - three.items
+    - decision.fit-or-recommendation
+    - save.items
+  optional:
+    - variant
+    - eyebrow
+    - highlight
+    - title
+    - body
+    - items
+    - fit
+    - not_fit
+    - recommendation
+    - note
+  enums:
+    variant:
+      - three
+      - decision
+      - save
+  defaults:
+    omitted-variant: one-line
+  invalid:
+    - one-line.missing-highlight
+    - three.missing-items
+    - decision.missing-fit-and-recommendation
+    - save.missing-items
+  ignored:
+    - inapplicable-fields
+    - unknown-fields
+  legacy:
+    - points-to-three
+    - recommend-to-decision
+    - checklist-to-save
+    - action-to-save
+    - for-to-fit
+    - not-to-not_fit
+    - avoid-to-not_fit
+    - fit_label
+    - not_fit_label
+    - highlight-title-fallback
+    - items-auto-three
+    - decision-fields-auto-decision
+    - case-folded-variant
+  applicability:
+    eyebrow: [one-line, three, decision, save]
+    highlight: [one-line]
+    title: [three, decision, save]
+    body: [one-line]
+    items: [three, save]
+    fit: [decision]
+    not_fit: [decision]
+    recommendation: [decision]
+    note: [three, save]
 metadata:
   author: md2wechat
   provenance: builtin

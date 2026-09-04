@@ -5,6 +5,7 @@ body_format: json_object
 version: "1.0.0"
 since: "1.5.0"
 category: sprint4
+input_positions: [json]
 serves: [attention, memorability]
 content_types: [opinion, announcement, brand]
 industry: [general]
@@ -30,7 +31,9 @@ fields:
   optional:
     - name: source
       description: 来源说明（JSON key：source）
+      default: 佚名
       example: "内容设计原则"
+  compatibility:
     - name: author
       description: 作者姓名（JSON key：author，与 source 互补）
       example: "极客旅程"
@@ -38,6 +41,24 @@ example: |
   :::quote-card
   {"text":"结构先于风格，骨架决定气质","source":"内容设计原则"}
   :::
+agent_contract:
+  body_format: json_object
+  required:
+    - text
+  optional:
+    - source
+  enums: {}
+  defaults:
+    source: 佚名
+  invalid:
+    - malformed-json
+    - blank-text
+    - wrong-type-text
+    - wrong-type-source
+  ignored:
+    - unknown-keys
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

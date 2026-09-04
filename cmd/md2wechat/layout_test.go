@@ -11,6 +11,16 @@ import (
 	"github.com/geekjourneyx/md2wechat-skill/internal/layoutcatalog"
 )
 
+func TestBaseLayoutEnhancementInventoryMatchesUpstreamGuide(t *testing.T) {
+	want := []string{"highlight-text", "katex", "mermaid", "gfm-alert"}
+	if got := baseLayoutEnhancements[:]; !slices.Equal(got, want) {
+		t.Fatalf("base layout enhancements = %v, want %v", got, want)
+	}
+	if got := len(baseLayoutEnhancements); got != 4 {
+		t.Fatalf("base layout enhancement count = %d, want 4", got)
+	}
+}
+
 func TestLayoutListJSONIncludesHero(t *testing.T) {
 	oldJSON := jsonOutput
 	t.Cleanup(func() {
@@ -234,6 +244,92 @@ func TestLayoutShowJSONReturnsSpec(t *testing.T) {
 	if spec["body_format"] != layoutcatalog.BodyFormatFields {
 		t.Fatalf("expected hero body_format fields, got %#v", spec["body_format"])
 	}
+	if _, ok := spec["agent_contract"]; ok {
+		t.Fatalf("layout show must not expose internal agent_contract metadata: %#v", spec)
+	}
+	fields, ok := spec["Fields"].(map[string]any)
+	if !ok || fields["Required"] == nil || fields["Optional"] == nil {
+		t.Fatalf("layout show must expose canonical fields guidance: %#v", spec)
+	}
+}
+
+func TestLayoutShowJSONReturnsCanonicalAuthoringSchema(t *testing.T) {
+	oldJSON := jsonOutput
+	t.Cleanup(func() {
+		jsonOutput = oldJSON
+		layoutcatalog.ResetDefaultCatalogForTests()
+	})
+	jsonOutput = true
+	layoutcatalog.ResetDefaultCatalogForTests()
+
+	show := func(name string) map[string]any {
+		t.Helper()
+		stdout := captureStdout(t, func() {
+			if err := layoutShowCmd.RunE(layoutShowCmd, []string{name}); err != nil {
+				t.Fatalf("layout show %s: %v", name, err)
+			}
+		})
+		var response struct {
+			Data struct {
+				Spec map[string]any `json:"spec"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(stdout, &response); err != nil {
+			t.Fatalf("decode layout show %s: %v\n%s", name, err, stdout)
+		}
+		return response.Data.Spec
+	}
+	fieldNames := func(spec map[string]any, membership string) []string {
+		t.Helper()
+		fields, _ := spec["Fields"].(map[string]any)
+		items, _ := fields[membership].([]any)
+		names := make([]string, 0, len(items))
+		for _, item := range items {
+			field, _ := item.(map[string]any)
+			name, _ := field["Name"].(string)
+			names = append(names, name)
+		}
+		return names
+	}
+
+	toolbox := show("toolbox")
+	rows := toolbox["Rows"].(map[string]any)
+	schema := rows["Schema"].([]any)
+	if len(schema) != 3 || strings.Contains(toolbox["Example"].(string), "http") {
+		t.Fatalf("toolbox canonical rows/example still advertises a fourth URL cell: %#v", toolbox)
+	}
+	if got := fieldNames(show("quote-card"), "Optional"); !slices.Equal(got, []string{"source"}) {
+		t.Fatalf("quote-card optional fields = %v, want [source]", got)
+	}
+	if got := fieldNames(show("infographic"), "Optional"); slices.Contains(got, "variant") || slices.Contains(got, "layout") {
+		t.Fatalf("infographic canonical optional fields leak legacy selectors: %v", got)
+	}
+	callout := show("callout")
+	if _, ok := callout["Opener"]; ok {
+		t.Fatalf("callout canonical discovery exposes legacy token opener: %#v", callout["Opener"])
+	}
+	if got := fieldNames(callout, "Required"); !slices.Equal(got, []string{"body"}) {
+		t.Fatalf("callout required fields = %v, want [body]", got)
+	}
+	if got := fieldNames(callout, "Optional"); !slices.Equal(got, []string{"type"}) {
+		t.Fatalf("callout optional fields = %v, want [type]", got)
+	}
+	for _, tt := range []struct {
+		name, hidden string
+	}{
+		{name: "faq", hidden: "Rows"},
+		{name: "question", hidden: "Fields"},
+		{name: "flow", hidden: "Fields"},
+		{name: "timeline", hidden: "Fields"},
+	} {
+		if value, ok := show(tt.name)[tt.hidden]; ok {
+			t.Fatalf("%s canonical discovery exposes compatibility-only %s: %#v", tt.name, tt.hidden, value)
+		}
+	}
+	epilogue := show("epilogue")
+	if avoid, ok := epilogue["AvoidCombiningWith"].([]any); !ok || len(avoid) != 0 {
+		t.Fatalf("epilogue avoid_combining_with = %#v, want empty", epilogue["AvoidCombiningWith"])
+	}
 }
 
 func TestLayoutListCompatibilityIsolation(t *testing.T) {
@@ -279,11 +375,11 @@ func TestLayoutListCompatibilityIsolation(t *testing.T) {
 	}
 
 	defaultNames := listNames("")
-	if len(defaultNames) != 53 {
-		t.Fatalf("default count = %d, want 53", len(defaultNames))
+	if len(defaultNames) != 56 {
+		t.Fatalf("default count = %d, want 56", len(defaultNames))
 	}
-	if got := buildLayoutCapabilityData()["module_count"]; got != 53 {
-		t.Fatalf("capability module_count = %#v, want 53", got)
+	if got := buildLayoutCapabilityData()["module_count"]; got != 56 {
+		t.Fatalf("capability module_count = %#v, want 56", got)
 	}
 	for _, legacy := range []string{"dialogue", "gallery", "longimage"} {
 		if slices.Contains(defaultNames, legacy) {
@@ -383,7 +479,7 @@ func TestLayoutRenderBodyFileDashReadsStdin(t *testing.T) {
 	})
 
 	for _, want := range []string{
-		`:::gallery-grid{columns=2 variant=card}`,
+		`:::gallery-grid{accent=brand caption_style=minimal columns=2 density=normal image_shape=square variant=clean wechat_safe_level=normal}`,
 		`![移动端](https://example.com/mobile.jpg)`,
 	} {
 		if !strings.Contains(string(stdout), want) {

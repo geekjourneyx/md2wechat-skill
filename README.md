@@ -5,7 +5,7 @@
   md2wechat
 </h1>
 
-<img src="assets/readme-header.gif" alt="md2wechat CLI demo" width="720" />
+<a href="https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=readme-hero"><img src="assets/readme-header.gif" alt="md2wechat：从 Markdown 检查、排版、预览到微信公众号草稿" width="720" /></a>
 
 **面向 AI Agent 的微信公众号创作与发布 CLI**
 
@@ -19,12 +19,7 @@
 [![Agent Ready](https://img.shields.io/badge/Agent-Ready-00b0aa)](#agent-工作流)
 [![API](https://img.shields.io/badge/API-Professional-blue)](#专业-api)
 
-<p>
-  <a href="https://trendshift.io/repositories/26638?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-26638" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/26638/daily?language=Go" alt="geekjourneyx%2Fmd2wechat-skill | Trendshift" width="250" height="55"/></a>
-  <a href="https://trendshift.io/repositories/26638?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-26638" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/26638/weekly?language=Go" alt="geekjourneyx%2Fmd2wechat-skill | Trendshift" width="250" height="55"/></a>
-</p>
-
-[快速开始](#快速开始) · [专业 API](#专业-api) · [Agent 工作流](#agent-工作流) · [高级排版](#高级排版) · [文档](#文档)
+[快速开始](#快速开始) · [专业 API ¥199/永久](#专业-api) · [获取 API Key](https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=api) · [Agent 工作流](#agent-工作流) · [文档](#文档)
 
 </div>
 
@@ -38,7 +33,7 @@ md2wechat 把公众号发布流程拆成一组可验证的 CLI 命令：
 |---|---|
 | Markdown 转微信 HTML | `convert`，支持预览、上传图片、创建草稿 |
 | 发布前检查 | `inspect --json` 输出标题、摘要、图片、cover、draft readiness |
-| 稳定排版 | API 模式成功时返回最终 HTML，覆盖 68 个主推高级排版场景条目和 53 个主推 `:::` 语法名 |
+| 稳定排版 | API 模式成功时返回最终 HTML，覆盖 77 个主推高级排版场景条目和 56 个主推 `:::` 语法名 |
 | Agent 自动化 | `capabilities`、`doctor`、`themes`、`layout`、`providers` 等 discovery 命令 |
 | 内容生产 | `write`、`humanize`、`title suggest`、`generate_cover`、`generate_infographic` |
 | 多账号发布 | 命名公众号账号，本地只读发现，不输出 Secret |
@@ -55,7 +50,7 @@ md2wechat config init --json
 md2wechat config validate --json
 ```
 
-API 模式预览和转换需要 md2wechat API Key；完成详细凭证配置后，先检查文章，再把 HTML 明确写入本地文件：
+API 模式预览和转换需要 md2wechat API Key。专业 API 统一版 ¥199/永久；可直接[查看价格与获取方式](https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=api)。完成凭证配置后，先检查文章，再把 HTML 明确写入本地文件：
 
 ```bash
 md2wechat inspect article.md --json
@@ -84,24 +79,31 @@ md2wechat convert article.md --draft --cover cover.jpg
 
 API 模式适合需要稳定输出、多人协作、批量发布或 Agent 自动化的场景。
 
+**统一版 ¥199/永久，一次购买。** 包含稳定转换接口、定期更新和专属创作交流群。
+
+[查看价格与获取 API Key](https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=api)
+
 | 能力 | 免费 AI 模式 | 专业 API 模式 |
 |---|---|---|
 | 输出方式 | 生成 prompt，由外部 LLM 继续处理 | 直接返回微信 HTML |
 | 主题 | 3 个基础主题 | 48 个专业主题 |
-| 高级排版模块 | 不解析，`:::module` 作为普通段落输出 | API renderer 解析 53 个推荐 `:::module` 语法 |
+| 高级排版模块 | 不解析，`:::module` 作为普通段落输出 | API renderer 解析 56 个推荐 `:::module` 语法 |
 | 转换结果 | 需要外部 LLM 完成 HTML | converter 成功时返回最终 HTML |
 | 发布自动化 | 适合实验 | 适合团队、客户号、矩阵号 |
 
 专业能力包括：
 
 - 48 个微信渲染精调主题：[theme-gallery](https://md2wechat.app/theme-gallery)
-- 68 个主推高级排版场景条目，对应 53 个主推 `:::` 语法名：[docs/LAYOUT.md](docs/LAYOUT.md)
-- 3 个兼容模块只用于旧稿迁移；加上 4 个基础增强能力，共计 60 项渲染层语法能力
+- 77 个主推高级排版场景条目，对应 56 个主推 `:::` 语法名：[docs/LAYOUT.md](docs/LAYOUT.md)
+- 3 个兼容模块只用于旧稿迁移；加上 4 个基础增强能力，共计 63 项渲染层语法能力
 - 多公众号账号：[docs/CONFIG.md](docs/CONFIG.md)
 - 微信接口固定出口：[docs/WECHAT-CREDENTIALS.md](docs/WECHAT-CREDENTIALS.md)
 - 发布前 readiness 检查：[docs/DISCOVERY.md](docs/DISCOVERY.md)
 
-申请 API 服务：关注公众号「极客杰尼」，备注「API咨询」。
+获取 API Key：
+
+- 正式使用：[查看价格与获取方式](https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=api)
+- 微信咨询：关注公众号「极客杰尼」，备注「API咨询」
 
 <p align="center">
 <img src="assets/wechat.png" alt="公众号：极客杰尼" width="160" />
@@ -161,7 +163,16 @@ md2wechat generate_infographic --article article.md --preset infographic-claude-
 
 完整 preset 清单、用途和默认画幅以 `prompts list/show --json` 为准，文档只保留代表性示例。
 
-支持 Volcengine、ModelScope、OpenRouter、OpenAI、Gemini 等服务。配置见 [docs/IMAGE_PROVISIONERS.md](docs/IMAGE_PROVISIONERS.md)。
+支持 Volcengine、ModelScope、OpenRouter、OpenAI、Gemini、MiniMax 等服务。配置见 [docs/IMAGE_PROVISIONERS.md](docs/IMAGE_PROVISIONERS.md)。
+
+需要在生成结果中保持同一人物形象时，可以用 MiniMax 的主体参考（图生图）：
+
+```bash
+md2wechat generate_image "保持同一人物形象的秋日封面" \
+  --subject-reference "https://cdn.example.com/portrait.png"
+```
+
+`--subject-reference` 只支持 `minimax` provider 的 `image-01` 模型，参考图必须是可公开访问的 `http(s)` 图片 URL。
 
 使用宿主 Agent 的 Image Gen：
 
@@ -186,7 +197,8 @@ subtitle: 为什么读者愿意继续读下去
 :::
 
 :::callout
-高级排版模块只在 API 模式渲染。
+type: info
+body: 高级排版模块只在 API 模式渲染。
 :::
 ```
 
@@ -208,7 +220,7 @@ md2wechat layout validate --file article.md --json
 
 完整教程见 [docs/LAYOUT.md](docs/LAYOUT.md)。
 
-这里的计数不是同一维度：68 是上游使用场景条目，一个语法名可以覆盖多个结构变体；53 是 `layout list --json` 默认返回的推荐语法名。兼容模块默认不混入推荐列表。
+这里的计数不是同一维度：77 是上游使用场景条目，一个语法名可以覆盖多个结构变体；56 是 `layout list --json` 默认返回的推荐语法名。兼容模块默认不混入推荐列表。完整计数契约见 [docs/LAYOUT.md](docs/LAYOUT.md)。
 
 ---
 
@@ -254,7 +266,7 @@ md2wechat layout validate --file article.md --json
 
 本项目采用 Source Available License。个人使用、学习、评估、非营利使用免费。商业使用、SaaS、客户交付、白标、再分发和训练数据用途需要商业授权。
 
-商业授权和 API 服务：关注公众号「极客杰尼」备注「API咨询」，或联系 `skrphper@gmail.com`。
+专业 API：[查看价格与获取 API Key](https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=api)。商业授权（SaaS、客户交付、白标、再分发和训练数据）请联系 `skrphper@gmail.com`。
 
 ---
 

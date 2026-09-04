@@ -13,6 +13,7 @@ import (
 type recommendedScenarioMap struct {
 	SourceCommit               string   `yaml:"source_commit"`
 	SourceFile                 string   `yaml:"source_file"`
+	SourceSHA256               string   `yaml:"source_sha256"`
 	GuideOnlyRecommendedSyntax []string `yaml:"guide_only_recommended_syntax"`
 	Scenarios                  []struct {
 		ID      string `yaml:"id"`
@@ -25,8 +26,16 @@ const pinnedRecommendedScenarioOracle = `
 hero-editorial|hero|editorial
 hero-briefing|hero|briefing
 hero-story|hero|story
+hero-masthead|hero|masthead
 cards|cards|
 part|part|
+epilogue|epilogue|
+section-title-marker|section-title|marker
+section-title-divider|section-title|divider
+section-title-numbered|section-title|numbered
+section-title-frame|section-title|frame
+section-title-focus|section-title|focus
+section-title-vertical|section-title|vertical
 toc|toc|
 label-title|label-title|
 audience-fit|audience-fit|
@@ -69,10 +78,11 @@ checklist|checklist|
 toolbox|toolbox|
 specs|specs|
 notice|notice|
-summary-legacy|summary|
+summary-one-line|summary|
 summary-three|summary|three
 summary-decision|summary|decision
 summary-save|summary|save
+closing|closing|
 cta-save-follow|cta|save-follow
 cta-consult|cta|consult
 cta-trial|cta|trial
@@ -93,15 +103,14 @@ dialogue-pair|dialogue-pair|
 `
 
 func TestRecommendedScenarioMappingMatchesPinnedSources(t *testing.T) {
-	c := NewCatalog()
-	if err := c.Load(); err != nil {
-		t.Fatal(err)
-	}
 	m := readRecommendedScenarioMap(t)
-	if m.SourceCommit != "989a335" || m.SourceFile != "lib/advanced-module-groups.ts" {
+	if m.SourceCommit != "0e7027616dd1654802cf11615f6ba8bd23e539ae" || m.SourceFile != "lib/advanced-module-groups.ts" {
 		t.Fatalf("source = %q:%q", m.SourceCommit, m.SourceFile)
 	}
-	if len(m.Scenarios) != 68 {
+	if m.SourceSHA256 != "ca78e6c32617ef380fa665f5817049bc9d6d6b502bfd841d42977050dd707756" {
+		t.Fatalf("source digest = %q", m.SourceSHA256)
+	}
+	if len(m.Scenarios) != 77 {
 		t.Fatalf("scenario count = %d", len(m.Scenarios))
 	}
 	if err := comparePinnedScenarioTuples(m); err != nil {
@@ -114,15 +123,10 @@ func TestRecommendedScenarioMappingMatchesPinnedSources(t *testing.T) {
 			t.Fatalf("invalid duplicate id %q", scenario.ID)
 		}
 		seenIDs[scenario.ID] = true
-		spec, ok := c.Get(scenario.Module)
-		if !ok || spec.Lifecycle != LifecycleRecommended {
-			t.Fatalf("invalid target %+v", scenario)
-		}
-		assertScenarioHasWitness(t, spec, scenario.Variant)
 		coveredModules[scenario.Module] = true
 	}
-	if len(coveredModules) != 48 {
-		t.Fatalf("covered module count = %d, want 48", len(coveredModules))
+	if len(coveredModules) != 51 {
+		t.Fatalf("covered module count = %d, want 51", len(coveredModules))
 	}
 	wantGuideOnly := []string{
 		"figure-caption", "gallery-grid", "gallery-story", "svg-reveal", "svg-swipe-gallery",
@@ -135,6 +139,20 @@ func TestRecommendedScenarioMappingMatchesPinnedSources(t *testing.T) {
 	slices.Sort(diff)
 	if !slices.Equal(diff, wantGuideOnly) {
 		t.Fatalf("scenario-source gap = %v, want %v", diff, wantGuideOnly)
+	}
+}
+
+func TestRecommendedScenarioCatalogProjection(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, scenario := range readRecommendedScenarioMap(t).Scenarios {
+		spec, ok := c.Get(scenario.Module)
+		if !ok || spec.Lifecycle != LifecycleRecommended {
+			t.Fatalf("invalid target %+v", scenario)
+		}
+		assertScenarioHasWitness(t, spec, scenario.Variant)
 	}
 }
 
@@ -192,6 +210,12 @@ func assertScenarioHasWitness(t *testing.T, spec *LayoutSpec, variant string) {
 			continue
 		}
 		c := NewCatalogWithSpec(spec)
+		if strings.TrimSpace(candidate.Example) == "" && isCanonicalDefaultVariant(spec, candidate.Name) {
+			if err := checkExecutableWitness(c, spec.Name, "", spec.Example, spec.ExampleAssertContains); err != nil {
+				t.Fatal(err)
+			}
+			return
+		}
 		if err := c.ValidateWitness(WitnessContract{
 			Module: spec.Name, Variant: candidate.Name, VariantAliases: candidate.Aliases,
 			Example: candidate.Example, AssertContains: candidate.AssertContains,
@@ -278,6 +302,26 @@ func TestExecutableWitnessUsesEffectiveLastWriteSelector(t *testing.T) {
 	}
 }
 
+func TestInfographicMicroCaseCanonicalWitnessAvoidsLegacyAlias(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	spec, ok := c.Get("infographic")
+	if !ok {
+		t.Fatal("missing infographic")
+	}
+	for _, variant := range spec.Variants {
+		if variant.Name == "micro-case" {
+			if strings.Contains(variant.Example, "type: mini-case") || !strings.Contains(variant.Example, "type: micro-case") {
+				t.Fatalf("micro-case canonical witness = %q", variant.Example)
+			}
+			return
+		}
+	}
+	t.Fatal("missing micro-case variant")
+}
+
 func TestExecutableWitnessRejectsInvalidContracts(t *testing.T) {
 	c := NewCatalog()
 	c.modules["demo"] = &LayoutSpec{
@@ -326,6 +370,9 @@ func TestBuiltinVariantWitnesses(t *testing.T) {
 	for _, spec := range c.ListFiltered(ListFilter{}) {
 		for _, variant := range spec.Variants {
 			variant := variant
+			if strings.TrimSpace(variant.Example) == "" && isCanonicalDefaultVariant(spec, variant.Name) {
+				continue
+			}
 			t.Run(spec.Name+"/"+variant.Name, func(t *testing.T) {
 				if err := c.ValidateWitness(WitnessContract{
 					Module: spec.Name, Variant: variant.Name, VariantAliases: variant.Aliases,
@@ -351,6 +398,9 @@ func TestBuiltinExecutableWitnessesAreComplete(t *testing.T) {
 		})
 		for _, variant := range spec.Variants {
 			variant := variant
+			if strings.TrimSpace(variant.Example) == "" && isCanonicalDefaultVariant(spec, variant.Name) {
+				continue
+			}
 			t.Run(spec.Name+"/"+variant.Name, func(t *testing.T) {
 				if strings.TrimSpace(variant.UseWhen) == "" {
 					t.Fatal("variant use_when is required")
@@ -363,6 +413,36 @@ func TestBuiltinExecutableWitnessesAreComplete(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestBuiltinRemoteWitnessInventory(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	canonical, variants, compatibility := 0, 0, 0
+	for _, spec := range c.ListFiltered(ListFilter{}) {
+		canonical++
+		for _, variant := range spec.Variants {
+			if strings.TrimSpace(variant.Example) != "" {
+				variants++
+			}
+		}
+	}
+	for _, spec := range c.ListFiltered(ListFilter{Lifecycle: LifecycleCompatibility}) {
+		if strings.TrimSpace(spec.Example) != "" {
+			compatibility++
+		}
+	}
+	const (
+		recommendedCanonicalWitnessCount = 56
+		structuralVariantWitnessCount    = 25
+		compatibilityWitnessCount        = 3
+	)
+	wantTotal := recommendedCanonicalWitnessCount + structuralVariantWitnessCount + compatibilityWitnessCount
+	if canonical != recommendedCanonicalWitnessCount || variants != structuralVariantWitnessCount || compatibility != compatibilityWitnessCount || canonical+variants+compatibility != wantTotal {
+		t.Fatalf("witness inventory = canonical:%d variants:%d compatibility:%d total:%d, want 56/25/3/%d", canonical, variants, compatibility, canonical+variants+compatibility, wantTotal)
 	}
 }
 

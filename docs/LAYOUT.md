@@ -3,7 +3,7 @@
 > **前提**：高级排版模块是 **API 模式**专属功能。`convert` 命令默认即 API 模式，无需额外参数。  
 > 如需 API 访问权限，请联系作者咨询。
 
-本教程讲解微信公众号高级排版模块的核心用法。当前数量与完整规格以 `md2wechat capabilities --json`、`layout list --json` 和 `layout show` 为准；默认 discovery 返回 53 个推荐语法。
+本教程讲解微信公众号高级排版模块的核心用法。当前数量与完整规格以 `md2wechat capabilities --json`、`layout list --json` 和 `layout show` 为准；默认 discovery 返回 56 个推荐语法。
 
 ---
 
@@ -104,25 +104,36 @@ subtitle: 不是好不好看，是读者读不读得完
 | `json_object` | 一个 JSON 对象 | `definition`、`tweet` |
 | `json_array` | 一个 JSON 数组 | `stat-row`、`resource-list` |
 | `markdown_images` | Markdown 图片列表，可夹带允许的文本 | `gallery-grid`、`svg-swipe-gallery` |
-| `markdown_fields` | 重复字段组中允许 Markdown 图片 | `image-steps`、`figure-caption` |
+| `markdown_fields` | `key: value` 字段行，可按 schema 允许 Markdown 图片或重复组 | `callout`、`image-steps` |
 | `split` | 两段正文由模块 schema 指定的分隔线隔开 | `split` |
-| `lines` | 逐行条目，分隔符或前缀由 schema 约束 | `flow`、`callout` |
+| `lines` | 逐行条目，分隔符或前缀由 schema 约束 | `flow` |
 | `dialogue` | 成对前缀或具名说话人行 | `question`、`dialogue-pair` |
 
 `compatible_body_formats` 是旧正文仍可通过校验的兼容入口，不改变主推格式。例如 `question` 的主格式是 `dialogue`，同时接受旧的 `json_array`。
 
 ### Catalog 计数与 lifecycle
 
-<!-- layout-count-contract: recommended_scenarios=68 recommended_syntaxes=53 compatibility_modules=3 base_enhancements=4 render_syntaxes=60 -->
+<!-- layout-count-contract: recommended_scenarios=77 recommended_syntaxes=56 compatibility_modules=3 base_enhancements=4 render_syntaxes=63 -->
 
-- 68 个主推高级排版场景条目是上游使用场景维度。
-- 53 个主推 `:::` 语法名是 `layout list --json` 默认返回的 CLI 对象。
+- 77 个主推高级排版场景条目是上游使用场景维度。
+- 56 个主推 `:::` 语法名是 `layout list --json` 默认返回的 CLI 对象。
 - 3 个 compatibility 模块是 `dialogue`、`gallery`、`longimage`，只用于旧稿迁移。
-- 4 个基础增强能力与上述语法合计为 60 项渲染层语法能力。
+- 4 个基础增强能力与上述语法合计为 63 项渲染层语法能力。
 
-68 与 53 不能互换：一个语法名可以承载多个场景或结构变体。场景映射只用于维护测试，不会通过 CLI discovery 输出。
+77 与 56 不能互换：一个语法名可以承载多个场景或结构变体。场景映射只用于维护测试，不会通过 CLI discovery 输出。
 
 具体 opener、body、schema、canonical witness 和结构 variant 以 `layout show <name> --json` 为准。生产渲染状态以发布时保存的目标 API conformance 证据为准，不在常青教程中固化单次运行结果。
+
+### Agent 读取 `layout show` 的固定顺序
+
+不要从示例反推字段。对每个已选模块，按以下顺序读取：
+
+1. `input_positions`，确定输入进入 body、header 或 prefix 的位置；
+2. primary `body_format`，再读取相应的 `Opener` 与 `Fields` / `Rows` / `Body`；
+3. canonical `Variants[].Name`，只选择这些规范变体；
+4. canonical `Example`，作为可执行起点。
+
+`compatible_body_formats` 和 `Variants[].Aliases` 是只读兼容事实：它们只帮助迁移旧稿，**不得**作为新内容的选择项。`layout validate` 只接受本地 catalog/schema；目标 API 是否实际支持 renderer，仍以一次 API `convert` 或发布 conformance 为准。
 
 ---
 
@@ -279,6 +290,17 @@ subtitle: 主题决定气质，模块决定读者能不能看懂
 - 在数据报告里用（改用 metrics）
 - 一篇文章放两个 hero
 
+**masthead 极简变体**：正文只保留 `title`、可选 `subtitle` 和 `symbol`；不要把 `kicker`、`points`、`image` 或 `tags` 塞进 masthead。
+
+```
+:::hero
+variant: masthead
+title: 先让读者看见这篇文章的主判断
+subtitle: 再用正文把判断说清楚
+symbol: spark-solid
+:::
+```
+
 ---
 
 #### toc — 阅读导航
@@ -330,6 +352,36 @@ subtitle: 系统模块 · 列表 / 代码 / 表格
 
 ---
 
+#### section-title — 重要章节转场
+
+**什么时候用**：普通 `##` / `###` heading 足以组织绝大多数正文；仅在重要主题切换、关键判断或章节节奏需要明确停顿时使用 `section-title`。它不是每段文字的装饰。
+
+`numbered` 必须带 `index`；`symbol` 只适用于 `marker`、`divider`、`focus`、`vertical`，不要填给 `numbered` 或 `frame`。
+
+```
+:::section-title
+variant: numbered
+index: "02"
+title: 再验证真实渲染
+:::
+```
+
+---
+
+#### epilogue — 正文尾部过渡
+
+**什么时候用**：在完整叙事后、`summary` 或结尾行动区之前，留一段可选的安静过渡。它不是 CTA，也不承载行动或链接。
+
+```
+:::epilogue
+title: 结构稳定之后，表达才有余地生长。
+subtitle: 下一节把这个判断落到真实工作流。
+symbol: infinity
+:::
+```
+
+---
+
 #### label-title — 标签标题
 
 **什么时候用**：短文或单主题文章的开篇，比 hero 轻量。
@@ -368,13 +420,13 @@ title: 公众号创作者正在经历什么
 
 **什么时候用**：有两种方案/时间点/方法需要横向对比时。
 
-**格式**：`维度 | A方描述 | B方描述 | 颜色`（也可 `维度 | 旧描述 | 新描述`）
+**格式**：`left-title | left-body | right-title | right-body`
 
 ```
 :::compare[效果对比]
-文章打开率 | 旧版排版 3.2% | 新版模块化排版 8.7% | accent
-读者完读率 | 41% | 79% | default
-制作时间 | 每篇 2小时 | 每篇 35分钟 | default
+旧版排版 | 文章打开率 3.2% | 模块化排版 | 文章打开率 8.7%
+手工制作 | 每篇约 2 小时 | 模块复用 | 每篇约 35 分钟
+风格漂移 | 每篇重新搭结构 | 稳定骨架 | 替换内容即可复用
 :::
 ```
 
@@ -461,7 +513,7 @@ note: 适合观点文、复盘、方案结论
 
 **什么时候用**：文章开头明确适合谁读、不适合谁读，帮读者快速判断。
 
-**字段**：`title` 为必填；`fit` 和 `avoid` 使用 `|` 分隔多项内容。
+**字段**：`fit` 和 `avoid` 至少填写一个，并使用 `|` 分隔多项内容；`title`、`subtitle` 可选。
 
 ```
 :::audience-fit
@@ -593,7 +645,7 @@ right_image: https://example.com/after.png
 
 **什么时候用**：操作教程，每步配一张截图。
 
-**格式**：`body_format: markdown_fields`。每组使用 `step` 和 `desc`，中间可放一张 Markdown 图片；图片可省略。可用 `{columns=2 caption_style=numbered}` 等参数。
+**格式**：`body_format: markdown_fields`。每组必须使用 `step`、`desc` 并提供 Markdown 图片。可用 `{columns=2 caption_style=numbered}` 等参数。
 
 ```
 :::image-steps{columns=2 caption_style=numbered}
@@ -647,19 +699,38 @@ note: 联系作者咨询 API 服务
 :::
 ```
 
+一篇文章最多一个 CTA。行动需要在这里说清；不要用 `closing` 再重复一次行动。
+
+---
+
+#### closing — 安静的最终签名
+
+**什么时候用**：可选地放在 CTA 之后，用一句不带行动的收束句结束文章。`closing` 永远不放 `action`、`link`、`image` 或第二个 CTA。
+
+```
+:::closing
+title: 先让读者看懂，再让读者行动。
+subtitle: 每次发布前都用真实转换结果验证。
+symbol: asterism
+:::
+```
+
 ---
 
 #### faq — 常见问题
 
 **什么时候用**：有 3-8 个读者经常问的问题，或者需要处理潜在疑虑时。
 
-**格式**：`问题 | 回答`
+**格式**：primary `dialogue` 使用成对的 `Q:` / `A:` 行；旧版 `问题 | 回答` 仅作为兼容格式，不用于新稿。
 
 ```
 :::faq[常见问题]
-这些模块只能在某个主题里用吗？ | 不是，48 个专业主题都支持高级排版模块。
-API 模式和 AI 模式有什么区别？ | API 模式直接转换输出 HTML，AI 模式生成提示词给外部 AI。
-我的文章需要用几个模块？ | 按 4 件事原则选，hero 1 个，verdict 1 个，cta 1 个，不要堆。
+Q: 这些模块只能在某个主题里用吗？
+A: 不是，专业主题都支持高级排版模块。
+Q: API 模式和 AI 模式有什么区别？
+A: API 模式直接转换输出 HTML，AI 模式生成提示词给外部 AI。
+Q: 我的文章需要用几个模块？
+A: 按 4 件事原则选，hero 1 个，CTA 1 个，不要堆。
 :::
 ```
 
@@ -669,7 +740,7 @@ API 模式和 AI 模式有什么区别？ | API 模式直接转换输出 HTML，
 
 **什么时候用**：有操作性清单、检查事项时，比普通列表更有视觉重量。
 
-**格式**：`状态 | 描述 | 说明`（状态：`done`、`pending`、`warn`、`todo`）
+**格式**：`状态 | 描述 | 说明`（新内容状态只使用 `done`、`pending`、`warn`）
 
 ```
 :::checklist[发布前检查]
@@ -700,7 +771,7 @@ warn | 链接和说明单独检查 | 避免手机里出现跳读和看不清
 
 **什么时候用**：章节复盘或文章结尾。根据读者需要选择一句话、三点、决策或收藏清单。
 
-**必填规则**：默认/`legacy` 需要 `highlight`；`three` 和 `save` 需要 `items`；`decision` 需要 `fit` 或 `recommendation`。
+**必填规则**：新内容省略 `variant` 使用 canonical 默认分支，并提供 `highlight`；不要显式选择 `legacy`，它只服务旧稿兼容。`three` 和 `save` 需要 `items`；`decision` 需要 `fit` 或 `recommendation`。
 
 ```
 :::summary
@@ -717,13 +788,13 @@ note: 适合章节末尾和观点文复盘
 
 **什么时候用**：有重要通知、政策变更、限时活动时。
 
-**格式**：`项目 | 条件 | 说明`，可在方括号中提供标题。
+**格式**：`tone | label | body | optional note`，可在方括号中提供标题。
 
 ```
 :::notice[适用说明]
-适合 | 干货长文、教程拆解、白皮书、活动总结 | 适合需要结构感和复用性的内容
-前提 | 先把信息分层 | 不要把所有信息都塞进一个模块
-风险 | 模块堆太多会抢正文 | 一篇文章保留 3 到 6 个重点模块更稳
+fit | 适合 | 干货长文、教程拆解、白皮书、活动总结 | 适合需要结构感和复用性的内容
+require | 前提 | 先把信息分层 | 不要把所有信息都塞进一个模块
+risk | 风险 | 模块堆太多会抢正文 | 一篇文章保留 3 到 6 个重点模块更稳
 :::
 ```
 
@@ -744,8 +815,9 @@ note: 适合章节末尾和观点文复盘
 ```
 :::author-card
 name: 极客旅程
+role: 内容系统研究者
 bio: 研究内容创作工具和 AI 工作流，专注公众号效率提升。
-avatar: https://example.com/avatar.jpg
+tags: AI 工具 | 内容系统 | 独立产品
 :::
 ```
 
@@ -814,23 +886,27 @@ tags: 公众号 | 品牌排版 | 内容系统
 
 **什么时候用**：需要突出提示、警告、成功确认或危险说明时，支持 4 种样式。
 
-**格式**：`:::callout 类型`（类型：`info` 默认、`warning`、`success`、`danger`）
+**格式**：块内使用 `type:`（`info` 默认、`warning`、`success`、`danger`）和 `body:`；不要把类型写在 opener 上。
 
 ```
 :::callout
-这是默认 info 样式，适合一般说明。
+type: info
+body: 这是默认 info 样式，适合一般说明。
 :::
 
-:::callout warning
-⚠️ 注意：高级排版模块仅在 API 模式下渲染，AI 模式不支持。
+:::callout
+type: warning
+body: ⚠️ 注意：高级排版模块仅在 API 模式下渲染，AI 模式不支持。
 :::
 
-:::callout success
-成功：layout validate 返回 0 errors，说明本地 catalog/schema 接受该语法。
+:::callout
+type: success
+body: 成功：layout validate 返回 0 errors，说明本地 catalog/schema 接受该语法。
 :::
 
-:::callout danger
-❌ 错误：不要用 --mode ai 时期望 :::module 模块渲染。
+:::callout
+type: danger
+body: ❌ 错误：不要用 --mode ai 时期望 :::module 模块渲染。
 :::
 ```
 
@@ -882,7 +958,7 @@ tags: 公众号 | 品牌排版 | 内容系统
 
 **什么时候用**：在正文段落中横向插入 2-4 个小指标时（比 metrics 更轻量）。
 
-**格式**：JSON 数组，每项包含 `label`、`value`，可选 `unit`、`note`
+**格式**：JSON 数组，每项包含 `label`、`value`，可选 `unit`
 
 ```
 :::stat-row
@@ -922,11 +998,11 @@ A: 不需要，照着字段填写就行。
 
 **什么时候用**：推荐工具、书单、链接集合时。
 
-**格式**：JSON 数组，key 是 `name`、`url`、`desc`（不是 `description`）、`icon`
+**格式**：JSON 数组，key 是 `name`、`desc`（不是 `description`）、`icon`
 
 ```
 :::resource-list
-[{"icon":"🛠","name":"md2wechat CLI","url":"https://github.com/geekjourneyx/md2wechat-skill","desc":"Markdown 转微信的命令行工具"},{"icon":"📖","name":"Layout 教程","url":"https://github.com/geekjourneyx/md2wechat-skill/blob/main/docs/LAYOUT.md","desc":"高级排版模块核心教程"}]
+[{"icon":"🛠","name":"md2wechat CLI","desc":"Markdown 转微信的命令行工具"},{"icon":"📖","name":"Layout 教程","desc":"高级排版模块核心教程"}]
 :::
 ```
 
@@ -997,7 +1073,7 @@ md2wechat layout show gallery --json
 
 ## 四、一篇完整文章示例
 
-以下是一篇观点文的完整排版骨架，涵盖 opening → body → conversion → brand 的完整流程。
+以下是一篇观点文的完整排版骨架，涵盖 opening → body → conversion → brand 的完整流程。默认使用普通 headings；只有重要转场才加入 `section-title`。文章尾部的固定边界是：可选 `epilogue` → 可选 `summary` → 至多一个 `cta` → 可选 `closing`。`epilogue` 是正文尾部过渡，`cta` 是唯一行动区，`closing` 只是安静签名。
 
 ```markdown
 ---
@@ -1022,7 +1098,11 @@ kicker: 先给读者一个判断
 
 ---
 
-## 01 问题：读者没有理由读你的文章
+:::section-title
+variant: numbered
+index: "01"
+title: 读者为什么没有理由读你的文章
+:::
 
 :::audience-fit
 title: 这篇适合谁
@@ -1033,8 +1113,9 @@ avoid: 尚未形成固定内容方向的新手
 
 在手机上，读者决定读还是划走只需要 **3 秒钟**。
 
-:::callout warning
-大多数文章失败不是因为内容差，而是因为前 3 秒没有给读者理由继续读。
+:::callout
+type: warning
+body: 大多数文章失败不是因为内容差，而是因为前 3 秒没有给读者理由继续读。
 :::
 
 :::myth-fact
@@ -1046,7 +1127,11 @@ fact | 选最少的模块，每件事做好一个
 
 ---
 
-## 02 原理：排版要解决的 4 件事
+:::section-title
+variant: focus
+title: 排版要解决的 4 件事
+symbol: double-circle
+:::
 
 :::metrics[排版的 4 个目标]
 让读者知道值不值得读 | attention | hero / cards / verdict | accent
@@ -1066,12 +1151,16 @@ fact | 选最少的模块，每件事做好一个
 
 ---
 
-## 03 实战：选最少的模块
+:::section-title
+variant: divider
+title: 选最少的模块
+symbol: spark-outline
+:::
 
 :::compare[模块化前 vs 后]
-制作时间 | 每篇约 2 小时，手工堆样式 | 每篇约 35 分钟，用模块填内容 | accent
-完读率 | 行业平均 41% | 使用模块后平均 79% | default
-品牌识别度 | 每篇风格不一样 | 固定骨架，风格稳定 | default
+手工制作 | 每篇约 2 小时，反复堆样式 | 模块复用 | 每篇约 35 分钟，直接填内容
+普通长文 | 行业平均完读率 41% | 模块化长文 | 平均完读率 79%
+临时风格 | 每篇结构都不一样 | 固定骨架 | 品牌表达更稳定
 :::
 
 :::verdict
@@ -1082,13 +1171,23 @@ body: 让读者每次打开你的文章都知道"哦，这是 XX 的风格"，�
 
 ---
 
-## 04 行动：今天就能上手
+:::section-title
+variant: vertical
+title: 今天就能上手
+symbol: diamond-solid
+:::
 
 :::checklist[上手清单]
 done | 安装 md2wechat CLI | 确认 version 输出
 pending | 配置 API Key | 先运行 config validate
-todo | 运行 layout list 发现模块 | 只选择能正确填充的模块
-todo | 写一篇文章 | 先 validate 再 convert
+pending | 运行 layout list 发现模块 | 只选择能正确填充的模块
+pending | 写一篇文章 | 先 validate 再 convert
+:::
+
+:::epilogue
+title: 当结构可复用，表达才有更大的自由。
+subtitle: 现在只保留读者真正需要的下一步。
+symbol: infinity
 :::
 
 :::summary
@@ -1102,17 +1201,9 @@ title: 想把公众号做成稳定可复用的结构？从这 3 个模块开始�
 note: 联系作者咨询 API 服务
 :::
 
-:::author-card
-name: 极客旅程
-bio: 研究 AI 工作流和内容创作工具，专注公众号效率提升。
-:::
-
-:::subscribe
-label: 持续更新
-title: 如果这篇对你有帮助，可以把这个系列收藏起来
-subtitle: 每周分享 AI 工具和内容创作方法论。
-primary: 关注公众号
-secondary: 转发给正在写长文的人
+:::closing
+title: 先让读者看懂，再让读者行动。
+symbol: asterism
 :::
 ```
 

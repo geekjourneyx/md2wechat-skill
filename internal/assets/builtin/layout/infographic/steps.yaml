@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: infographic
+input_positions: [row-dsl]
 serves: [readability]
 content_types: [tutorial, report]
 industry: [general]
@@ -22,15 +23,18 @@ anti_pattern: |
   没有任何满足 3 列的行导致渲染失败；
   步骤序号不统一；
   说明写太短失去步骤的引导价值。
+opener:
+  caption: true
+  caption_default: 使用步骤
 rows:
   delimiter: "|"
   min_columns: 3
   schema:
-    - name: number
+    - name: index
       description: 步骤序号（如 01、02、03）
     - name: title
       description: 步骤标题，动词开头
-    - name: description
+    - name: body
       description: 步骤说明，解释具体怎么做
 example: |
   :::steps[落地步骤]
@@ -38,6 +42,23 @@ example: |
   02 | 再补数据和案例 | 让读者知道这套方法真的成立
   03 | 最后落到动作 | 结尾明确下一步该做什么
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - index
+    - title
+    - body
+  optional:
+    - header-title
+  enums: {}
+  defaults:
+    header-title: 使用步骤
+  invalid:
+    - blank-required-cell
+  ignored:
+    - cells-after-body
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

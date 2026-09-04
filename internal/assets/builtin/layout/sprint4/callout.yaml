@@ -1,10 +1,12 @@
 schema_version: "1"
 name: callout
 lifecycle: recommended
-body_format: lines
+body_format: markdown_fields
+compatible_body_formats: [lines]
 version: "1.0.0"
 since: "1.5.0"
 category: sprint4
+input_positions: [markdown-body]
 serves: [attention, readability]
 content_types: [tutorial, report, announcement]
 industry: [general]
@@ -13,28 +15,58 @@ position: body
 when_to_use: |
   重要提示、警告、成功确认、危险操作说明。
   适合在正文中插入需要读者特别注意的信息。
-  类型修饰符写在开块标签后：:::callout info（默认）/ warning / success / danger。
+  类型修饰符写在块内：type: info（默认）/ warning / success / danger。
 when_not_to_use: |
   多条注意事项用 notice；
   文章前提说明用 notice 或 audience-fit。
 pairs_well_with: [notice, steps, checklist]
 avoid_combining_with: []
 anti_pattern: |
-  类型修饰符只能是 info / warning / success / danger（默认 info），写在 ::: 后如 :::callout warning；
+  类型修饰符只能是 info / warning / success / danger（默认 info），写作 type: warning；
   缺少内容导致渲染失败；
   danger 类型用于非危险场景失去警示意义；
   内容写太长应该拆成正文段落。
+fields:
+  required:
+    - name: body
+      description: 提示正文
+  optional:
+    - name: type
+      enum: [info, warning, success, danger]
+      default: info
 opener:
   param_style: token
   params:
     - name: variant
       enum: [info, warning, success, danger]
+opener_compatibility_only: true
 body:
   min_items: 1
 example: |
-  :::callout warning
-  注意：发布前请检查图片、链接和行动按钮，避免复制到公众号后出现断链。
+  :::callout
+  type: warning
+  body: 注意：发布前请检查图片、链接和行动按钮，避免复制到公众号后出现断链。
   :::
+agent_contract:
+  body_format: markdown_fields
+  required:
+    - body
+  optional:
+    - type
+  enums:
+    type:
+      - info
+      - warning
+      - success
+      - danger
+  defaults:
+    type: info
+  invalid:
+    - blank-body
+  ignored: []
+  legacy:
+    - case-folded-type
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

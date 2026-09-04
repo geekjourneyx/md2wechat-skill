@@ -253,7 +253,7 @@ func TestCalibratedVariantAndBodyMatrix(t *testing.T) {
 		{name: "callout invalid variant", markdown: ":::callout tip\n提示。\n:::\n"},
 		{name: "callout empty", markdown: ":::callout info\n:::\n"},
 		{name: "image steps complete", markdown: ":::image-steps{columns=2}\nstep: 打开编辑器\ndesc: 选择主题\n![界面](https://example.com/a.png)\n:::\n", accepted: true},
-		{name: "image steps without image", markdown: ":::image-steps\nstep: 打开编辑器\ndesc: 选择主题\n:::\n", accepted: true},
+		{name: "image steps without image", markdown: ":::image-steps\nstep: 打开编辑器\ndesc: 选择主题\n:::\n"},
 		{name: "image steps incomplete", markdown: ":::image-steps\nstep: 打开编辑器\n:::\n"},
 		{name: "tweet complete", markdown: ":::tweet\n{\"name\":\"作者\",\"text\":\"观点\"}\n:::\n", accepted: true},
 		{name: "tweet missing name", markdown: ":::tweet\n{\"text\":\"观点\"}\n:::\n"},
@@ -268,6 +268,28 @@ func TestCalibratedVariantAndBodyMatrix(t *testing.T) {
 			report := c.Validate(tt.markdown)
 			if got := len(report.Errors) == 0; got != tt.accepted {
 				t.Fatalf("accepted = %v, want %v; errors=%+v", got, tt.accepted, report.Errors)
+			}
+		})
+	}
+}
+
+func TestCompatibilityOnlyInputsRemainAccepted(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name, markdown string
+	}{
+		{name: "toolbox fourth cell", markdown: ":::toolbox\n工具 | md2wechat | 转换器 | https://example.com\n:::\n"},
+		{name: "quote-card unknown author", markdown: ":::quote-card\n{\"text\":\"结构先于风格\",\"author\":\"旧作者\"}\n:::\n"},
+		{name: "infographic legacy selectors", markdown: ":::infographic\ntitle: 核心判断\nvariant: thesis\nlayout: default\n:::\n"},
+		{name: "callout token opener", markdown: ":::callout warning\n注意备份。\n:::\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if report := c.Validate(tt.markdown); len(report.Errors) != 0 {
+				t.Fatalf("compatibility input errors = %+v", report.Errors)
 			}
 		})
 	}

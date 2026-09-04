@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: free-layout
+input_positions: [header-attrs, row-dsl]
 serves: [readability]
 content_types: [tutorial, report, announcement, product-launch]
 industry: [general]
@@ -25,6 +26,7 @@ opener:
   param_style: tokens
   params:
     - name: headers
+      required: true
       description: 逗号分隔的表头
       example: "能力,基础版,专业版,企业版"
 rows:
@@ -42,6 +44,23 @@ example: |
   API 调用|无|有|有
   私有部署|无|无|有
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - headers
+    - rows
+  optional: []
+  enums: {}
+  defaults: {}
+  invalid:
+    - blank-header
+    - blank-cell
+    - zero-rows
+    - ragged-row
+    - markdown-separator-row
+  ignored: []
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

@@ -102,7 +102,7 @@ openclaw skills install @geekjourneyx/md2wechat
 Windows 用户也可以使用固定版本 PowerShell 安装器：
 
 ```powershell
-Invoke-WebRequest https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install-openclaw.ps1 -OutFile install-openclaw.ps1
+Invoke-WebRequest https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.4.0/install-openclaw.ps1 -OutFile install-openclaw.ps1
 powershell -ExecutionPolicy Bypass -File .\install-openclaw.ps1
 ```
 
@@ -133,7 +133,7 @@ macOS 和 Linux 不再提供 OpenClaw 专用 shell 安装器，使用 npm + Claw
 
 ```bash
 # 1. 下载固定版本 release 资产
-VERSION=3.2.0
+VERSION=3.4.0
 # 按你的平台选择对应二进制，这里以 Linux amd64 为例
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-openclaw-skill.tar.gz
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-linux-amd64

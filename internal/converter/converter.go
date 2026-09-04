@@ -147,7 +147,7 @@ func (c *converter) normalizeRequest(req *ConvertRequest) {
 
 // validateRequest 验证请求参数
 func (c *converter) validateRequest(req *ConvertRequest) error {
-	if req.Markdown == "" {
+	if strings.TrimSpace(req.Markdown) == "" {
 		return ErrEmptyMarkdown
 	}
 

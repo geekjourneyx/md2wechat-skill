@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: infographic
+input_positions: [row-dsl]
 serves: [readability, attention]
 content_types: [opinion, tutorial, report, announcement]
 industry: [general]
@@ -28,17 +29,43 @@ rows:
   schema:
     - name: left-title
       description: 左侧方案名称（如"旧方式"、"方案 A"）
-    - name: left-description
+    - name: left-body
       description: 左侧方案说明
     - name: right-title
       description: 右侧方案名称（如"新方式"、"方案 B"）
-    - name: right-description
+    - name: right-body
+fields:
+  optional:
+    - name: left-header
+      default: 旧方式
+    - name: right-header
+      default: 新方式
       description: 右侧方案说明
 example: |
   :::compare[旧方式 | 新方式]
   手工堆样式 | 每篇都要重搭结构，容易乱 | 模块化排版 | 节奏固定，替换内容就能稳定复用
   硬塞双列 | 手机里容易挤，信息也容易断开 | 单列卡片 | 重点成组出现，阅读更稳定
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - left-title
+    - left-body
+    - right-title
+    - right-body
+  optional:
+    - left-header
+    - right-header
+  enums: {}
+  defaults:
+    left-header: 旧方式
+    right-header: 新方式
+  invalid:
+    - blank-required-cell
+  ignored:
+    - cells-after-right-body
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

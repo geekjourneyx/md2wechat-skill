@@ -56,12 +56,12 @@ md2wechat capabilities --json
   },
   "layout": {
     "available": true,
-    "module_count": 53,
-    "recommended_syntax_count": 53,
-    "recommended_scenario_count": 68,
+    "module_count": 56,
+    "recommended_syntax_count": 56,
+    "recommended_scenario_count": 77,
     "compatibility_module_count": 3,
     "base_enhancement_count": 4,
-    "render_syntax_count": 60,
+    "render_syntax_count": 63,
     "supports_validate": true,
     "api_mode_only": true,
     "schema_version": "1"
@@ -145,6 +145,7 @@ md2wechat providers show openai --json
 md2wechat providers show atlascloud --json
 md2wechat providers show openrouter --json
 md2wechat providers show volcengine --json
+md2wechat providers show minimax --json
 ```
 
 `providers list --json` 只返回选择下一条命令所需的轻量元数据：
@@ -153,6 +154,7 @@ md2wechat providers show volcengine --json
 - `aliases`
 - `description`
 - `supports_size`
+- `supports_subject_reference`
 - `current`
 - `configured`
 
@@ -164,17 +166,22 @@ md2wechat providers show volcengine --json
 - `default_model`
 - `supported_models`
 
+`supported_models` 中的每个模型也会带上 `supports_subject_reference`，用于判断哪些模型可以配合 `--subject-reference` 使用。
+
 因此，Agent 应先用 `list` 选择 provider，只在准备配置或调用具体 provider 时读取 `show`，避免在枚举阶段加载完整模型表。
 
 当前内置支持的图片 provider：
 
 - `openai`
+- `minimax`
 - `atlascloud` / `atlas-cloud` / `atlas`
 - `tuzi`
 - `modelscope` / `ms`
 - `openrouter` / `or`
 - `gemini` / `google`
 - `volcengine` / `volc`
+
+其中只有 `minimax` 的 `supports_subject_reference` 为 `true`，对应模型为 `image-01`。
 
 ## 主题发现
 
@@ -417,7 +424,7 @@ Prompt catalog 的加载优先级为：
 
 ## Layout Module Discovery (:::module Syntax)
 
-The `layout` subcommand exposes 53 个主推 advanced WeChat layout syntax names (`:::module`) by default. Capability discovery separately reports 68 个主推高级排版场景条目, 3 个兼容模块, 4 个基础增强能力, and 60 项渲染层语法能力; these counts are not interchangeable. The 68 scenarios are source-use-case mappings, while the 53 names are the default CLI discovery objects. Maintainer tests map 48 of those names from source scenarios and keep five guide-only names explicit; the CLI does not publish that test-only mapping.
+The `layout` subcommand exposes 56 个主推 advanced WeChat layout syntax names (`:::module`) by default. Capability discovery separately reports 77 个主推高级排版场景条目, 3 个兼容模块, 4 个基础增强能力, and 63 项渲染层语法能力; these counts are not interchangeable. The 77 scenarios are source-use-case mappings, while the 56 names are the default CLI discovery objects. The CLI does not publish the test-only scenario mapping.
 
 ### Commands
 
@@ -445,6 +452,8 @@ md2wechat layout validate --stdin --json < article.md
 ```
 
 layout 内置 catalog 是唯一事实源，不读取用户目录、项目目录或环境变量中的模块 YAML。`layout list --json` 会在模块摘要中显示 `body_format`；`layout show --json` 会显示完整 schema、canonical `Example` 和结构不同的 `Variants[].Example`。Schema 定义合法输入；Example 是经过验证的可执行 witness，应复用而不是手猜语法。正文格式共有 `fields` / `rows` / `json_object` / `json_array` / `markdown_images` / `markdown_fields` / `split` / `lines` / `dialogue` 九种；`compatible_body_formats` 只表示模块仍接受的旧正文格式。
+
+新内容的固定读取顺序是：`input_positions` → primary `body_format` 与对应 `Opener`、`Fields` / `Rows` / `Body` → canonical `Variants[].Name` → canonical `Example`。`compatible_body_formats` 和 `Variants[].Aliases` 都是只读 compatibility facts，只用于理解旧稿，不能作为新内容的选择项。
 
 默认 `layout list --json` 只返回 recommended lifecycle。旧稿迁移时才运行 `layout list --lifecycle compatibility --json`；不要把 `dialogue`、`gallery`、`longimage` 推荐给新稿。复杂正文使用 `layout render <name> --body-file <path>`（或 `--body-file -` 从 stdin 读取），opener 参数用可重复的 `--param KEY=VALUE`，方括号 caption 用 `--caption`。
 

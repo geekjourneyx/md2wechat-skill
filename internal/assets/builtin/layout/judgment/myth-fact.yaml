@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: judgment
+input_positions: [row-dsl]
 serves: [attention, readability]
 content_types: [opinion, tutorial, announcement]
 industry: [general]
@@ -22,6 +23,9 @@ anti_pattern: |
   没有任何满足 2 列的行导致渲染失败；
   误区写成客观事实而不是真正的误解；
   事实列写得和误区差别不大。
+opener:
+  caption: true
+  caption_default: 误区纠正
 rows:
   delimiter: "|"
   min_columns: 2
@@ -30,13 +34,31 @@ rows:
       description: 常见误区，读者可能持有的错误观点
     - name: fact
       description: 真实情况，对误区的正确纠正
-    - name: supplement
+    - name: note
       description: 补充说明，解释为什么事实是这样（可省略）
 example: |
   :::myth-fact[常见误区]
   模块越多越高级 | 模块越准越高级 | 数量只是覆盖面，准确才决定阅读体验
   信息图必须像海报 | 信息图首先是一句话判断 | 图片和编号都不是必要内容
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - myth
+    - fact
+  optional:
+    - header-title
+    - note
+  enums: {}
+  defaults:
+    header-title: 误区纠正
+  invalid:
+    - blank-myth
+    - blank-fact
+  ignored:
+    - cells-after-note
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

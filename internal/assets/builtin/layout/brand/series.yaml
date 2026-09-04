@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: brand
+input_positions: [body-kv]
 serves: [memorability, conversion]
 content_types: [opinion, tutorial, brand]
 industry: [general]
@@ -43,6 +44,7 @@ fields:
     - name: next
       description: 下一篇预告
       example: "下一篇：个人品牌模块怎么搭"
+  compatibility:
     - name: index
       description: 当前期在系列中的序号
       example: "07"
@@ -64,6 +66,27 @@ example: |
   tags: 公众号 | 品牌排版 | 内容系统
   next: 下一篇：个人品牌模块怎么搭
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - name
+    - title
+  optional:
+    - issue
+    - desc
+    - tags
+    - next
+  enums: {}
+  defaults:
+    max-tags: "4"
+  invalid:
+    - blank-name
+    - blank-title
+  ignored:
+    - tags-after-4
+    - unknown-fields
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

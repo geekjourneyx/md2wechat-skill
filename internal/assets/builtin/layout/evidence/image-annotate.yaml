@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: evidence
+input_positions: [body-kv, row-dsl]
 serves: [readability, attention]
 content_types: [tutorial, report]
 industry: [general]
@@ -31,8 +32,11 @@ fields:
       description: 编号解读（可多次重复，最多渲染 3 条），格式：编号 | 标题 | 描述；描述可省略
       example: "01 | 主信息区 | 一进入页面先看到的核心判断和主标题"
   optional:
+    - name: point-description
+      description: 标注说明
     - name: eyebrow
       description: 标签词
+      default: 图片解读卡
       example: "图片解读"
     - name: title
       description: 图片解读标题
@@ -62,6 +66,31 @@ example: |
   point: 02 | 指标区 | 适合讲关键数字、结果和变化
   point: 03 | 行动区 | 适合解释按钮、入口和下一步动作
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - image
+    - point
+  optional:
+    - title
+    - eyebrow
+    - note
+    - alt
+    - point-description
+  enums: {}
+  defaults:
+    eyebrow: 图片解读卡
+    max-points: "3"
+  invalid:
+    - blank-image
+    - unsafe-image
+    - malformed-point
+    - zero-valid-points
+  ignored:
+    - points-after-3
+    - unknown-fields
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

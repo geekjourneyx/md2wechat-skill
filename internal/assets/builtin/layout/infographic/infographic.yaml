@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: infographic
+input_positions: [body-kv]
 serves: [attention, memorability]
 content_types: [opinion, tutorial, report, announcement, product-launch]
 industry: [general]
@@ -31,10 +32,12 @@ fields:
   optional:
     - name: type
       description: 信息卡结构类型
-      enum: [thesis, formula, pullquote, contrast, diagnosis, number, path, anatomy, tradeoff, evidence-chain, mini-case]
+      enum: [thesis, pullquote, number, path, contrast, formula, anatomy, diagnosis, tradeoff, evidence-chain, micro-case]
+      default: thesis
       example: thesis
     - name: eyebrow
       description: 标签词，定位信息图的角色
+      default: 文章信息图
       example: "视觉摘要"
     - name: subtitle
       description: 副标题，补充 title 的说明
@@ -59,13 +62,8 @@ fields:
       example: "适合教程、方案和发布稿"
     - name: accent
       description: 强调色控制
-      example: "true"
-    - name: variant
-      description: 视觉变体
-      example: "centered"
-    - name: layout
-      description: 布局控制（旧格式兼容，不影响渲染主逻辑）
-      example: "default"
+      enum: [green, emerald, blue, sky, orange, amber, red, rose, "#RGB", "#RRGGBB"]
+      default: theme-derived
     - name: items
       description: 列表项，用 | 分隔
       example: "第一点 | 第二点 | 第三点"
@@ -75,16 +73,18 @@ fields:
     - name: tradeoffs
       description: 取舍项，格式为 标签:值 并用 | 分隔
       example: "选择更多:更像自己 | 结构更稳:更少返工"
+  compatibility:
+    - name: variant
+      description: 旧版视觉变体（兼容输入）
+      example: "centered"
+    - name: layout
+      description: 旧版布局控制（兼容输入）
+      example: "default"
 variants:
   - name: thesis
     aliases: [statement, judgment, claim]
     use_when: 需要突出单一主判断
     required: [title]
-    example: |
-      :::infographic
-      type: thesis
-      title: 高级排版不是装饰，是阅读决策系统
-      :::
   - name: formula
     aliases: [equation]
     use_when: 需要表达可记忆公式
@@ -189,25 +189,112 @@ variants:
       title: 读者相信的是顺畅证据
       items: 先给结论 | 再给数据 | 最后给案例
       :::
-  - name: mini-case
-    aliases: [micro-case, case]
+  - name: micro-case
+    aliases: [mini-case, case]
     use_when: 需要压缩一个微案例
     required: [title, items]
     shapes:
       - {field: items, separator: "|", min_parts: 2}
     example: |
       :::infographic
-      type: mini-case
+      type: micro-case
       title: 一篇草稿如何变成可发布稿
       items: 原稿没有结构 | 补齐判断与证据 | 完成发布检查
       :::
 example: |
   :::infographic
-  type: thesis
   eyebrow: 核心判断
   title: 高级排版不是装饰，是阅读决策系统
   subtitle: 它先帮读者判断值不值得看，再帮作者建立记忆点
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - title
+  optional:
+    - type
+    - eyebrow
+    - subtitle
+    - quote
+    - value
+    - label
+    - items
+    - left
+    - right
+    - formula
+    - tradeoffs
+    - note
+    - accent
+  enums:
+    type:
+      - thesis
+      - pullquote
+      - number
+      - path
+      - contrast
+      - formula
+      - anatomy
+      - diagnosis
+      - tradeoff
+      - evidence-chain
+      - micro-case
+    accent:
+      - green
+      - emerald
+      - blue
+      - sky
+      - orange
+      - amber
+      - red
+      - rose
+      - "#RGB"
+      - "#RRGGBB"
+  defaults:
+    type: thesis
+    eyebrow: 文章信息图
+    accent: theme-derived
+    caps: title22,eyebrow10,subtitle30,quote28,value12,label14,item16,formula4x10,tradeoff4x8x10,note20,highlight3
+  invalid:
+    - blank-title
+  ignored:
+    - image
+    - alt
+    - serial
+    - unknown-fields
+  legacy:
+    - variant-selector
+    - layout-selector
+    - flow-to-items
+    - statement-to-thesis
+    - judgment-to-thesis
+    - claim-to-thesis
+    - quote-to-pullquote
+    - saying-to-pullquote
+    - golden-to-pullquote
+    - golden-quote-to-pullquote
+    - data-to-number
+    - metric-to-number
+    - stat-to-number
+    - type-flow-to-path
+    - logic-to-path
+    - chain-to-path
+    - compare-to-contrast
+    - comparison-to-contrast
+    - vs-to-contrast
+    - equation-to-formula
+    - breakdown-to-anatomy
+    - deconstruct-to-anatomy
+    - diagnose-to-diagnosis
+    - problem-to-diagnosis
+    - trade-off-to-tradeoff
+    - tradeoffs-to-tradeoff
+    - evidence-to-evidence-chain
+    - proof-chain-to-evidence-chain
+    - case-to-micro-case
+    - mini-case-to-micro-case
+    - case-folded-selector
+    - case-folded-accent
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

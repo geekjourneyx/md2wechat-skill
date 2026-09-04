@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: infographic
+input_positions: [row-dsl]
 serves: [readability]
 content_types: [report, announcement, tutorial]
 industry: [general]
@@ -21,22 +22,56 @@ anti_pattern: |
   没有任何满足 3 列的行导致渲染失败；
   阶段列写太多导致视觉混乱；
   和 steps 混用（timeline 强调时序，steps 强调动作）。
+opener:
+  caption: true
+  caption_default: 时间线
 rows:
   delimiter: "|"
-  min_columns: 3
+  min_columns: 2
   schema:
-    - name: date
+    - name: meta
       description: 阶段或时间标签（如"品牌稿"、"2026-01"）
     - name: title
       description: 该阶段的事件或标题
-    - name: description
+    - name: body
       description: 说明，补充这个阶段的背景或意义
+    - name: image
+      description: 阶段图片
+fields:
+  compatibility:
+    - name: format
+      enum: [meta-dot-title, meta-title-body, meta-image-title-body]
+fields_compatibility_only: true
 example: |
   :::timeline[应用场景]
   品牌稿 | 开头先用封面卡 | 适合活动稿、专题稿、发布稿。
   方案稿 | 中间用数据和对比 | 适合把价值和差异讲清楚。
   交付稿 | 末尾接清单和行动 | 让读者知道下一步该做什么。
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - meta
+    - title
+  optional:
+    - header-title
+    - body
+    - image
+  enums:
+    format:
+      - meta-dot-title
+      - meta-title-body
+      - meta-image-title-body
+  defaults:
+    header-title: 时间线
+  invalid:
+    - malformed-row
+    - blank-required-cell
+    - zero-valid-rows
+    - extra-pipe-cells
+  ignored: []
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

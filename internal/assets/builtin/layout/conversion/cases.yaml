@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: conversion
+input_positions: [row-dsl]
 serves: [conversion, attention]
 content_types: [report, announcement, brand, product-launch]
 industry: [general]
@@ -22,6 +23,9 @@ anti_pattern: |
   没有任何满足 3 列的行导致渲染失败；
   结果列写模糊定性而非具体数字；
   每行都用 accent 失去重点效果。
+opener:
+  caption: true
+  caption_default: 案例精选
 rows:
   delimiter: "|"
   min_columns: 3
@@ -30,16 +34,43 @@ rows:
       description: 案例标题或客户名称
     - name: result
       description: 案例结果，尽量用数字表达
-    - name: context
+    - name: body
       description: 说明，解释如何达成这个结果
-    - name: style
-      description: "风格：accent 或 default（可省略）"
-      enum: [accent, default]
+    - name: image
+      description: 案例图片（可省略）
+    - name: tone
+      description: "风格：default 或 accent（可省略）"
+      enum: [default, accent]
+      default: default
 example: |
   :::cases[案例精选]
   品牌发布稿 | 阅读完成率 +38% | 用封面卡和数据卡更容易把重点讲清楚 | accent
   销售方案稿 | 理解效率更高 | 用对比卡和步骤流减少解释成本 | default
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - title
+    - result
+    - body
+  optional:
+    - header-title
+    - image
+    - tone
+  enums:
+    tone:
+      - default
+      - accent
+  defaults:
+    header-title: 案例精选
+    tone: default
+  invalid:
+    - blank-required-cell
+  ignored:
+    - unsafe-image
+    - cells-after-tone
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

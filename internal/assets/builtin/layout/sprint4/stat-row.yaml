@@ -5,6 +5,7 @@ body_format: json_array
 version: "1.0.0"
 since: "1.5.0"
 category: sprint4
+input_positions: [json]
 serves: [attention, memorability]
 content_types: [report, announcement, product-launch]
 industry: [general]
@@ -35,6 +36,7 @@ fields:
     - name: unit
       description: 单位，渲染在数字后方字号更小（JSON key：unit，可省略）
       example: "人"
+  compatibility:
     - name: note
       description: 补充说明（JSON key：note，可省略）
       example: "环比上周"
@@ -42,6 +44,24 @@ example: |
   :::stat-row
   [{"value":"99%","label":"满意度"},{"value":"12K","label":"用户","unit":"人"}]
   :::
+agent_contract:
+  body_format: json_array
+  required:
+    - value
+    - label
+  optional:
+    - unit
+  enums: {}
+  defaults: {}
+  invalid:
+    - non-array
+    - empty-array
+    - blank-item
+    - wrong-type-item
+  ignored:
+    - unknown-keys
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

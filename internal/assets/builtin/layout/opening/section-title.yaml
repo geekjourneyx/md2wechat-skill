@@ -1,0 +1,167 @@
+schema_version: "1"
+name: section-title
+lifecycle: recommended
+body_format: fields
+version: "1.0.0"
+since: "3.3.0"
+category: opening
+serves: [readability, attention]
+content_types: [opinion, tutorial, report, announcement]
+industry: [general]
+tags: [opening, section, title, chapter]
+position: body
+input_positions: [body-kv]
+when_to_use: |
+  需要把正文切成可扫描的主题段落，并让读者立刻知道下一节要解决什么。
+  选择 numbered 表达顺序，选择 marker、divider、focus 或 vertical 建立视觉停顿。
+when_not_to_use: |
+  文章开头的主标题请使用 hero；只有一句小标签时使用 label-title。
+  不要为每个自然段都插入 section-title。
+pairs_well_with: [hero, toc, summary]
+avoid_combining_with: [part]
+anti_pattern: |
+  numbered 漏掉 index 会让序号没有意义；在 frame 或 numbered 中填写 symbol
+  会成为 API 忽略的无效 Agent 输入。
+fields:
+  required:
+    - name: title
+      description: 本节的明确主题
+      example: "先校准输入契约"
+  optional:
+    - name: variant
+      description: 标题结构变体
+      enum: [marker, divider, numbered, frame, focus, vertical]
+      default: marker
+      example: marker
+    - name: subtitle
+      description: 对标题的补充说明
+      example: "让选择和执行遵守同一份事实"
+    - name: symbol
+      description: 可使用装饰符号的标题变体；默认 marker 使用 diamond-outline
+      enum: [spark-solid, spark-outline, diamond-solid, diamond-outline, reference-mark, asterism, double-circle, circle, square-solid, square-outline, star, infinity]
+      applies_to: [marker, divider, focus, vertical]
+      example: diamond-outline
+    - name: index
+      description: numbered 变体的章节序号
+      min_runes: 1
+      max_runes: 4
+      applies_to: [numbered]
+      example: "01"
+  output_order: [variant, symbol, index, title, subtitle]
+variants:
+  - name: marker
+    use_when: 用轻量标记开始一个正文主题
+    defaults:
+      symbol: diamond-outline
+    required: [title]
+  - name: divider
+    use_when: 用分隔线清晰切开上下文
+    defaults:
+      symbol: spark-outline
+    required: [title]
+    example: |
+      :::section-title
+      variant: divider
+      title: 让模块服务阅读路径
+      symbol: spark-outline
+      :::
+  - name: numbered
+    use_when: 章节有明确先后顺序
+    required: [title, index]
+    example: |
+      :::section-title
+      variant: numbered
+      index: "02"
+      title: 再验证真实渲染
+      :::
+  - name: frame
+    use_when: 用边框强调一个独立判断
+    required: [title]
+    example: |
+      :::section-title
+      variant: frame
+      title: 结构先于装饰
+      subtitle: 先让读者看懂，再让页面好看
+      :::
+  - name: focus
+    use_when: 需要聚焦一个关键转折
+    defaults:
+      symbol: double-circle
+    required: [title]
+    example: |
+      :::section-title
+      variant: focus
+      title: 不把无效字段交给 Agent
+      symbol: double-circle
+      :::
+  - name: vertical
+    use_when: 用竖向标题制造更强的章节节奏
+    defaults:
+      symbol: diamond-solid
+    required: [title]
+    example: |
+      :::section-title
+      variant: vertical
+      title: 最后检查发布路径
+      symbol: diamond-solid
+      :::
+example: |
+  :::section-title
+  title: 先校准输入契约
+  symbol: diamond-outline
+  :::
+agent_contract:
+  body_format: fields
+  required:
+    - title
+  optional:
+    - variant
+    - subtitle
+    - symbol
+    - index
+  enums:
+    variant:
+      - marker
+      - divider
+      - numbered
+      - frame
+      - focus
+      - vertical
+    symbol:
+      - spark-solid
+      - spark-outline
+      - diamond-solid
+      - diamond-outline
+      - reference-mark
+      - asterism
+      - double-circle
+      - circle
+      - square-solid
+      - square-outline
+      - star
+      - infinity
+  defaults:
+    variant: marker
+    unknown-variant: marker
+    marker.symbol: diamond-outline
+    divider.symbol: spark-outline
+    focus.symbol: double-circle
+    vertical.symbol: diamond-solid
+    unknown-or-raw-symbol: location-default
+  invalid:
+    - blank-title
+    - numbered-missing-index
+    - numbered-index-over-4
+  ignored:
+    - numbered.symbol
+    - frame.symbol
+    - non-numbered.index
+  legacy:
+    - case-folded-variant
+  applicability:
+    symbol: [marker, divider, focus, vertical]
+    index: [numbered]
+metadata:
+  author: md2wechat
+  provenance: builtin
+  inspired_by: "advanced-layout-modules-guide.md#section-title"

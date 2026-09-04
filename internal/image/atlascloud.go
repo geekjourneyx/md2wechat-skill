@@ -38,7 +38,17 @@ type atlasCloudPrediction struct {
 type atlasCloudResponse struct {
 	Code    int                  `json:"code"`
 	Message string               `json:"message"`
+	Msg     string               `json:"msg"`
 	Data    atlasCloudPrediction `json:"data"`
+}
+
+// errorMessage 返回 API 实际填充的错误字段：Atlas Cloud 部分响应用 msg，
+// 部分用 message，只读其中一个会让错误信息退化成原始 JSON。
+func (r atlasCloudResponse) errorMessage() string {
+	if message := strings.TrimSpace(r.Message); message != "" {
+		return message
+	}
+	return strings.TrimSpace(r.Msg)
 }
 
 func NewAtlasCloudProvider(cfg *config.Config) (*AtlasCloudProvider, error) {
@@ -231,7 +241,7 @@ func decodeAtlasCloudResponse(body io.Reader) (atlasCloudPrediction, error) {
 		return atlasCloudPrediction{}, err
 	}
 	if response.Code != 0 && response.Code != http.StatusOK {
-		return atlasCloudPrediction{}, fmt.Errorf("atlas cloud API code %d: %s", response.Code, response.Message)
+		return atlasCloudPrediction{}, fmt.Errorf("atlas cloud API code %d: %s", response.Code, response.errorMessage())
 	}
 	return response.Data, nil
 }
@@ -240,9 +250,13 @@ func (p *AtlasCloudProvider) handleErrorResponse(resp *http.Response) error {
 	body, _ := io.ReadAll(resp.Body)
 	var response struct {
 		Message string `json:"message"`
+		Msg     string `json:"msg"`
 	}
 	_ = json.Unmarshal(body, &response)
 	message := strings.TrimSpace(response.Message)
+	if message == "" {
+		message = strings.TrimSpace(response.Msg)
+	}
 	if message == "" {
 		message = strings.TrimSpace(string(body))
 	}

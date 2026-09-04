@@ -1036,20 +1036,23 @@ func TestBuildCapabilitiesDataIncludesLayoutWithoutUnreleasedFormat(t *testing.T
 	if layout["module_count"] != wantModuleCount {
 		t.Fatalf("layout module_count = %#v, want %d", layout["module_count"], wantModuleCount)
 	}
-	if layout["module_count"] != 53 {
-		t.Fatalf("layout module_count = %#v, want 53", layout["module_count"])
+	if layout["module_count"] != 56 {
+		t.Fatalf("layout module_count = %#v, want 56", layout["module_count"])
 	}
-	if layout["recommended_syntax_count"] != 53 {
+	if layout["recommended_syntax_count"] != 56 {
 		t.Fatalf("recommended_syntax_count = %#v", layout)
 	}
-	if layout["recommended_scenario_count"] != 68 {
+	if layout["recommended_scenario_count"] != 77 {
 		t.Fatalf("recommended_scenario_count = %#v", layout)
 	}
 	if layout["compatibility_module_count"] != 3 {
 		t.Fatalf("compatibility_module_count = %#v", layout)
 	}
-	if layout["base_enhancement_count"] != 4 || layout["render_syntax_count"] != 60 {
+	if layout["base_enhancement_count"] != 4 || layout["render_syntax_count"] != 63 {
 		t.Fatalf("render count contract = %#v", layout)
+	}
+	if got, want := layout["render_syntax_count"], layout["recommended_syntax_count"].(int)+layout["compatibility_module_count"].(int)+layout["base_enhancement_count"].(int); got != want {
+		t.Fatalf("render_syntax_count = %#v, want derived count %d", got, want)
 	}
 	wantCategories := []string{"brand", "conversion", "evidence", "free-layout", "infographic", "interactive", "judgment", "opening", "sprint4"}
 	if got := layout["categories"]; !reflect.DeepEqual(got, wantCategories) {
@@ -1068,8 +1071,11 @@ func TestBuildCapabilitiesDataIncludesLayoutWithoutUnreleasedFormat(t *testing.T
 
 func TestLayoutCapabilitiesExposeSingleCatalogCounts(t *testing.T) {
 	layout := buildLayoutCapabilityData()
-	if layout["recommended_syntax_count"] != 53 || layout["render_syntax_count"] != 60 {
+	if layout["recommended_syntax_count"] != 56 || layout["render_syntax_count"] != 63 {
 		t.Fatalf("layout capability counts drifted: %#v", layout)
+	}
+	if layout["render_syntax_count"] != layout["recommended_syntax_count"].(int)+layout["compatibility_module_count"].(int)+layout["base_enhancement_count"].(int) {
+		t.Fatalf("layout capability render count must be derived: %#v", layout)
 	}
 	for _, obsolete := range []string{
 		"effective_recommended_syntax_count",
@@ -1462,5 +1468,81 @@ func TestPromptsListIncludesVictorianBannerByTag(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected infographic-victorian-engraving-banner in response: %#v", prompts)
+	}
+}
+
+// TestProvidersExposeSubjectReferenceCapability asserts the subject reference
+// capability reaches both providers list --json and providers show --json.
+func TestProvidersExposeSubjectReferenceCapability(t *testing.T) {
+	oldCfg, oldJSON := cfg, jsonOutput
+	t.Cleanup(func() {
+		cfg, jsonOutput = oldCfg, oldJSON
+	})
+
+	cfg = &config.Config{ImageProvider: "minimax", ImageAPIKey: "configured-key"}
+	jsonOutput = true
+
+	listOutput := captureStdout(t, func() {
+		if err := providersListCmd.RunE(providersListCmd, nil); err != nil {
+			t.Fatalf("providers list: %v", err)
+		}
+	})
+	var listResponse struct {
+		Data struct {
+			Providers []providerListItem `json:"providers"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(listOutput, &listResponse); err != nil {
+		t.Fatalf("decode providers list: %v\n%s", err, listOutput)
+	}
+	if !bytes.Contains(listOutput, []byte(`"supports_subject_reference"`)) {
+		t.Fatalf("providers list must expose supports_subject_reference\n%s", listOutput)
+	}
+	var seenMiniMax bool
+	for _, provider := range listResponse.Data.Providers {
+		switch provider.Name {
+		case "minimax":
+			seenMiniMax = true
+			if !provider.SupportsSubjectReference {
+				t.Fatalf("minimax list item = %#v, want supports_subject_reference true", provider)
+			}
+		default:
+			if provider.SupportsSubjectReference {
+				t.Fatalf("provider %q must not advertise subject reference support", provider.Name)
+			}
+		}
+	}
+	if !seenMiniMax {
+		t.Fatal("providers list is missing minimax")
+	}
+
+	showOutput := captureStdout(t, func() {
+		if err := providersShowCmd.RunE(providersShowCmd, []string{"minimax"}); err != nil {
+			t.Fatalf("providers show: %v", err)
+		}
+	})
+	var showResponse struct {
+		Data struct {
+			Provider providerView `json:"provider"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(showOutput, &showResponse); err != nil {
+		t.Fatalf("decode provider show: %v\n%s", err, showOutput)
+	}
+	provider := showResponse.Data.Provider
+	if !provider.SupportsSubjectReference {
+		t.Fatalf("shown provider = %#v, want supports_subject_reference true", provider)
+	}
+	if provider.DefaultBaseURL != "https://api.minimax.io" || provider.DefaultModel != "image-01" {
+		t.Fatalf("shown provider defaults = %q / %q", provider.DefaultBaseURL, provider.DefaultModel)
+	}
+	var subjectModels []string
+	for _, model := range provider.SupportedModels {
+		if model.SupportsSubjectReference {
+			subjectModels = append(subjectModels, model.Name)
+		}
+	}
+	if len(subjectModels) != 1 || subjectModels[0] != "image-01" {
+		t.Fatalf("models advertising subject reference support = %#v", subjectModels)
 	}
 }

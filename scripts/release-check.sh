@@ -276,6 +276,14 @@ grep -q 'API-mode preview and conversion require a valid `MD2WECHAT_API_KEY`' pl
 grep -q '`create_image_post` effects' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must include create_image_post in named-account pre-effect validation"
 grep -q 'md2wechat skills read md2wechat --json' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must route stale-SOP checks through skills read"
 GOCACHE="${GOCACHE:-/tmp/md2wechat-go-build}" go test ./cmd/md2wechat -run '^TestLayoutDocumentation' -count=1 >/dev/null || fail "layout documentation contracts must pass"
+! rg -Fq 'https://md2wechat.app' examples/layout-e2e-test.md \
+  || fail "layout E2E fixture must not hardcode an unrelated production endpoint"
+grep -Fq 'https://www.md2wechat.cn/api/convert' examples/layout-e2e-test.md \
+  || fail "layout E2E fixture must state the default convert endpoint"
+grep -Fq 'MD2WECHAT_BASE_URL' examples/layout-e2e-test.md \
+  || fail "layout E2E fixture must state endpoint override resolution"
+grep -Fq '与 `convert` 相同的解析结果' examples/layout-e2e-test.md \
+  || fail "layout E2E fixture must require the same endpoint resolution as convert"
 grep -q -- '--body-file' docs/LAYOUT.md || fail "LAYOUT must document complex body input"
 grep -q 'layout list --lifecycle compatibility --json' skills/md2wechat/SKILL.md || fail "embedded skill must isolate compatibility layouts"
 grep -q 'layout list --lifecycle compatibility --json' platforms/openclaw/md2wechat/SKILL.md || fail "OpenClaw skill must isolate compatibility layouts"

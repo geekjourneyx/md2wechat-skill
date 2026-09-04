@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: conversion
+input_positions: [row-dsl]
 serves: [readability, conversion]
 content_types: [tutorial, report]
 industry: [general]
@@ -20,18 +21,21 @@ pairs_well_with: [steps, specs, notice]
 avoid_combining_with: []
 anti_pattern: |
   没有任何有效事项导致渲染失败；
-  状态列写错（只允许 done/pending/warn/todo）；
+  状态列写错（只允许 done/pending/warn）；
   每条都写 done 失去检查列表的意义。
+opener:
+  caption: true
+  caption_default: 检查清单
 rows:
   delimiter: "|"
-  min_columns: 1
+  min_columns: 2
   schema:
     - name: status
-      description: "状态：done（完成）/ pending（待完成）/ warn（警告）/ todo（等同 pending）"
-      enum: [done, pending, warn, todo]
-    - name: item
+      description: "状态：done（完成）/ pending（待完成）/ warn（警告）"
+      enum: [done, pending, warn]
+    - name: title
       description: 检查事项
-    - name: note
+    - name: description
       description: 说明，补充检查要点（可省略）
 example: |
   :::checklist[发布前检查]
@@ -40,6 +44,33 @@ example: |
   warn | 链接和说明单独检查 | 避免手机里出现跳读和看不清
   :::
 example_assert_contains: "结构先搭好"
+agent_contract:
+  body_format: rows
+  required:
+    - status
+    - title
+  optional:
+    - header-title
+    - description
+  enums:
+    status:
+      - done
+      - pending
+      - warn
+  defaults:
+    header-title: 检查清单
+  invalid:
+    - blank-title
+    - unknown-status
+  ignored:
+    - cells-after-description
+  legacy:
+    - title-only-to-pending
+    - todo-to-pending
+    - "[x]-to-done"
+    - "[ ]-to-pending"
+    - case-folded-status
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

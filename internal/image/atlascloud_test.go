@@ -3,6 +3,7 @@ package image
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
@@ -93,6 +94,60 @@ func TestAtlasCloudProviderGenerate(t *testing.T) {
 	}
 	if pollCount != 2 {
 		t.Fatalf("pollCount = %d, want 2", pollCount)
+	}
+}
+
+func TestAtlasCloudProviderReadsMsgFieldOnHTTPError(t *testing.T) {
+	// Atlas Cloud replies with "msg" on this path, e.g.
+	// {"code":400,"msg":"bad request","request_id":"..."}.
+	p, _ := NewAtlasCloudProvider(&config.Config{
+		ImageAPIKey:  "test-key",
+		ImageAPIBase: "https://mock.local/api/v1/model/",
+	})
+	p.client = newMockHTTPClient(func(req *http.Request) (*http.Response, error) {
+		return jsonResponse(http.StatusBadRequest, map[string]any{
+			"code":       400,
+			"msg":        "bad request",
+			"request_id": "req-1",
+		}), nil
+	})
+
+	_, err := p.Generate(context.Background(), "a blue circle")
+	if err == nil {
+		t.Fatal("Generate() error = nil, want error")
+	}
+	if !strings.Contains(err.Error(), "bad request") {
+		t.Fatalf("error = %v, want it to include the msg field", err)
+	}
+	if strings.Contains(err.Error(), "request_id") {
+		t.Fatalf("error = %v, should not fall back to the raw JSON body", err)
+	}
+}
+
+func TestAtlasCloudProviderReadsMsgFieldOnCodeError(t *testing.T) {
+	p, _ := NewAtlasCloudProvider(&config.Config{
+		ImageAPIKey:  "test-key",
+		ImageAPIBase: "https://mock.local/api/v1/model/",
+	})
+	p.client = newMockHTTPClient(func(req *http.Request) (*http.Response, error) {
+		return jsonResponse(http.StatusOK, map[string]any{
+			"code": 400,
+			"msg":  "invalid request params",
+		}), nil
+	})
+
+	_, err := p.Generate(context.Background(), "a blue circle")
+	if err == nil {
+		t.Fatal("Generate() error = nil, want error")
+	}
+	// This path keeps the provider-facing wording and carries the API detail in
+	// Original, so assert there rather than on the user-facing message.
+	var genErr *GenerateError
+	if !errors.As(err, &genErr) {
+		t.Fatalf("error = %v, want *GenerateError", err)
+	}
+	if genErr.Original == nil || !strings.Contains(genErr.Original.Error(), "invalid request params") {
+		t.Fatalf("original = %v, want it to include the msg field", genErr.Original)
 	}
 }
 

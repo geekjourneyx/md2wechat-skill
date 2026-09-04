@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: conversion
+input_positions: [row-dsl]
 serves: [conversion, memorability]
 content_types: [announcement, brand, product-launch]
 industry: [general]
@@ -22,19 +23,39 @@ anti_pattern: |
   没有任何非空行导致渲染失败；
   品牌名写太长影响排版；
   说明列写成宣传语而非简洁定位。
+opener:
+  caption: true
+  caption_default: 合作品牌
 rows:
   delimiter: "|"
   min_columns: 1
   schema:
     - name: name
       description: 品牌或合作方名称
-    - name: description
+    - name: note
       description: 简短定位说明（可省略）
 example: |
   :::logos[合作品牌]
   Northstar | 增长团队
   MoriLab | 内容品牌
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - name
+  optional:
+    - header-title
+    - note
+  enums: {}
+  defaults:
+    header-title: 合作品牌
+  invalid:
+    - blank-name
+    - trailing-empty-cell
+  ignored:
+    - cells-after-note
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

@@ -18,10 +18,19 @@ const (
 	codeLayoutRendered  = "LAYOUT_RENDERED"
 	codeLayoutValidated = "LAYOUT_VALIDATED"
 
-	recommendedLayoutScenarioCount = 68
-	baseLayoutEnhancementCount     = 4
-	renderLayoutSyntaxCount        = 60
+	recommendedLayoutScenarioCount = 77
 )
+
+// baseLayoutEnhancements is the exact non-module inventory from
+// docs/advanced-layout-modules-guide.md in the pinned upstream editor source.
+// These renderer capabilities intentionally do not appear in `layout list`,
+// but do contribute to render_syntax_count.
+var baseLayoutEnhancements = [...]string{
+	"highlight-text",
+	"katex",
+	"mermaid",
+	"gfm-alert",
+}
 
 var (
 	layoutListFilters struct {

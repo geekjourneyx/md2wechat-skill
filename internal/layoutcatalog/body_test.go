@@ -20,6 +20,28 @@ func TestValidateRowsRejectsTooFewColumns(t *testing.T) {
 	}
 }
 
+func TestCalloutCanonicalTypeAndLegacyTokenBody(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		name, markdown string
+		wantErr        bool
+	}{
+		{name: "canonical type", markdown: ":::callout\ntype: warning\nbody: 先完成发布前检查。\n:::\n"},
+		{name: "canonical invalid type", markdown: ":::callout\ntype: urgent\nbody: 先完成发布前检查。\n:::\n", wantErr: true},
+		{name: "legacy token opener", markdown: ":::callout warning\n先完成发布前检查。\n:::\n"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			report := c.Validate(tt.markdown)
+			if (len(report.Errors) != 0) != tt.wantErr {
+				t.Fatalf("errors = %+v, wantErr %v", report.Errors, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestValidateBlockBodyMatrix(t *testing.T) {
 	field := func(name string) FieldSpec { return FieldSpec{Name: name} }
 	tests := []struct {
@@ -95,7 +117,7 @@ func TestValidateBlockBodyMatrix(t *testing.T) {
 				Fields:     &FieldsSpec{Optional: []FieldSpec{field("step"), field("desc")}},
 				Body:       &BodySpec{Group: &FieldGroupSpec{Start: "step", Required: []string{"step", "desc"}, Min: 1}},
 			},
-			body: []string{"unrelated"}, wantErr: "at least 1 complete group",
+			body: []string{"unrelated"}, wantErr: "declared field or Markdown image",
 		},
 		{
 			name: "split accepts two nonempty sides",
@@ -226,6 +248,8 @@ func TestFieldShapeValidationMatrix(t *testing.T) {
 	}{
 		{name: "pipe accepts two", values: []string{"one | two"}, shapes: []FieldShapeSpec{{Field: "items", Separator: "|", MinParts: 2}}},
 		{name: "pipe rejects one", values: []string{"one"}, shapes: []FieldShapeSpec{{Field: "items", Separator: "|", MinParts: 2}}, wantErr: true},
+		{name: "max only accepts one", values: []string{"one"}, shapes: []FieldShapeSpec{{Field: "items", Separator: "|", MaxParts: 2}}},
+		{name: "max only rejects overflow", values: []string{"one | two | three"}, shapes: []FieldShapeSpec{{Field: "items", Separator: "|", MaxParts: 2}}, wantErr: true},
 		{name: "plus ignores empty parts", values: []string{"one + "}, shapes: []FieldShapeSpec{{Field: "items", Separator: "+", MinParts: 2}}, wantErr: true},
 		{name: "validates every repeated value", values: []string{"01 | 20 | 30 | title", "broken"}, shapes: []FieldShapeSpec{{Field: "point", Separator: "|", MinParts: 4}}, wantErr: true},
 	}
@@ -390,6 +414,120 @@ func TestRowsBodyEnforcesDeclaredColumnSchema(t *testing.T) {
 	}
 }
 
+func TestFieldRuneBoundsAndAppliesToAreGeneric(t *testing.T) {
+	spec := &LayoutSpec{
+		Name: "schema-fixture", BodyFormat: BodyFormatFields,
+		Fields: &FieldsSpec{Optional: []FieldSpec{
+			{Name: "variant", Default: "numbered"},
+			{Name: "index", MinRunes: 1, MaxRunes: 4, AppliesTo: []string{"numbered"}},
+		}},
+		Variants: []VariantSpec{{Name: "numbered"}, {Name: "plain"}},
+	}
+	tests := []struct {
+		name, body string
+		accepted   bool
+	}{
+		{name: "one unicode rune", body: "index: 壹", accepted: true},
+		{name: "four unicode runes", body: "index: 一二三四", accepted: true},
+		{name: "blank index", body: "index:   "},
+		{name: "five unicode runes", body: "index: 一二三四五"},
+		{name: "field on another variant", body: "variant: plain\nindex: 1"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			issues := validateBlockBody(spec, strings.Split(tt.body, "\n"))
+			if got := len(issues) == 0; got != tt.accepted {
+				t.Fatalf("issues = %+v, accepted = %v, want %v", issues, got, tt.accepted)
+			}
+		})
+	}
+}
+
+func TestTitleAndClosureContractValidationMatrix(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"hero", "section-title", "epilogue", "closing", "cta"} {
+		if _, ok := c.Get(name); !ok {
+			t.Fatalf("missing %s contract", name)
+		}
+	}
+
+	tests := []struct {
+		name, markdown string
+		accepted       bool
+	}{
+		{name: "hero masthead accepts its symbol", markdown: ":::hero\nvariant: masthead\ntitle: 标题\nsymbol: spark-solid\n:::\n", accepted: true},
+		{name: "hero rejects missing title", markdown: ":::hero\nvariant: masthead\nsymbol: spark-solid\n:::\n"},
+		{name: "hero rejects unknown variant", markdown: ":::hero\nvariant: unknown\ntitle: 标题\n:::\n"},
+		{name: "hero rejects symbol outside masthead", markdown: ":::hero\nvariant: editorial\ntitle: 标题\nsymbol: spark-solid\n:::\n"},
+		{name: "hero masthead rejects ineffective kicker", markdown: ":::hero\nvariant: masthead\ntitle: 标题\nkicker: 无效\n:::\n"},
+		{name: "hero masthead rejects ineffective points", markdown: ":::hero\nvariant: masthead\ntitle: 标题\npoints: 一 | 二\n:::\n"},
+		{name: "hero masthead rejects ineffective image", markdown: ":::hero\nvariant: masthead\ntitle: 标题\nimage: https://example.com/hero.png\n:::\n"},
+		{name: "hero masthead rejects ineffective tags", markdown: ":::hero\nvariant: masthead\ntitle: 标题\ntags: 开场 | 判断\n:::\n"},
+		{name: "section title marker is default", markdown: ":::section-title\ntitle: 标题\n:::\n", accepted: true},
+		{name: "section title marker accepts symbol", markdown: ":::section-title\nvariant: marker\ntitle: 标题\nsymbol: diamond-outline\n:::\n", accepted: true},
+		{name: "section title divider accepts symbol", markdown: ":::section-title\nvariant: divider\ntitle: 标题\nsymbol: spark-outline\n:::\n", accepted: true},
+		{name: "section title numbered accepts bounded index", markdown: ":::section-title\nvariant: numbered\ntitle: 标题\nindex: 一二三四\n:::\n", accepted: true},
+		{name: "section title frame accepts title", markdown: ":::section-title\nvariant: frame\ntitle: 标题\n:::\n", accepted: true},
+		{name: "section title focus accepts symbol", markdown: ":::section-title\nvariant: focus\ntitle: 标题\nsymbol: double-circle\n:::\n", accepted: true},
+		{name: "section title vertical accepts symbol", markdown: ":::section-title\nvariant: vertical\ntitle: 标题\nsymbol: diamond-solid\n:::\n", accepted: true},
+		{name: "section title rejects blank title", markdown: ":::section-title\ntitle:   \n:::\n"},
+		{name: "section title numbered requires index", markdown: ":::section-title\nvariant: numbered\ntitle: 标题\n:::\n"},
+		{name: "section title numbered rejects blank index", markdown: ":::section-title\nvariant: numbered\ntitle: 标题\nindex:   \n:::\n"},
+		{name: "section title numbered rejects long index", markdown: ":::section-title\nvariant: numbered\ntitle: 标题\nindex: 一二三四五\n:::\n"},
+		{name: "section title rejects symbol on numbered", markdown: ":::section-title\nvariant: numbered\ntitle: 标题\nindex: 01\nsymbol: star\n:::\n"},
+		{name: "section title rejects symbol on frame", markdown: ":::section-title\nvariant: frame\ntitle: 标题\nsymbol: star\n:::\n"},
+		{name: "section title rejects index outside numbered", markdown: ":::section-title\nvariant: marker\ntitle: 标题\nindex: 01\n:::\n"},
+		{name: "epilogue accepts title subtitle and symbol", markdown: ":::epilogue\ntitle: 结语\nsubtitle: 继续前进\nsymbol: infinity\n:::\n", accepted: true},
+		{name: "epilogue rejects missing title", markdown: ":::epilogue\nsubtitle: 继续前进\n:::\n"},
+		{name: "epilogue rejects invalid symbol", markdown: ":::epilogue\ntitle: 结语\nsymbol: glyph\n:::\n"},
+		{name: "closing accepts title subtitle and symbol", markdown: ":::closing\ntitle: 收尾\nsubtitle: 到这里\nsymbol: asterism\n:::\n", accepted: true},
+		{name: "closing rejects missing title", markdown: ":::closing\nsubtitle: 到这里\n:::\n"},
+		{name: "closing rejects action input", markdown: ":::closing\ntitle: 收尾\naction: 立即开始\n:::\n"},
+		{name: "closing rejects link input", markdown: ":::closing\ntitle: 收尾\nlink: https://example.com\n:::\n"},
+		{name: "closing rejects image input", markdown: ":::closing\ntitle: 收尾\nimage: https://example.com/closing.png\n:::\n"},
+		{name: "closing rejects variant input", markdown: ":::closing\ntitle: 收尾\nvariant: plain\n:::\n"},
+		{name: "closing rejects invalid symbol", markdown: ":::closing\ntitle: 收尾\nsymbol: glyph\n:::\n"},
+		{name: "cta save follow accepts title", markdown: ":::cta\nvariant: save-follow\ntitle: 收藏\n:::\n", accepted: true},
+		{name: "cta rejects missing title", markdown: ":::cta\nvariant: save-follow\n:::\n"},
+		{name: "cta consult accepts title", markdown: ":::cta\nvariant: consult\ntitle: 咨询\n:::\n", accepted: true},
+		{name: "cta trial accepts three points", markdown: ":::cta\nvariant: trial\ntitle: 试用\npoints: 一 | 二 | 三\n:::\n", accepted: true},
+		{name: "cta trial accepts one point", markdown: ":::cta\nvariant: trial\ntitle: 试用\npoints: 一\n:::\n", accepted: true},
+		{name: "cta rejects unknown variant", markdown: ":::cta\nvariant: unknown\ntitle: 标题\n:::\n"},
+		{name: "cta rejects points outside trial", markdown: ":::cta\nvariant: save-follow\ntitle: 收藏\npoints: 一 | 二\n:::\n"},
+		{name: "cta rejects more than three trial points", markdown: ":::cta\nvariant: trial\ntitle: 试用\npoints: 一 | 二 | 三 | 四\n:::\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			report := c.Validate(tt.markdown)
+			if got := len(report.Errors) == 0; got != tt.accepted {
+				t.Fatalf("accepted = %v, want %v; errors=%+v", got, tt.accepted, report.Errors)
+			}
+		})
+	}
+}
+
+func TestRowsBodyRejectsMaxColumns(t *testing.T) {
+	spec := &LayoutSpec{Name: "row-fixture", BodyFormat: BodyFormatRows, Rows: &RowsSpec{
+		Delimiter: "|", MinColumns: 2, MaxColumns: 2,
+	}}
+	if issues := validateBlockBody(spec, []string{"one|two|three"}); len(issues) == 0 {
+		t.Fatal("row with an extra cell was accepted")
+	}
+}
+
+func TestSeparatorListRejectsItemMaxParts(t *testing.T) {
+	spec := &LayoutSpec{Name: "list-fixture", BodyFormat: BodyFormatFields, Fields: &FieldsSpec{
+		Optional: []FieldSpec{{Name: "items"}},
+		Shapes:   []FieldShapeSpec{{Field: "items", Separator: ",", MinParts: 2, ItemSeparator: "|", ItemMinParts: 2, ItemMaxParts: 2}},
+	}}
+	if issues := validateBlockBody(spec, []string{"items: a|b|overflow,c|d"}); len(issues) == 0 {
+		t.Fatal("separator list with too many item parts was accepted")
+	}
+}
+
 func TestParseLayoutSpecFieldShapeAndOutputOrderSchema(t *testing.T) {
 	tests := []struct {
 		name, fields, want string
@@ -401,6 +539,9 @@ func TestParseLayoutSpecFieldShapeAndOutputOrderSchema(t *testing.T) {
 		{name: "unknown shape field", fields: "  shapes:\n    - {field: missing, separator: '|', min_parts: 2}\n", want: "shape field"},
 		{name: "empty separator", fields: "  shapes:\n    - {field: items, separator: '', min_parts: 2}\n", want: "separator"},
 		{name: "small minimum", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 1}\n", want: "greater than 1"},
+		{name: "max only", fields: "  shapes:\n    - {field: items, separator: '|', max_parts: 3}\n"},
+		{name: "negative max parts", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 2, max_parts: -1}\n", want: "max_parts"},
+		{name: "inverted max parts", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 3, max_parts: 2}\n", want: "at least min_parts"},
 		{name: "negative max occurrences", fields: "  shapes:\n    - {field: items, separator: '|', min_parts: 2, max_occurrences: -1}\n", want: "max_occurrences"},
 		{name: "part rule missing bounds", fields: "  shapes:\n    - field: items\n      separator: '|'\n      min_parts: 2\n      part_rules:\n        - {required_positions: [1]}\n", want: "requires min_parts or max_parts"},
 		{name: "part rule negative bound", fields: "  shapes:\n    - field: items\n      separator: '|'\n      min_parts: 2\n      part_rules:\n        - {min_parts: -1, required_positions: [1]}\n", want: "bounds must be nonnegative"},
@@ -769,5 +910,32 @@ func TestRenderRawBodyUsesPrimaryValidation(t *testing.T) {
 	}
 	if _, err := c.Render("question-next", map[string]any{"body": "Q: Why?"}); err == nil || !strings.Contains(err.Error(), "A") {
 		t.Fatalf("Render() error = %v, want missing dialogue pair", err)
+	}
+}
+
+func TestSummaryCanonicalFieldsApplyOnlyToEffectiveBranch(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		name, markdown string
+		accepted       bool
+	}{
+		{name: "one line accepts highlight", markdown: ":::summary\nhighlight: One line\n:::", accepted: true},
+		{name: "three accepts title items and note", markdown: ":::summary\nvariant: three\ntitle: Three\nitems: one | two | three\nnote: Save this\n:::", accepted: true},
+		{name: "decision accepts decision fields", markdown: ":::summary\nvariant: decision\ntitle: Decide\nfit: Fit\nrecommendation: Choose\n:::", accepted: true},
+		{name: "save accepts title items and note", markdown: ":::summary\nvariant: save\ntitle: Save\nitems: one | two\nnote: Keep\n:::", accepted: true},
+		{name: "decision rejects one line highlight", markdown: ":::summary\nvariant: decision\nhighlight: ineffective\nrecommendation: Choose\n:::"},
+		{name: "three rejects decision recommendation", markdown: ":::summary\nvariant: three\nitems: one | two\nrecommendation: ineffective\n:::"},
+		{name: "save rejects legacy body", markdown: ":::summary\nvariant: save\nitems: one | two\nbody: ineffective\n:::"},
+		{name: "one line rejects items", markdown: ":::summary\nhighlight: One line\nitems: ineffective\n:::"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			report := c.Validate(tt.markdown)
+			if got := len(report.Errors) == 0; got != tt.accepted {
+				t.Fatalf("accepted=%v errors=%+v", got, report.Errors)
+			}
+		})
 	}
 }

@@ -29,13 +29,13 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果你已经有稳定可用的 Go 环境，也可以把第一步改成：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.2.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.4.0
 ```
 
 如果以上都不适合，再改成固定版本安装脚本：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.4.0/install.sh | bash
 export PATH="$HOME/.local/bin:$PATH"
 md2wechat skills read md2wechat --json
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
@@ -288,7 +288,13 @@ md2wechat generate_image --preset cover-hero --article article.md
 
 # 单次覆盖图片模型
 md2wechat generate_image --preset cover-hero --article article.md --model gemini-3-pro-image-preview
+
+# 用人像参考图保持同一人物形象（仅 minimax provider 的 image-01 支持）
+md2wechat generate_image "保持同一人物形象的秋日封面" \
+  --subject-reference "https://cdn.example.com/portrait.png"
 ```
+
+`--subject-reference` 需要一个可公开访问的 `http(s)` 人像图片 URL，当前不支持内联 data URL 和本地路径。如果当前 provider 或模型不支持该参数，命令会立即返回 `CONFIG_INVALID`，不会发起图片生成请求。可以先用 `md2wechat providers show minimax --json` 确认 `supports_subject_reference`。详见 [图片生成服务配置](IMAGE_PROVISIONERS.md)。
 
 ### 只生成 Agent 图片计划
 
@@ -305,6 +311,7 @@ md2wechat generate_cover --article article.md --plan --json
 ```bash
 md2wechat providers show openrouter --json
 md2wechat providers show volcengine --json
+md2wechat providers show minimax --json
 ```
 
 优先看返回里的 `supported_models`，不要凭记忆写死模型名。

@@ -52,7 +52,7 @@ func TestLayoutDocumentationCountContract(t *testing.T) {
 		}
 		counts = append(counts, value)
 	}
-	if want := []int{68, 53, 3, 4, 60}; !equalInts(counts, want) {
+	if want := []int{77, 56, 3, 4, 63}; !equalInts(counts, want) {
 		t.Fatalf("layout count contract = %v, want %v", counts, want)
 	}
 	if counts[1]+counts[2]+counts[3] != counts[4] {
@@ -64,11 +64,11 @@ func TestLayoutDocumentationCountContract(t *testing.T) {
 
 	discoveryText := readDocumentationFile(t, "../../docs/DISCOVERY.md")
 	semanticCounts := map[string]int{
-		"recommended_scenario_count": 68,
-		"recommended_syntax_count":   53,
+		"recommended_scenario_count": 77,
+		"recommended_syntax_count":   56,
 		"compatibility_module_count": 3,
 		"base_enhancement_count":     4,
-		"render_syntax_count":        60,
+		"render_syntax_count":        63,
 	}
 	for key, value := range semanticCounts {
 		pattern := regexp.MustCompile(`"` + regexp.QuoteMeta(key) + `"\s*:\s*` + strconv.Itoa(value) + `\b`)
@@ -168,11 +168,60 @@ func TestLayoutDocumentationSeparatesLocalValidationFromRemoteConformance(t *tes
 	if !strings.Contains(agentGuide, "本地 catalog/schema") {
 		t.Error("docs/AGENT-GUIDE.md must state the local validation boundary")
 	}
-	dateStampedResult := regexp.MustCompile(`20\d\d-\d\d-\d\d[^\n]*80 pass`)
+	dateStampedResult := regexp.MustCompile(`20\d\d-\d\d-\d\d[^\n]*84 pass`)
 	for _, path := range []string{"../../docs/LAYOUT.md", "../../docs/SMOKE.md"} {
 		if dateStampedResult.MatchString(readDocumentationFile(t, path)) {
 			t.Errorf("%s must not embed a dated one-off conformance result", path)
 		}
+	}
+}
+
+func TestLayoutDocumentationKeepsPR1AuthoringBoundary(t *testing.T) {
+	layout := readDocumentationFile(t, "../../docs/LAYOUT.md")
+	for _, phrase := range []string{
+		"`input_positions`",
+		"primary `body_format`",
+		"`Opener` 与 `Fields` / `Rows` / `Body`",
+		"canonical `Variants[].Name`",
+		"canonical `Example`",
+		"`compatible_body_formats` 和 `Variants[].Aliases`",
+		"普通 `##` / `###` heading 足以组织绝大多数正文",
+		"可选 `epilogue` → 可选 `summary` → 至多一个 `cta` → 可选 `closing`",
+	} {
+		if !strings.Contains(layout, phrase) {
+			t.Errorf("docs/LAYOUT.md must preserve PR1 authoring boundary %q", phrase)
+		}
+	}
+
+	start := strings.Index(layout, "## 四、一篇完整文章示例")
+	end := strings.Index(layout, "## 五、Agent 工作流")
+	if start < 0 || end < 0 || end <= start {
+		t.Fatal("docs/LAYOUT.md must retain the complete-example section")
+	}
+	completeExample := layout[start:end]
+	for _, directive := range []string{":::author-card", ":::subscribe"} {
+		if strings.Contains(completeExample, directive) {
+			t.Errorf("complete closing-tail example must not place %s after its CTA", directive)
+		}
+	}
+	for _, directive := range []string{":::epilogue", ":::summary", ":::cta", ":::closing"} {
+		if strings.Count(completeExample, directive) != 1 {
+			t.Errorf("complete closing-tail example must contain exactly one %s", directive)
+		}
+	}
+	orderedTail := []string{":::epilogue", ":::summary", ":::cta", ":::closing"}
+	previous := -1
+	for _, marker := range orderedTail {
+		index := strings.Index(completeExample, marker)
+		if index < 0 || index <= previous {
+			t.Errorf("complete closing-tail markers must be ordered %v", orderedTail)
+			break
+		}
+		previous = index
+	}
+	closing := strings.LastIndex(completeExample, ":::closing")
+	if closing < 0 || strings.Count(completeExample[closing:], ":::") != 2 {
+		t.Error("complete closing-tail example must end with closing as its last directive")
 	}
 }
 
@@ -187,6 +236,72 @@ func TestLayoutDocumentationE2EFixtureMatchesCurrentCatalog(t *testing.T) {
 	if len(report.Errors) != 0 || len(report.Warnings) != 0 {
 		t.Fatalf("layout E2E fixture drifted: errors=%+v warnings=%+v", report.Errors, report.Warnings)
 	}
+}
+
+func TestLayoutDocumentationE2EFixtureUsesConvertResolvedEndpoint(t *testing.T) {
+	markdown := readDocumentationFile(t, "../../examples/layout-e2e-test.md")
+	if strings.Contains(markdown, "https://md2wechat.app") {
+		t.Fatal("layout E2E fixture must not hardcode an unrelated production endpoint")
+	}
+	for _, phrase := range []string{
+		"https://www.md2wechat.cn/api/convert",
+		"MD2WECHAT_BASE_URL",
+		"api.md2wechat_base_url",
+		"与 `convert` 相同的解析结果",
+	} {
+		if !strings.Contains(markdown, phrase) {
+			t.Errorf("layout E2E fixture must define convert-resolved endpoint behavior %q", phrase)
+		}
+	}
+}
+
+func TestLayoutDocumentationE2EFixtureComposition(t *testing.T) {
+	markdown := readDocumentationFile(t, "../../examples/layout-e2e-test.md")
+
+	hero := fixtureDirectiveBlocks(markdown, "hero")
+	if len(hero) != 1 || !strings.Contains(hero[0], "variant: masthead") {
+		t.Fatalf("fixture hero must use the masthead variant: %q", hero)
+	}
+
+	sectionTitles := fixtureDirectiveBlocks(markdown, "section-title")
+	wantSectionTitleVariants := []string{"numbered", "focus", "divider", "vertical"}
+	if len(sectionTitles) != len(wantSectionTitleVariants) {
+		t.Fatalf("fixture section-title blocks = %d, want %d", len(sectionTitles), len(wantSectionTitleVariants))
+	}
+	for _, variant := range wantSectionTitleVariants {
+		found := false
+		for _, block := range sectionTitles {
+			if strings.Contains(block, "variant: "+variant) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("fixture missing section-title variant %q", variant)
+		}
+	}
+
+	for _, directive := range []string{"epilogue", "summary", "cta", "closing"} {
+		if got := len(fixtureDirectiveBlocks(markdown, directive)); got != 1 {
+			t.Errorf("fixture %s blocks = %d, want exactly one", directive, got)
+		}
+	}
+
+	lastComposition := []string{":::hero", ":::epilogue", ":::summary", ":::cta", ":::closing"}
+	previous := -1
+	for _, marker := range lastComposition {
+		index := strings.Index(markdown, marker)
+		if index < 0 || index <= previous {
+			t.Errorf("fixture composition order must be %v", lastComposition)
+			break
+		}
+		previous = index
+	}
+}
+
+func fixtureDirectiveBlocks(markdown, directive string) []string {
+	pattern := regexp.MustCompile(`(?ms)^:::` + regexp.QuoteMeta(directive) + `[^\n]*\n.*?^:::\s*$`)
+	return pattern.FindAllString(markdown, -1)
 }
 
 func TestLayoutDocumentationConcreteExamplesMatchCatalog(t *testing.T) {

@@ -381,9 +381,11 @@ image:
 | `api.image_provider` | 否 | 图片服务提供方 | `openai` |
 | `api.image_base_url` | 否 | 图片服务地址 | `https://api.openai.com/v1` |
 | `api.image_model` | 否 | 图片模型 | `gpt-image-2` |
-| `api.image_size` | 否 | 默认图片执行尺寸/宽高比 | 跟随当前 provider，例如 `openai=auto`、`volcengine=2K` |
+| `api.image_size` | 否 | 默认图片执行尺寸/宽高比 | 跟随当前 provider，例如 `openai=auto`、`volcengine=2K`、`minimax=1:1` |
 
-当前内置 provider：`openai`、`tuzi`、`modelscope` (`ms`)、`openrouter` (`or`)、`gemini` (`google`)、`volcengine` (`volc`)。
+当前内置 provider：`openai`、`minimax`、`atlascloud` (`atlas-cloud` / `atlas`)、`tuzi`、`modelscope` (`ms`)、`openrouter` (`or`)、`gemini` (`google`)、`volcengine` (`volc`)。
+
+`minimax` 的默认值为 `image_base_url=https://api.minimax.io`（国内站为 `https://api.minimaxi.com`）、`image_model=image-01`、`image_size=1:1`。它也是当前唯一支持 `--subject-reference` 主体参考的 provider，且只有 `image-01` 支持该参数。详见 [图片生成服务配置](IMAGE_PROVISIONERS.md)。
 
 ### 图片处理配置
 
@@ -505,7 +507,7 @@ api:
 - 对于 Gemini / OpenRouter 这类支持比例格式的 provider，`api.image_size` 可以直接写成 `16:9`、`3:4`、`21:9`
 - 对于 Atlas Cloud，`api.image_size` 使用模型 schema 支持的 `WIDTHxHEIGHT`，默认是 `1024x1024`
 - 对于 Volcengine Ark 当前接入，`api.image_size` 使用尺寸等级，例如 `2K`、`3K`；如果省略，当前默认值是 `2K`
-- `api.image_base_url` 对 OpenAI、Atlas Cloud、TuZi、ModelScope、OpenRouter、Volcengine 生效；Gemini 直连模式当前固定走官方 Go SDK backend，不读取该配置
+- `api.image_base_url` 对 OpenAI、MiniMax、Atlas Cloud、TuZi、ModelScope、OpenRouter、Volcengine 生效；Gemini 直连模式当前固定走官方 Go SDK backend，不读取该配置
 
 ---
 

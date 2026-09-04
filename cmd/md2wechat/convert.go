@@ -25,6 +25,10 @@ type imageProcessor interface {
 	GenerateAndUploadWithSize(prompt string, size string) (*image.GenerateAndUploadResult, error)
 }
 
+type subjectReferenceImageProcessor interface {
+	GenerateAndUploadWithSubject(prompt, subjectReference string) (*image.GenerateAndUploadResult, error)
+}
+
 var (
 	newMarkdownConverter = func() converter.Converter {
 		return converter.NewConverter(cfg, log)

@@ -190,6 +190,17 @@ func (p *Processor) GenerateAndUpload(prompt string) (*GenerateAndUploadResult, 
 	return p.generateAndUploadWithProvider(prompt, p.provider)
 }
 
+// GenerateAndUploadWithSubject generates an image guided by a portrait reference.
+func (p *Processor) GenerateAndUploadWithSubject(prompt, subjectReference string) (*GenerateAndUploadResult, error) {
+	provider, ok := p.provider.(SubjectReferenceProvider)
+	if !ok {
+		return nil, fmt.Errorf("configured image provider does not support subject references")
+	}
+	return p.generateAndUploadWithGenerator(prompt, func(ctx context.Context) (*GenerateResult, error) {
+		return provider.GenerateWithSubject(ctx, prompt, subjectReference)
+	})
+}
+
 // GenerateAndUploadWithSize AI 生成指定尺寸的图片并上传
 func (p *Processor) GenerateAndUploadWithSize(prompt string, size string) (*GenerateAndUploadResult, error) {
 	p.log.Info("generating image via AI with size",
@@ -212,15 +223,25 @@ func (p *Processor) GenerateAndUploadWithSize(prompt string, size string) (*Gene
 }
 
 func (p *Processor) generateAndUploadWithProvider(prompt string, provider Provider) (*GenerateAndUploadResult, error) {
+	var generate func(context.Context) (*GenerateResult, error)
+	if provider != nil {
+		generate = func(ctx context.Context) (*GenerateResult, error) {
+			return provider.Generate(ctx, prompt)
+		}
+	}
+	return p.generateAndUploadWithGenerator(prompt, generate)
+}
+
+func (p *Processor) generateAndUploadWithGenerator(prompt string, generate func(context.Context) (*GenerateResult, error)) (*GenerateAndUploadResult, error) {
 	if err := p.cfg.ValidateForImageGeneration(); err != nil {
 		return nil, err
 	}
-	if provider == nil {
+	if generate == nil {
 		return nil, fmt.Errorf("图片生成服务未配置，请检查配置文件中的 api.image_provider 和 api.image_key")
 	}
 
 	ctx := context.Background()
-	result, err := provider.Generate(ctx, prompt)
+	result, err := generate(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("generate image: %w", err)
 	}

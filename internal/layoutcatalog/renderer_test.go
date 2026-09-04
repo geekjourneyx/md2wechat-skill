@@ -136,6 +136,36 @@ func TestRenderBlockPreservesLegacyHeroRender(t *testing.T) {
 	}
 }
 
+func TestRenderBlockKeepsCanonicalSummarySyntaxSeparateFromExplicitCompatibilityInput(t *testing.T) {
+	c := NewCatalog()
+	if err := c.Load(); err != nil {
+		t.Fatal(err)
+	}
+	canonical, err := c.RenderBlock("summary", RenderInput{Fields: map[string]any{
+		"variant": "three",
+		"title":   "Three conclusions",
+		"items":   "one | two | three",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(canonical, "variant: three") || strings.Contains(canonical, "variant: points") {
+		t.Fatalf("canonical summary render = %q", canonical)
+	}
+
+	legacy := ":::summary\nvariant: points\ntitle: Legacy\nitems: one | two | three\n:::\n"
+	if report := c.Validate(legacy); len(report.Errors) != 0 {
+		t.Fatalf("explicit compatibility input must validate: %+v", report.Errors)
+	}
+	raw, err := c.RenderBlock("summary", RenderInput{Body: "variant: points\ntitle: Legacy\nitems: one | two | three"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(raw, "variant: points") {
+		t.Fatalf("explicit legacy raw input was not preserved: %q", raw)
+	}
+}
+
 func TestRenderPreservesDeclaredOpenerOrderWhileRenderBlockSortsParams(t *testing.T) {
 	c := NewCatalog()
 	c.modules["ordered"] = &LayoutSpec{
@@ -271,6 +301,64 @@ func TestRenderBlockMarkdownFieldsSupportsStructuredFields(t *testing.T) {
 	}
 	if want := ":::markdown-card\ntitle: Structured\n:::\n"; out != want {
 		t.Fatalf("RenderBlock() = %q, want %q", out, want)
+	}
+}
+
+func TestRenderRejectsFieldOutsideEffectiveVariantWithoutInjectingDefault(t *testing.T) {
+	c := NewCatalog()
+	c.modules["schema-fixture"] = &LayoutSpec{
+		Name: "schema-fixture", BodyFormat: BodyFormatFields,
+		Fields: &FieldsSpec{Optional: []FieldSpec{
+			{Name: "variant", Default: "numbered"},
+			{Name: "index", AppliesTo: []string{"numbered"}},
+		}},
+		Variants: []VariantSpec{{Name: "numbered"}, {Name: "plain"}},
+	}
+	if _, err := c.Render("schema-fixture", map[string]any{"variant": "plain", "index": "1"}); !errors.Is(err, ErrInvalidFieldValue) {
+		t.Fatalf("Render() error = %v, want ErrInvalidFieldValue", err)
+	}
+	out, err := c.Render("schema-fixture", map[string]any{"index": "1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out, "variant:") {
+		t.Fatalf("Render() injected field default: %q", out)
+	}
+}
+
+func TestRowsSchemaAppliesToKeepsRenderAndValidateAligned(t *testing.T) {
+	c := NewCatalog()
+	c.modules["row-schema-fixture"] = &LayoutSpec{
+		Name: "row-schema-fixture", BodyFormat: BodyFormatRows,
+		Fields: &FieldsSpec{Optional: []FieldSpec{{Name: "variant", Default: "numbered"}}},
+		Rows: &RowsSpec{Delimiter: "|", MinColumns: 2, MaxColumns: 2, Schema: []FieldSpec{
+			{Name: "label"}, {Name: "index", AppliesTo: []string{"numbered"}},
+		}},
+		Variants: []VariantSpec{{Name: "numbered"}, {Name: "plain"}},
+	}
+	tests := []struct {
+		name, variant string
+		accepted      bool
+	}{
+		{name: "selected variant accepts row field", variant: "numbered", accepted: true},
+		{name: "other variant rejects row field", variant: "plain"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fields := map[string]any{"variant": tt.variant, "rows": []any{[]any{"Chapter", "1"}}}
+			out, err := c.Render("row-schema-fixture", fields)
+			if got := err == nil; got != tt.accepted {
+				t.Fatalf("Render() error = %v, accepted = %v, want %v", err, got, tt.accepted)
+			}
+			markdown := ":::row-schema-fixture\nvariant: " + tt.variant + "\nChapter|1\n:::\n"
+			report := c.Validate(markdown)
+			if got := len(report.Errors) == 0; got != tt.accepted {
+				t.Fatalf("Validate() errors = %+v, accepted = %v, want %v", report.Errors, got, tt.accepted)
+			}
+			if tt.accepted && len(c.Validate(out).Errors) != 0 {
+				t.Fatalf("rendered output failed validation: %q", out)
+			}
+		})
 	}
 }
 

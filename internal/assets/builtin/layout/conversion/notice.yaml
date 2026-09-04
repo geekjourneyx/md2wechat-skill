@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: conversion
+input_positions: [row-dsl]
 serves: [readability, attention]
 content_types: [tutorial, report, announcement]
 industry: [general]
@@ -22,23 +23,55 @@ anti_pattern: |
   没有任何满足 2 列的行导致渲染失败；
   标签关键词写错导致样式无法匹配；
   每行都用风险标签失去区分度。
+opener:
+  caption: true
+  caption_default: 适用说明
 rows:
   delimiter: "|"
-  min_columns: 2
+  min_columns: 3
   schema:
+    - name: tone
+      enum: [fit, avoid, risk, require, note]
     - name: label
-      description: "标签词，自动识别语气：适合/推荐/适用/建议→适合样式；不适合/避免/慎用/禁用→不适合样式；风险/注意/警告→风险样式；前提/要求/条件/准备→前提样式"
-    - name: description
+      description: 标签词
+    - name: body
       description: 说明内容
-    - name: supplement
+    - name: note
       description: 补充说明（可省略）
 example: |
   :::notice[适用说明]
-  适合 | 干货长文、教程拆解、白皮书、活动总结 | 适合需要结构感和复用性的内容
-  前提 | 先把信息分层 | 不要把所有信息都塞进一个模块
-  风险 | 模块堆太多会抢正文 | 一篇文章保留 3 到 6 个重点模块更稳
-  不适合 | 特别短的快讯 | 这类内容通常一两个基础模块就够了
+  fit | 适合 | 干货长文、教程拆解、白皮书、活动总结 | 适合需要结构感和复用性的内容
+  require | 前提 | 先把信息分层 | 不要把所有信息都塞进一个模块
+  risk | 风险 | 模块堆太多会抢正文 | 一篇文章保留 3 到 6 个重点模块更稳
+  avoid | 不适合 | 特别短的快讯 | 这类内容通常一两个基础模块就够了
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - tone
+    - label
+    - body
+  optional:
+    - header-title
+    - note
+  enums:
+    tone:
+      - fit
+      - avoid
+      - risk
+      - require
+      - note
+  defaults:
+    header-title: 适用说明
+  invalid:
+    - unknown-tone
+    - blank-label
+    - blank-body
+    - extra-cells
+  ignored: []
+  legacy:
+    - chinese-label-inference-negative-first
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

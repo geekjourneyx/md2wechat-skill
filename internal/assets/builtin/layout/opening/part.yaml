@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: opening
+input_positions: [body-kv]
 serves: [readability]
 content_types: [opinion, tutorial, report]
 industry: [general]
@@ -43,6 +44,25 @@ example: |
   title: 旧能力也要接进同一套系统
   subtitle: 系统模块 · 列表 / 代码 / 表格
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - index
+    - title
+  optional:
+    - label
+    - subtitle
+  enums: {}
+  defaults: {}
+  invalid:
+    - blank-index
+    - blank-title
+  ignored:
+    - symbol
+    - variant
+    - unknown-fields
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

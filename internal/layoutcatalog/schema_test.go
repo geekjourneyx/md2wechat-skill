@@ -51,7 +51,7 @@ func TestFieldShapeSpecJSONOmitsUnsetExtensionConstraints(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, field := range []string{"MaxOccurrences", "PartRules"} {
+	for _, field := range []string{"MaxParts", "MaxOccurrences", "PartRules", "ItemMaxParts"} {
 		if strings.Contains(string(encoded), field) {
 			t.Fatalf("unset extension constraint %s leaked into JSON: %s", field, encoded)
 		}
@@ -70,5 +70,42 @@ func TestFieldShapeSpecJSONKeepsPartRulesInternal(t *testing.T) {
 	}
 	if strings.Contains(string(encoded), "PartRules") || strings.Contains(string(encoded), "RequiredPositions") {
 		t.Fatalf("internal compatibility rules leaked into discovery JSON: %s", encoded)
+	}
+}
+
+func TestSchemaExtensionsExposeAgentInputAndFieldDefaults(t *testing.T) {
+	spec := LayoutSpec{
+		InputPositions: []AgentInputPosition{InputBodyKV, InputHeaderAttrs},
+		Fields: &FieldsSpec{Optional: []FieldSpec{{
+			Name: "variant", Default: "marker", MinRunes: 1, MaxRunes: 4, AppliesTo: []string{"marker"},
+		}}},
+		Variants: []VariantSpec{{Name: "marker", Defaults: map[string]string{"symbol": "diamond-outline"}}},
+		AgentContract: &AgentContractSpec{
+			BodyFormat:    BodyFormatFields,
+			Required:      []string{"title"},
+			Optional:      []string{},
+			Enums:         map[string][]string{},
+			Defaults:      map[string]string{},
+			Applicability: map[string][]string{},
+			Invalid:       []string{"blank-title"},
+			Ignored:       []string{},
+			Legacy:        []string{},
+		},
+	}
+	if got := spec.Fields.Optional[0].Default; got != "marker" {
+		t.Fatalf("field default = %q, want marker", got)
+	}
+	encoded, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"input_positions":["body-kv","header-attrs"]`) {
+		t.Fatalf("input positions missing from JSON: %s", encoded)
+	}
+	if !strings.Contains(string(encoded), `"defaults":{"symbol":"diamond-outline"}`) {
+		t.Fatalf("variant defaults missing from JSON: %s", encoded)
+	}
+	if strings.Contains(string(encoded), `"agent_contract"`) {
+		t.Fatalf("internal upstream-audit metadata leaked into layout-show JSON model: %s", encoded)
 	}
 }

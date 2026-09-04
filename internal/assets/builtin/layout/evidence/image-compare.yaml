@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: evidence
+input_positions: [body-kv]
 serves: [attention, readability]
 content_types: [tutorial, report, announcement, product-launch]
 industry: [general]
@@ -33,6 +34,7 @@ fields:
   optional:
     - name: eyebrow
       description: 标签词
+      default: 左右对比图
       example: "前后对比"
     - name: title
       description: 对比标题，说明对比的核心结论
@@ -62,6 +64,29 @@ example: |
   right_image: https://example.com/after.png
   note: 适合界面改版、海报优化和方案 A/B 对比
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - left_image
+    - right_image
+  optional:
+    - left_title
+    - right_title
+    - left_alt
+    - right_alt
+    - eyebrow
+    - title
+    - note
+  enums: {}
+  defaults:
+    eyebrow: 左右对比图
+  invalid:
+    - blank-required-image
+    - unsafe-required-image
+  ignored:
+    - unknown-fields
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

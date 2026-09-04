@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: brand
+input_positions: [body-kv]
 serves: [memorability, conversion]
 content_types: [opinion, announcement, brand]
 industry: [general]
@@ -27,10 +28,10 @@ fields:
     - name: name
       description: 作者名称
       example: "极客旅程"
+  optional:
     - name: bio
       description: 作者简介，说明擅长领域和关注价值
       example: "长期写 AI 工具、内容系统和产品增长，关注怎么把复杂工作流做成可复用资产。"
-  optional:
     - name: role
       description: 作者身份标签
       example: "独立开发者 / 内容产品"
@@ -43,6 +44,7 @@ fields:
     - name: link
       description: 展示链接（纯文字，不渲染成按钮）
       example: "md2wechat.com"
+  compatibility:
     - name: avatar
       description: 头像图片 URL
       example: "https://example.com/avatar.png"
@@ -55,6 +57,28 @@ example: |
   note: 关注我，持续看产品和内容系统的真实打磨过程
   link: md2wechat.com
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - name
+  optional:
+    - role
+    - bio
+    - tags
+    - note
+    - link
+  enums: {}
+  defaults:
+    max-tags: "4"
+    link: plain-text
+  invalid:
+    - blank-name
+  ignored:
+    - tags-after-4
+    - unknown-fields
+  legacy:
+    - json-object
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

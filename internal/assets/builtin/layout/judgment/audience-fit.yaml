@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: judgment
+input_positions: [body-kv]
 serves: [attention, readability]
 content_types: [opinion, tutorial, report, announcement]
 industry: [general]
@@ -39,6 +40,7 @@ fields:
     - name: subtitle
       description: 副标题，帮读者理解判断的目的
       example: "先帮读者判断要不要继续往下读"
+  compatibility:
     - name: note
       description: 补充说明
       example: "不符合条件的读者可以先收藏，以后用到时再回来看"
@@ -49,6 +51,26 @@ example: |
   fit: 正在写长文的人 | 想建立个人品牌的人 | 需要稳定交付内容的人
   avoid: 只发短讯的人 | 不需要结构化表达的人
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - fit-or-avoid
+  optional:
+    - title
+    - subtitle
+    - fit
+    - avoid
+  enums: {}
+  defaults: {}
+  invalid:
+    - missing-fit-and-avoid
+  ignored:
+    - unknown-fields
+  legacy:
+    - for-to-fit
+    - not-to-avoid
+    - note-to-subtitle
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

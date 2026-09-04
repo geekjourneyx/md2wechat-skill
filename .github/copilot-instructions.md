@@ -61,12 +61,12 @@ md2wechat capabilities --json
 md2wechat providers list --json
 md2wechat themes list --json
 md2wechat prompts list --json
-md2wechat layout list --json      # 53 recommended advanced layout syntax names
+md2wechat layout list --json      # 56 recommended advanced layout syntax names
 ```
 These are the source of truth. Do not guess from docs or stale memory.
 
 ### Layout Module Discovery
-Advanced layout discovery defaults to 53 recommended syntax names across 9 categories (`opening`, `infographic`, `judgment`, `evidence`, `conversion`, `brand`, `sprint4`, `free-layout`, `interactive`). Three compatibility modules are listed separately for migration:
+Advanced layout discovery defaults to 56 recommended syntax names across 9 categories (`opening`, `infographic`, `judgment`, `evidence`, `conversion`, `brand`, `sprint4`, `free-layout`, `interactive`). Three compatibility modules are listed separately for migration:
 ```bash
 md2wechat layout list --json                           # list recommended modules
 md2wechat layout list --lifecycle compatibility --json # migration only
@@ -76,11 +76,13 @@ md2wechat layout render <name> --var KEY=VALUE         # render syntax block
 md2wechat layout validate --file article.md --json     # validate syntax in file
 ```
 
+Counts use distinct dimensions: 77 recommended source scenarios, 56 recommended syntax names, 3 compatibility modules, 4 base enhancements, and 63 render-layer syntax capabilities. Read a selected `layout show` in this order: `input_positions`, primary `body_format` plus `Opener` / `Fields` / `Rows` / `Body`, canonical `Variants[].Name`, then canonical `Example`; `compatible_body_formats` and `Variants[].Aliases` are migration-only compatibility facts.
+
 **重要约束**：高级排版模块使用通用 `:::name` 语法，仅在 **API 模式**下渲染；`block` 是保留语法名，不是通用占位符。
 - `convert`（默认）= API 模式，模块正常渲染
 - `convert --mode ai` = AI 模式，`:::name` 高级排版块不渲染，以普通段落输出
 
-Keep one canonical executable example per recommended syntax and add examples only for structurally distinct variants. The 68-scenario mapping (48 source-mapped names plus 5 guide-only names) stays test-only. Real conformance must cover canonical, variant, and compatibility witnesses and prove semantic markers/stable content with no raw fence; local validation alone is not remote deployment proof.
+Keep one canonical executable example per recommended syntax and add examples only for structurally distinct variants. The 77-scenario mapping stays test-only. Real conformance covers 84 witnesses: 56 canonical, 25 structurally distinct non-default branches, and 3 compatibility witnesses. It must prove semantic markers/stable content with no raw fence; local validation alone is not remote deployment proof.
 
 The 4 `serves` values that every module is mapped to: `attention` | `readability` | `memorability` | `conversion`.
 

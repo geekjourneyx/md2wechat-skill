@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: judgment
+input_positions: [body-kv]
 serves: [attention, memorability]
 content_types: [opinion, announcement, manifesto]
 industry: [general]
@@ -23,13 +24,11 @@ anti_pattern: |
   believe 和 against 用逗号分隔（应该用 |）；
   写成宣传稿而非真实的个人立场。
 fields:
-  required: []
-  required_any:
-    - [title, believe]
-  optional:
+  required:
     - name: title
-      description: 核心主张标题（title 或 believe 至少填一个）
+      description: 核心主张标题
       example: "我相信普通人也应该拥有自己的内容系统"
+  optional:
     - name: believe
       description: 正面信念，用 | 分隔多个条目（title 或 believe 至少填一个）
       example: "结构先于风格 | 文字永远是主角 | 主题负责气质"
@@ -42,12 +41,15 @@ fields:
     - name: body
       description: 展开说明，解释主张的背景和意义
       example: "排版系统的价值，是让不懂设计的人也能稳定输出有识别度的文章。"
-    - name: subtitle
-      description: 副标题，对 title 补充说明
-      example: "个人品牌的内容原则"
     - name: note
       description: 底部说明
       example: "适合个人品牌、专栏开头或结尾"
+  compatibility:
+    - name: subtitle
+      description: 副标题，对 title 补充说明
+      example: "个人品牌的内容原则"
+  compatibility_required_any:
+    - [title, believe]
 example: |
   :::manifesto
   label: 我的长期判断
@@ -57,6 +59,27 @@ example: |
   against: 大字报式排版 | 随机堆模板 | 为装饰牺牲阅读
   note: 适合个人品牌、专栏开头或结尾
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - title
+  optional:
+    - label
+    - body
+    - believe
+    - against
+    - note
+  enums: {}
+  defaults: {}
+  invalid:
+    - blank-title
+    - against-only
+  ignored:
+    - unknown-fields
+  legacy:
+    - subtitle-to-body
+    - believe-to-title
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

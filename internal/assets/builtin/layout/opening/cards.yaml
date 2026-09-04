@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: opening
+input_positions: [row-dsl]
 serves: [attention, readability]
 content_types: [opinion, tutorial, report, announcement]
 industry: [general]
@@ -22,6 +23,9 @@ anti_pattern: |
   每行少于 3 列导致渲染失败；
   风格字段写错（只允许 accent 或 default）；
   把所有内容塞进一张卡片而不是分开。
+opener:
+  caption: true
+  caption_default: 模块列表
 rows:
   delimiter: "|"
   min_columns: 3
@@ -32,15 +36,39 @@ rows:
       description: 卡片标题，简短有力
     - name: description
       description: 卡片说明，一句话描述内容
-    - name: style
-      description: "风格：accent 或 default（可省略，默认 default）"
-      enum: [accent, default]
+    - name: tone
+      description: "风格：default 或 accent（可省略，默认 default）"
+      enum: [default, accent]
+      default: default
 example: |
   :::cards[模块速览]
   PART 01 | 开场模块 | 先交代判断和阅读入口 | accent
   PART 02 | 信息图模块 | 先把一句判断放大成视觉摘要 | default
   PART 03 | 证据模块 | 用数据、对比和步骤支撑结论 | default
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - label
+    - title
+    - description
+  optional:
+    - header-title
+    - tone
+  enums:
+    tone:
+      - default
+      - accent
+  defaults:
+    header-title: 模块列表
+    tone: default
+  invalid:
+    - fewer-than-3-cells
+    - agent-forbidden-blank-required-cell
+  ignored:
+    - cells-after-tone
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

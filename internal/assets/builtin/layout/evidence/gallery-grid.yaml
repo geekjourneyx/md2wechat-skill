@@ -5,6 +5,7 @@ body_format: markdown_images
 version: "1.0.0"
 since: "1.5.0"
 category: evidence
+input_positions: [header-attrs, markdown-body]
 serves: [attention, readability]
 content_types: [tutorial, report, announcement, product-launch]
 industry: [general]
@@ -24,14 +25,32 @@ anti_pattern: |
 opener:
   param_style: braces
   params:
-    - name: columns
-      description: 图集列数
-      enum: ["1", "2", "3"]
-      default: "2"
     - name: variant
       description: 图集外观
-      enum: [card, plain]
-      default: card
+      enum: [clean, card]
+      default: clean
+    - name: density
+      enum: [compact, normal, airy]
+      default: normal
+    - name: columns
+      description: 图集列数
+      default: "3"
+    - name: image_shape
+      enum: [square, rounded, phone, poster, original]
+      default: square
+    - name: caption_style
+      enum: [none, minimal, numbered, label]
+      default: minimal
+    - name: accent
+      enum: [brand, muted, contrast]
+      default: brand
+    - name: wechat_safe_level
+      enum: [strict, normal]
+      default: normal
+    - name: title
+      description: 图集标题
+    - name: description
+      description: 图集说明
 body:
   min_images: 1
 example: |
@@ -40,6 +59,68 @@ example: |
   ![B](https://example.com/2.jpg) | 详情状态
   ![C](https://example.com/3.jpg) | 结果状态
   :::
+agent_contract:
+  body_format: markdown_images
+  required:
+    - image
+  optional:
+    - variant
+    - density
+    - columns
+    - image_shape
+    - caption_style
+    - accent
+    - wechat_safe_level
+    - title
+    - description
+  enums:
+    variant:
+      - clean
+      - card
+    density:
+      - compact
+      - normal
+      - airy
+    image_shape:
+      - square
+      - rounded
+      - phone
+      - poster
+      - original
+    caption_style:
+      - none
+      - minimal
+      - numbered
+      - label
+    accent:
+      - brand
+      - muted
+      - contrast
+    wechat_safe_level:
+      - strict
+      - normal
+  defaults:
+    variant: clean
+    density: normal
+    columns: "3"
+    columns-out-of-range: clamped-1-4
+    image_shape: square
+    caption_style: minimal
+    accent: brand
+    wechat_safe_level: normal
+    unknown-enum: field-default
+  invalid:
+    - malformed-image
+  ignored:
+    - unsupported-attrs
+  legacy:
+    - case-folded-header-keys
+    - magazine-to-clean
+    - tech-to-clean
+    - elegant-to-clean
+    - bold-to-clean
+    - experimental-to-normal
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

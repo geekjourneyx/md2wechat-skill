@@ -3,9 +3,12 @@ package layoutcatalog
 import (
 	"bytes"
 	"fmt"
+	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
 
@@ -108,8 +111,14 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if !ValidLifecycles[spec.Lifecycle] {
 		return nil, fmt.Errorf("invalid lifecycle %q", spec.Lifecycle)
 	}
+	if err := validateInputPositions(spec.InputPositions); err != nil {
+		return nil, err
+	}
 	if err := validateOpenerSpec(spec.Opener); err != nil {
 		return nil, err
+	}
+	if spec.OpenerCompatibilityOnly && spec.Opener == nil {
+		return nil, fmt.Errorf("opener_compatibility_only requires opener")
 	}
 	normalizeBodyFormat(&spec)
 	if !ValidBodyFormats[spec.BodyFormat] {
@@ -140,6 +149,9 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if err != nil {
 		return nil, err
 	}
+	if spec.FieldsCompatibilityOnly && spec.Fields == nil {
+		return nil, fmt.Errorf("fields_compatibility_only requires fields")
+	}
 	if err := validateBodySpec(spec.Body, declaredFields, seenBodyFormats); err != nil {
 		return nil, err
 	}
@@ -152,16 +164,192 @@ func parseLayoutSpec(data []byte) (*LayoutSpec, error) {
 	if err := validateRowsSpec(spec.Rows); err != nil {
 		return nil, err
 	}
+	if spec.RowsCompatibilityOnly && spec.Rows == nil {
+		return nil, fmt.Errorf("rows_compatibility_only requires rows")
+	}
 	if spec.Metadata.Author == "" || spec.Metadata.Provenance == "" {
 		return nil, fmt.Errorf("metadata.author and metadata.provenance are required")
 	}
 	if err := validateWitnessSpecs(&spec, declaredFields); err != nil {
 		return nil, err
 	}
+	if err := validateFieldApplicability(&spec); err != nil {
+		return nil, err
+	}
+	if err := validateVariantDefaults(&spec); err != nil {
+		return nil, err
+	}
 	return &spec, nil
 }
 
+func validateAgentContract(contract *AgentContractSpec, lifecycle string) error {
+	if lifecycle != LifecycleRecommended {
+		return nil
+	}
+	if contract == nil {
+		return fmt.Errorf("recommended layout requires agent_contract")
+	}
+	if contract.Required == nil || contract.Optional == nil || contract.Enums == nil || contract.Defaults == nil || contract.Applicability == nil || contract.Invalid == nil || contract.Ignored == nil || contract.Legacy == nil {
+		return fmt.Errorf("agent_contract requires required, optional, enums, defaults, applicability, invalid, ignored, and legacy")
+	}
+	if !ValidBodyFormats[contract.BodyFormat] {
+		return fmt.Errorf("agent_contract has invalid body_format %q", contract.BodyFormat)
+	}
+	required, err := validateAgentContractList("required", contract.Required)
+	if err != nil {
+		return err
+	}
+	if _, err := validateAgentContractList("optional", contract.Optional); err != nil {
+		return err
+	}
+	for _, field := range contract.Optional {
+		if required[field] {
+			return fmt.Errorf("agent_contract field %q is both required and optional", field)
+		}
+	}
+	for field, values := range contract.Enums {
+		if strings.TrimSpace(field) == "" || strings.TrimSpace(field) != field {
+			return fmt.Errorf("agent_contract enum field %q is invalid", field)
+		}
+		if len(values) == 0 {
+			return fmt.Errorf("agent_contract enum %q requires values", field)
+		}
+		seen := make(map[string]bool, len(values))
+		for _, value := range values {
+			if strings.TrimSpace(value) == "" || strings.TrimSpace(value) != value {
+				return fmt.Errorf("agent_contract enum %q value %q is invalid", field, value)
+			}
+			if seen[value] {
+				return fmt.Errorf("agent_contract enum %q has duplicate value %q", field, value)
+			}
+			seen[value] = true
+		}
+	}
+	for field, value := range contract.Defaults {
+		if strings.TrimSpace(field) == "" || strings.TrimSpace(field) != field || strings.TrimSpace(value) == "" {
+			return fmt.Errorf("agent_contract default %q must have a non-empty key and value", field)
+		}
+	}
+	for field, variants := range contract.Applicability {
+		if strings.TrimSpace(field) == "" || strings.TrimSpace(field) != field {
+			return fmt.Errorf("agent_contract applicability field %q is invalid", field)
+		}
+		if len(variants) == 0 {
+			return fmt.Errorf("agent_contract applicability %q requires variants", field)
+		}
+		if _, err := validateAgentContractList("applicability "+field, variants); err != nil {
+			return err
+		}
+	}
+	for name, values := range map[string][]string{
+		"invalid": contract.Invalid,
+		"ignored": contract.Ignored,
+		"legacy":  contract.Legacy,
+	} {
+		if _, err := validateAgentContractList(name, values); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateAgentContractList(name string, values []string) (map[string]bool, error) {
+	seen := make(map[string]bool, len(values))
+	for _, value := range values {
+		if strings.TrimSpace(value) == "" || strings.TrimSpace(value) != value {
+			return nil, fmt.Errorf("agent_contract %s value %q is invalid", name, value)
+		}
+		if seen[value] {
+			return nil, fmt.Errorf("agent_contract has duplicate %s value %q", name, value)
+		}
+		seen[value] = true
+	}
+	return seen, nil
+}
+
+func validateAgentContractMatchesSpec(spec *LayoutSpec) error {
+	if err := validateAgentContract(spec.AgentContract, spec.Lifecycle); err != nil {
+		return err
+	}
+	if spec.Lifecycle != LifecycleRecommended {
+		return nil
+	}
+	if spec.AgentContract.BodyFormat != spec.BodyFormat {
+		return fmt.Errorf("agent_contract body_format %q differs from canonical body_format %q", spec.AgentContract.BodyFormat, spec.BodyFormat)
+	}
+	for name, values := range spec.AgentContract.Enums {
+		field, ok := declaredAgentContractFields(spec)[name]
+		if !ok {
+			if abstractAgentEnumMatchesSpec(spec, name, values) {
+				continue
+			}
+			return fmt.Errorf("agent_contract enum %q is not declared by the canonical schema", name)
+		}
+		if !slices.Equal(values, field.Enum) {
+			return fmt.Errorf("agent_contract enum %q %v differs from canonical field enum %v", name, values, field.Enum)
+		}
+	}
+	wantApplicability := declaredAgentApplicability(spec)
+	if !reflect.DeepEqual(spec.AgentContract.Applicability, wantApplicability) {
+		return fmt.Errorf("agent_contract applicability %v differs from canonical schema applicability %v", spec.AgentContract.Applicability, wantApplicability)
+	}
+	return nil
+}
+
+func abstractAgentEnumMatchesSpec(spec *LayoutSpec, name string, values []string) bool {
+	if name == "format" && spec.BodyFormat == BodyFormatRows && spec.Rows != nil {
+		return true
+	}
+	return name == "separator" && spec.BodyFormat == BodyFormatLines && spec.Body != nil && slices.Equal(values, []string{spec.Body.Separator})
+}
+
+// declaredAgentContractFields collects schema inputs that can carry a public
+// enum. Agent contracts may also describe server-only fallback behavior (for
+// example omitted-variant), so defaults deliberately remain independent; the
+// exact public projection is pinned by its oracle.
+func declaredAgentContractFields(spec *LayoutSpec) map[string]FieldSpec {
+	fields := make(map[string]FieldSpec)
+	for _, field := range declaredSpecFields(spec) {
+		fields[field.Name] = field
+	}
+	if spec.Opener != nil {
+		for _, param := range spec.Opener.Params {
+			if _, exists := fields[param.Name]; !exists {
+				fields[param.Name] = FieldSpec{Name: param.Name, Enum: param.Enum, Default: param.Default}
+			}
+		}
+	}
+	return fields
+}
+
+func declaredAgentApplicability(spec *LayoutSpec) map[string][]string {
+	applicability := map[string][]string{}
+	for _, field := range declaredSpecFields(spec) {
+		if len(field.AppliesTo) != 0 {
+			applicability[field.Name] = field.AppliesTo
+		}
+	}
+	return applicability
+}
+
+func validateInputPositions(positions []AgentInputPosition) error {
+	seen := map[AgentInputPosition]bool{}
+	for _, position := range positions {
+		if !ValidAgentInputPositions[position] {
+			return fmt.Errorf("invalid input_positions value %q", position)
+		}
+		if seen[position] {
+			return fmt.Errorf("duplicate input_positions value %q", position)
+		}
+		seen[position] = true
+	}
+	return nil
+}
+
 func validateLoadedWitnesses(spec *LayoutSpec) error {
+	if err := validateAgentContractMatchesSpec(spec); err != nil {
+		return err
+	}
 	if spec.Lifecycle != LifecycleRecommended {
 		return nil
 	}
@@ -180,6 +368,9 @@ func validateLoadedWitnesses(spec *LayoutSpec) error {
 			return fmt.Errorf("variant %q requires use_when", variant.Name)
 		}
 		if strings.TrimSpace(variant.Example) == "" {
+			if isCanonicalDefaultVariant(spec, variant.Name) {
+				continue
+			}
 			return fmt.Errorf("variant %q requires an executable example", variant.Name)
 		}
 		if err := temporary.ValidateWitness(WitnessContract{
@@ -192,12 +383,33 @@ func validateLoadedWitnesses(spec *LayoutSpec) error {
 	return nil
 }
 
+// isCanonicalDefaultVariant identifies the branch selected by a declared
+// schema default. Such a variant is covered by the module's canonical witness
+// and does not require a redundant second remote witness.
+func isCanonicalDefaultVariant(spec *LayoutSpec, variant string) bool {
+	if spec.Fields == nil {
+		return false
+	}
+	for _, field := range spec.Fields.Optional {
+		if field.Default == variant {
+			return true
+		}
+	}
+	return false
+}
+
 func validateRowsSpec(rows *RowsSpec) error {
 	if rows == nil {
 		return nil
 	}
 	if rows.MinColumns <= 0 {
 		return fmt.Errorf("rows.min_columns must be greater than zero")
+	}
+	if rows.MaxColumns < 0 {
+		return fmt.Errorf("rows.max_columns must be nonnegative")
+	}
+	if rows.MaxColumns != 0 && rows.MaxColumns < rows.MinColumns {
+		return fmt.Errorf("rows.max_columns must be at least rows.min_columns when nonzero")
 	}
 	if len(rows.Schema) == 0 {
 		return nil
@@ -216,6 +428,9 @@ func validateRowsSpec(rows *RowsSpec) error {
 		seen[field.Name] = true
 		if field.ValueType != "" && field.ValueType != "string" {
 			return fmt.Errorf("rows.schema field %q has invalid value_type %q", field.Name, field.ValueType)
+		}
+		if err := validateFieldBounds(field, "rows.schema"); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -257,7 +472,7 @@ func validateWitnessSpecs(spec *LayoutSpec, declaredFields map[string]bool) erro
 				return fmt.Errorf("variant %q required field %q is not declared", variant.Name, field)
 			}
 		}
-		for _, group := range variant.RequiredAny {
+		for _, group := range append(append([][]string{}, variant.RequiredAny...), variant.CompatibilityRequiredAny...) {
 			if len(group) == 0 {
 				return fmt.Errorf("variant %q required_any group must not be empty", variant.Name)
 			}
@@ -279,7 +494,7 @@ func validateFieldsSpec(fields *FieldsSpec) (map[string]bool, error) {
 	if fields == nil {
 		return declared, nil
 	}
-	for _, field := range append(append([]FieldSpec{}, fields.Required...), fields.Optional...) {
+	for _, field := range allFieldSpecs(fields) {
 		if strings.TrimSpace(field.Name) == "" {
 			return nil, fmt.Errorf("field name must not be empty")
 		}
@@ -289,10 +504,13 @@ func validateFieldsSpec(fields *FieldsSpec) (map[string]bool, error) {
 		if field.ValueType != "" && field.ValueType != "string" {
 			return nil, fmt.Errorf("field %q has invalid value_type %q", field.Name, field.ValueType)
 		}
+		if err := validateFieldBounds(field, "field"); err != nil {
+			return nil, err
+		}
 		declared[field.Name] = true
 	}
 	seenGroups := map[string]bool{}
-	for _, group := range fields.RequiredAny {
+	for _, group := range append(append([][]string{}, fields.RequiredAny...), fields.CompatibilityRequiredAny...) {
 		if len(group) == 0 {
 			return nil, fmt.Errorf("required_any group must not be empty")
 		}
@@ -358,6 +576,80 @@ func validateFieldsSpec(fields *FieldsSpec) (map[string]bool, error) {
 	return declared, nil
 }
 
+func validateFieldBounds(field FieldSpec, owner string) error {
+	if field.MinRunes < 0 || field.MaxRunes < 0 {
+		return fmt.Errorf("%s %q rune bounds must be nonnegative", owner, field.Name)
+	}
+	if field.MinRunes > 0 && field.MaxRunes > 0 && field.MinRunes > field.MaxRunes {
+		return fmt.Errorf("%s %q min_runes must not exceed max_runes", owner, field.Name)
+	}
+	return nil
+}
+
+func validateFieldApplicability(spec *LayoutSpec) error {
+	identities := make(map[string]bool, len(spec.Variants))
+	for _, variant := range spec.Variants {
+		identities[variant.Name] = true
+	}
+	for _, field := range declaredSpecFields(spec) {
+		seen := map[string]bool{}
+		for _, variant := range field.AppliesTo {
+			if variant != "one-line" && !identities[variant] {
+				return fmt.Errorf("field %q applies_to variant %q is not declared", field.Name, variant)
+			}
+			if seen[variant] {
+				return fmt.Errorf("field %q has duplicate applies_to variant %q", field.Name, variant)
+			}
+			seen[variant] = true
+		}
+		if (field.Name == "variant" || field.Name == "type") && field.Default != "" && len(spec.Variants) > 0 && !identities[field.Default] {
+			return fmt.Errorf("field %q default variant %q is not declared", field.Name, field.Default)
+		}
+	}
+	return nil
+}
+
+func validateVariantDefaults(spec *LayoutSpec) error {
+	fields := map[string]FieldSpec{}
+	for _, field := range declaredSpecFields(spec) {
+		fields[field.Name] = field
+	}
+	for _, variant := range spec.Variants {
+		for name, value := range variant.Defaults {
+			field, ok := fields[name]
+			if !ok {
+				return fmt.Errorf("variant %q default field %q is not declared", variant.Name, name)
+			}
+			if !fieldAppliesToVariant(field, &variant) {
+				return fmt.Errorf("variant %q default field %q does not apply", variant.Name, name)
+			}
+			if strings.TrimSpace(value) == "" {
+				return fmt.Errorf("variant %q default field %q must not be empty", variant.Name, name)
+			}
+			if err := checkFieldEnum(field, spec.Variants, value); err != nil {
+				return fmt.Errorf("variant %q default field %q: %w", variant.Name, name, err)
+			}
+			runes := utf8.RuneCountInString(strings.TrimSpace(value))
+			if runes < field.MinRunes || (field.MaxRunes > 0 && runes > field.MaxRunes) {
+				return fmt.Errorf("variant %q default field %q violates rune bounds", variant.Name, name)
+			}
+		}
+	}
+	return nil
+}
+
+func declaredSpecFields(spec *LayoutSpec) []FieldSpec {
+	var fields []FieldSpec
+	if spec.Fields != nil {
+		fields = append(fields, spec.Fields.Required...)
+		fields = append(fields, spec.Fields.Optional...)
+	}
+	if spec.Rows != nil {
+		fields = append(fields, spec.Rows.Schema...)
+	}
+	return fields
+}
+
 func validateFieldShapeSpecs(shapes []FieldShapeSpec, declared map[string]bool, owner string) error {
 	for _, shape := range shapes {
 		if !declared[shape.Field] {
@@ -366,8 +658,17 @@ func validateFieldShapeSpecs(shapes []FieldShapeSpec, declared map[string]bool, 
 		if shape.Separator == "" {
 			return fmt.Errorf("%s shape separator must not be empty", owner)
 		}
-		if shape.MinParts <= 1 {
+		if shape.MinParts < 0 || shape.MinParts == 1 {
 			return fmt.Errorf("%s shape min_parts must be greater than 1", owner)
+		}
+		if shape.MinParts == 0 && shape.MaxParts == 0 {
+			return fmt.Errorf("%s shape requires min_parts or max_parts", owner)
+		}
+		if shape.MaxParts < 0 {
+			return fmt.Errorf("%s shape max_parts must be nonnegative", owner)
+		}
+		if shape.MaxParts > 0 && shape.MaxParts < shape.MinParts {
+			return fmt.Errorf("%s shape max_parts must be at least min_parts", owner)
 		}
 		if shape.MaxOccurrences < 0 {
 			return fmt.Errorf("%s shape max_occurrences must be nonnegative", owner)
@@ -399,11 +700,17 @@ func validateFieldShapeSpecs(shapes []FieldShapeSpec, declared map[string]bool, 
 				seenPositions[position] = true
 			}
 		}
-		if shape.ItemSeparator == "" && shape.ItemMinParts != 0 {
-			return fmt.Errorf("%s shape item_separator is required with item_min_parts", owner)
+		if shape.ItemSeparator == "" && (shape.ItemMinParts != 0 || shape.ItemMaxParts != 0) {
+			return fmt.Errorf("%s shape item_separator is required with item part bounds", owner)
 		}
 		if shape.ItemSeparator != "" && shape.ItemMinParts <= 1 {
 			return fmt.Errorf("%s shape item_min_parts must be greater than 1", owner)
+		}
+		if shape.ItemMaxParts < 0 {
+			return fmt.Errorf("%s shape item_max_parts must be nonnegative", owner)
+		}
+		if shape.ItemMaxParts > 0 && shape.ItemMaxParts < shape.ItemMinParts {
+			return fmt.Errorf("%s shape item_max_parts must be at least item_min_parts", owner)
 		}
 	}
 	return nil
@@ -518,6 +825,9 @@ func validateOpenerSpec(opener *OpenerSpec) error {
 	}
 	if opener.Caption && opener.ParamStyle == ParamStyleBracket {
 		return fmt.Errorf("opener caption and bracket param_style are mutually exclusive")
+	}
+	if opener.CaptionDefault != "" && !opener.Caption {
+		return fmt.Errorf("opener caption_default requires caption")
 	}
 	if opener.Caption && len(opener.Params) > 0 {
 		return fmt.Errorf("opener caption and opener params are mutually exclusive")

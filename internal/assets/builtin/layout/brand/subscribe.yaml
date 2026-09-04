@@ -5,6 +5,7 @@ body_format: fields
 version: "1.0.0"
 since: "1.5.0"
 category: brand
+input_positions: [body-kv]
 serves: [conversion, memorability]
 content_types: [opinion, tutorial, announcement, brand]
 industry: [general]
@@ -36,13 +37,16 @@ fields:
       example: "我会持续更新公众号排版、AI 内容工作流和产品化复盘。"
     - name: primary
       description: 主要行动文案（默认"继续关注"）
+      default: 继续关注
       example: "关注公众号"
     - name: secondary
       description: 次要行动文案（默认"收藏这篇"）
+      default: 收藏这篇
       example: "转发给正在写长文的人"
     - name: note
       description: 底部说明
       example: "下一篇继续拆个人品牌模块"
+  compatibility:
     - name: qrcode
       description: 二维码图片 URL
       example: "https://example.com/qrcode.png"
@@ -61,6 +65,29 @@ example: |
   secondary: 转发给正在写长文的人
   note: 下一篇继续拆个人品牌模块
   :::
+agent_contract:
+  body_format: fields
+  required:
+    - title
+  optional:
+    - label
+    - subtitle
+    - primary
+    - secondary
+    - note
+  enums: {}
+  defaults:
+    primary: 继续关注
+    secondary: 收藏这篇
+  invalid:
+    - blank-title
+  ignored:
+    - action-urls
+    - unknown-fields
+  legacy:
+    - json-object
+    - actions-fields
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

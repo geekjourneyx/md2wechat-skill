@@ -61,7 +61,7 @@ md2wechat themes list --json
 
 当需要选择主题，或 Brand Profile / 用户指令指定了主题时，Agent 必须读取 `type` 和 `selectable`：API 模式只能选择 `type: api` 且 `selectable: true` 的主题；AI 模式只能选择 `type: ai` 且 `selectable: true` 的主题。使用 `md2wechat themes show <theme_name> --json` 查看单个主题的详细配置。
 
-### 1.3 查看可用图片 Provider（6+ 个）
+### 1.3 查看可用图片 Provider（7 个）
 
 ```bash
 md2wechat providers list --json
@@ -69,6 +69,7 @@ md2wechat providers list --json
 
 仅在图片生成、封面、信息图或 provider 选择任务中使用。列出所有支持的图片生成 provider：
 - `openai` — OpenAI GPT Image / DALL·E
+- `minimax` — MiniMax 图片生成与 `image-01` 主体参考
 - `tuzi` — 图子 AI
 - `modelscope` / `ms` — ModelScope
 - `openrouter` / `or` — OpenRouter
@@ -76,6 +77,8 @@ md2wechat providers list --json
 - `volcengine` / `volc` — 火山引擎
 
 使用 `md2wechat providers show <provider_name> --json` 查看单个 provider 需要的配置和支持的模型。
+
+使用 `--subject-reference` 前先运行 `md2wechat providers show minimax --json`，读取 provider 和 `supported_models` 中的 `supports_subject_reference`。当前只有 `minimax` 的 `image-01` 接受该参数，参考图必须是可公开访问的 `http(s)` URL；本地路径和 data URL 会被拒绝。
 
 ### 1.4 查看 Prompt 模板库
 
@@ -90,7 +93,7 @@ md2wechat prompts list --json
 
 使用 `md2wechat prompts show <name> --kind <kind> --json` 查看单个 prompt 的具体内容和配置。
 
-### 1.5 查看高级排版模块（默认 53 个推荐语法名）
+### 1.5 查看高级排版模块（默认 56 个推荐语法名）
 
 ```bash
 md2wechat layout list --json
@@ -107,7 +110,11 @@ md2wechat layout list --lifecycle compatibility --json  # 仅旧稿迁移
 - `memorability` — 增强记忆点（quote、metrics、summary）
 - `conversion` — 驱动转化（cta、subscribe、faq）
 
+计数维度固定为：77 个推荐场景条目、56 个推荐语法名、3 个 compatibility 模块、4 个基础增强能力，以及 63 项渲染层语法能力。场景条目不是 `layout list` 的条目数；新稿只从 recommended 语法名中选择。
+
 **⚠️ 重要约束**：高级排版语法（`:::module` ... `:::` 语法）**仅在 API 模式**下渲染。使用 `--mode ai` 时，排版语法会被当作普通段落输出。
+
+选择模块后，按固定顺序读取 `layout show <name> --json`：`input_positions` → primary `body_format` 与对应 `Opener`、`Fields` / `Rows` / `Body` → canonical `Variants[].Name` → canonical `Example`。`compatible_body_formats` 与 `Variants[].Aliases` 只记录旧稿兼容性，不得用来选择新内容。
 
 ---
 
@@ -262,7 +269,7 @@ md2wechat layout show callout --json
 printf '%s\n' '重要提示' | md2wechat layout render callout --body-file - --json
 ```
 
-读取 `layout list --json` / `layout show --json` 的 `body_format` 决定正文写法：`fields` / `rows` / `json_object` / `json_array` / `markdown_images` / `markdown_fields` / `split` / `lines` / `dialogue`。Schema 决定合法性；优先复用 canonical `Example`，只有结构不同的分支才选 `Variants[].Example`。复杂正文用 `--body-file`，不要拼成大量 `--var`。兼容模块仅用于旧稿迁移。
+读取 `layout list --json` / `layout show --json` 的 primary `body_format` 决定正文写法：`fields` / `rows` / `json_object` / `json_array` / `markdown_images` / `markdown_fields` / `split` / `lines` / `dialogue`。Schema 决定合法性；优先复用 canonical `Example`，只有结构不同的分支才选 canonical `Variants[].Name` 的 `Example`。`compatible_body_formats` 和 `Variants[].Aliases` 是只读兼容事实，不能为新内容选择。复杂正文用 `--body-file`，不要拼成大量 `--var`。兼容模块仅用于旧稿迁移。
 
 ---
 
@@ -278,7 +285,7 @@ md2wechat convert article.md --output output.html
 
 **前置条件**：
 - 需要配置 `MD2WECHAT_API_KEY`，可通过 `MD2WECHAT_BASE_URL` 或 `api.md2wechat_base_url` 覆盖 API 地址
-- 支持默认发现的 53 个推荐高级排版语法；3 个兼容模块仅用于旧稿迁移
+- 支持默认发现的 56 个推荐高级排版语法；3 个兼容模块仅用于旧稿迁移
 - 输出 HTML 最终，可直接用于微信草稿或发布
 
 **响应示例**：
@@ -444,22 +451,25 @@ subtitle: 这是副标题
 :::
 
 :::verdict
-content: 这篇文章的核心观点
-confidence: high
+title: 这篇文章的核心观点
+body: 先给出明确判断，再补充证据和边界。
 :::
 
-:::callout level=warning
-这是一个重要提示
+:::callout
+type: warning
+body: 这是一个重要提示
 :::
 
 :::quote
-content: 经典引用
-author: 引用来源
+quote: 经典引用
+source: 引用来源
 :::
 
 :::cta
 title: 如果这篇对你有启发
-action: 关注 / 分享 / 咨询
+primary: 关注
+secondary: 分享
+tertiary: 咨询
 :::
 ```
 
@@ -760,4 +770,4 @@ JSON envelope 格式（v1）：
 
 ---
 
-*最后更新：与 md2wechat v3.2.0 同步*
+*最后更新：与 md2wechat v3.4.0 同步*

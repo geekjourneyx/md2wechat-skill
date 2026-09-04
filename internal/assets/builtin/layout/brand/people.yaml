@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: brand
+input_positions: [row-dsl]
 serves: [memorability, readability]
 content_types: [announcement, brand, report]
 industry: [general]
@@ -22,6 +23,9 @@ anti_pattern: |
   没有任何满足 3 列的行导致渲染失败；
   风格字段写错（只允许 accent 或 default）；
   每行都用 accent 失去重点突出效果。
+opener:
+  caption: true
+  caption_default: 核心角色
 rows:
   delimiter: "|"
   min_columns: 3
@@ -30,16 +34,40 @@ rows:
       description: 姓名或角色名称
     - name: role
       description: 身份或职位
-    - name: bio
+    - name: body
       description: 说明，介绍这个人的职责或贡献
-    - name: style
-      description: "风格：accent 或 default（可省略）"
-      enum: [accent, default]
+    - name: tone
+      description: "风格：default 或 accent（可省略）"
+      enum: [default, accent]
+      default: default
 example: |
   :::people[核心角色]
   内容负责人 | 内容策略 | 负责把文章重点和节奏定下来 | accent
   设计负责人 | 视觉把关 | 负责保证气质和细节不掉价 | default
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - name
+    - role
+    - body
+  optional:
+    - header-title
+    - tone
+  enums:
+    tone:
+      - default
+      - accent
+  defaults:
+    header-title: 核心角色
+    tone: default
+  invalid:
+    - blank-required-cell
+    - image-leading-row
+  ignored:
+    - cells-after-tone
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

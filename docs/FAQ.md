@@ -55,13 +55,13 @@ npm install -g @geekjourneyx/md2wechat
 如果你已经有稳定可用的 Go 环境，也可以：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.2.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.4.0
 ```
 
 如果以上都不适合，再走固定版本安装脚本：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.4.0/install.sh | bash
 ```
 
 安装脚本默认会把 CLI 放到：
@@ -152,13 +152,13 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果你已经有 Go 环境，再把第一步改成：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.2.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.4.0
 ```
 
 如果以上都不适合，再把第一步改成：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.4.0/install.sh | bash
 ```
 
 如果你懒得自己操作，也可以直接把下面的话发给 Claude Code / Codex / OpenCode：
@@ -167,8 +167,8 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.
 请先安装 md2wechat CLI，再安装 md2wechat skill，并验证版本和能力发现都正常。
 执行：
 1. 如果我是 mac 用户，先运行：brew install geekjourneyx/tap/md2wechat
-2. 如果我已经有稳定可用的 Go 环境，也可以改成：go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.2.0
-3. 如果以上两种都不适合，再运行：curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install.sh | bash
+2. 如果我已经有稳定可用的 Go 环境，也可以改成：go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.4.0
+3. 如果以上两种都不适合，再运行：curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.4.0/install.sh | bash
 4. 运行：npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 5. 如果我是通过 install.sh 安装的，再执行：export PATH="$HOME/.local/bin:$PATH"
 6. md2wechat version --json
@@ -213,7 +213,7 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果你已经有 Go 环境，再改成：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.2.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.4.0
 md2wechat version --json
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 ```
@@ -221,7 +221,7 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果以上都不适合，再改成：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.2.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.4.0/install.sh | bash
 export PATH="$HOME/.local/bin:$PATH"
 md2wechat version --json
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
@@ -595,6 +595,10 @@ md2wechat config show --format json
 
 如果是 Volcengine 返回 `ModelNotOpen`，去 [豆包大模型](https://www.volcengine.com/product/doubao) 点击“控制台” -> “开通管理”，勾选 `Seedream` 模型完成开通，再重试。
 
+如果是 MiniMax，错误信息里会带上上游 `base_resp.status_code`：`1004` / `2049` 是 API Key 问题，`1002` 是限流，`1008` 是余额不足，`1026` 是提示词命中内容安全策略，`2013` 是参数错误。全球站与国内站的 `image_base_url` 不同，分别是 `https://api.minimax.io` 和 `https://api.minimaxi.com`。
+
+MiniMax status code `1027` indicates that generated output was blocked by content safety policy and maps to `safety_blocked`.
+
 然后再试最小命令：
 
 ```bash
@@ -619,7 +623,32 @@ md2wechat generate_cover --article article.md --plan --json
 
 返回里的 `requires_provider:false` 和 `requires_image_api_key:false` 表示 md2wechat 这一侧不需要图片服务配置。真正的图片文件只有在宿主 Agent 调用 Image Gen 并保存后才会出现。完整流程见 [Agent 图片计划模式](AGENT_IMAGE_GEN.md)。
 
-### Q14.2：`advise` 和 `inspect` 有什么区别？
+### Q14.2：怎么在生成图片时保持同一人物形象？
+
+用 MiniMax 的主体参考（图生图）：
+
+```bash
+md2wechat generate_image "保持同一人物形象的秋日封面" \
+  --subject-reference "https://cdn.example.com/portrait.png"
+```
+
+注意事项：
+
+- 只有 `minimax` provider 支持 `--subject-reference`，其他 provider 会立即返回 `CONFIG_INVALID`，不会发起生成请求
+- 只有 `image-01` 支持该参数，`image-01-live` 会被直接拒绝
+- 参考图必须是可公开访问的 `http://` 或 `https://` 图片 URL，当前不支持内联 data URL 和本地路径
+- 建议使用单人正脸照片，格式 `JPG` / `JPEG` / `PNG`
+- 可以和 `--size`、`--model` 组合使用
+
+想确认当前 CLI 是否识别到该能力：
+
+```bash
+md2wechat providers show minimax --json
+```
+
+看返回里的 `supports_subject_reference`，以及 `supported_models` 中每个模型的 `supports_subject_reference`。
+
+### Q14.3：`advise` 和 `inspect` 有什么区别？
 
 `inspect` 是发布前 readiness 真相源，回答“能不能继续 convert/upload/draft”。`advise` 是可选增强建议，回答“这篇已有文章是否值得最小改动地加标题建议、封面计划、layout 模块或微调”。如果 `inspect` 的目标是 `blocked`，先修 blocker，不要用 `advise` 绕过发布前检查。
 
@@ -881,13 +910,15 @@ md2wechat doctor --json
 ### How do I discover layout modules supported in API mode?
 
 ```bash
-md2wechat layout list --json           # 53 recommended modules (default lifecycle)
+md2wechat layout list --json           # 56 recommended modules (default lifecycle)
 md2wechat layout list --lifecycle compatibility --json  # 3 legacy compatibility modules
 md2wechat layout list --serves attention --json   # attention-grabbing modules
 md2wechat layout show hero --json      # full spec with fields and example
 ```
 
-计数口径分别是 68 个场景条目、53 个默认推荐语法名、3 个兼容模块、4 个基础增强能力和 60 项渲染层语法能力。68 不是 `layout list` 的条目数：同一语法名可承载多个场景或结构变体。`layout show --json` 的 schema 定义合法性，canonical example 和结构不同的 variant examples 是可执行参考。
+计数口径分别是 77 个场景条目、56 个默认推荐语法名、3 个兼容模块、4 个基础增强能力和 63 项渲染层语法能力。77 不是 `layout list` 的条目数：同一语法名可承载多个场景或结构变体。`layout show --json` 的 schema 定义合法性，canonical example 和结构不同的 variant examples 是可执行参考。
+
+新内容按 `input_positions` → primary `body_format` 与 `Opener` / `Fields` / `Rows` / `Body` → canonical `Variants[].Name` → canonical `Example` 的顺序读取。`compatible_body_formats` 与 `Variants[].Aliases` 只用于旧稿兼容，不能作为新内容选择。
 
 When the user has not chosen a theme or module, use discovery output as facts and let the Agent decide from the article and Brand Profile. The CLI does not parse Brand Profile; Agents should read `~/.config/md2wechat/brand.md` themselves, choose a compatible theme from `themes list --json`, inspect module schemas with `layout show`, and render only the modules they can fill correctly.
 

@@ -23,26 +23,28 @@ const (
 )
 
 type providerView struct {
-	Name            string                    `json:"name"`
-	Aliases         []string                  `json:"aliases,omitempty"`
-	Description     string                    `json:"description"`
-	RequiredConfig  []string                  `json:"required_config,omitempty"`
-	OptionalConfig  []string                  `json:"optional_config,omitempty"`
-	DefaultBaseURL  string                    `json:"default_base_url,omitempty"`
-	DefaultModel    string                    `json:"default_model,omitempty"`
-	SupportedModels []image.ProviderModelMeta `json:"supported_models,omitempty"`
-	SupportsSize    bool                      `json:"supports_size"`
-	Current         bool                      `json:"current"`
-	Configured      bool                      `json:"configured"`
+	Name                     string                    `json:"name"`
+	Aliases                  []string                  `json:"aliases,omitempty"`
+	Description              string                    `json:"description"`
+	RequiredConfig           []string                  `json:"required_config,omitempty"`
+	OptionalConfig           []string                  `json:"optional_config,omitempty"`
+	DefaultBaseURL           string                    `json:"default_base_url,omitempty"`
+	DefaultModel             string                    `json:"default_model,omitempty"`
+	SupportedModels          []image.ProviderModelMeta `json:"supported_models,omitempty"`
+	SupportsSize             bool                      `json:"supports_size"`
+	SupportsSubjectReference bool                      `json:"supports_subject_reference"`
+	Current                  bool                      `json:"current"`
+	Configured               bool                      `json:"configured"`
 }
 
 type providerListItem struct {
-	Name         string   `json:"name"`
-	Aliases      []string `json:"aliases,omitempty"`
-	Description  string   `json:"description"`
-	SupportsSize bool     `json:"supports_size"`
-	Current      bool     `json:"current"`
-	Configured   bool     `json:"configured"`
+	Name                     string   `json:"name"`
+	Aliases                  []string `json:"aliases,omitempty"`
+	Description              string   `json:"description"`
+	SupportsSize             bool     `json:"supports_size"`
+	SupportsSubjectReference bool     `json:"supports_subject_reference"`
+	Current                  bool     `json:"current"`
+	Configured               bool     `json:"configured"`
 }
 
 type themeView struct {
@@ -306,17 +308,18 @@ func buildProviderViews() ([]providerView, error) {
 	for _, meta := range image.SupportedProviders() {
 		current := meta.Name == currentProvider || contains(meta.Aliases, currentProvider)
 		result = append(result, providerView{
-			Name:            meta.Name,
-			Aliases:         meta.Aliases,
-			Description:     meta.Description,
-			RequiredConfig:  meta.RequiredConfig,
-			OptionalConfig:  meta.OptionalConfig,
-			DefaultBaseURL:  meta.DefaultBaseURL,
-			DefaultModel:    meta.DefaultModel,
-			SupportedModels: meta.SupportedModels,
-			SupportsSize:    meta.SupportsSize,
-			Current:         current,
-			Configured:      current && hasAPIKey,
+			Name:                     meta.Name,
+			Aliases:                  meta.Aliases,
+			Description:              meta.Description,
+			RequiredConfig:           meta.RequiredConfig,
+			OptionalConfig:           meta.OptionalConfig,
+			DefaultBaseURL:           meta.DefaultBaseURL,
+			DefaultModel:             meta.DefaultModel,
+			SupportedModels:          meta.SupportedModels,
+			SupportsSize:             meta.SupportsSize,
+			SupportsSubjectReference: meta.SupportsSubjectReference,
+			Current:                  current,
+			Configured:               current && hasAPIKey,
 		})
 	}
 	return result, nil
@@ -324,12 +327,13 @@ func buildProviderViews() ([]providerView, error) {
 
 func providerToListItem(provider providerView) providerListItem {
 	return providerListItem{
-		Name:         provider.Name,
-		Aliases:      provider.Aliases,
-		Description:  provider.Description,
-		SupportsSize: provider.SupportsSize,
-		Current:      provider.Current,
-		Configured:   provider.Configured,
+		Name:                     provider.Name,
+		Aliases:                  provider.Aliases,
+		Description:              provider.Description,
+		SupportsSize:             provider.SupportsSize,
+		SupportsSubjectReference: provider.SupportsSubjectReference,
+		Current:                  provider.Current,
+		Configured:               provider.Configured,
 	}
 }
 
@@ -564,6 +568,10 @@ func buildLayoutCapabilityData() map[string]any {
 	}
 	modules := catalog.ListFiltered(layoutcatalog.ListFilter{})
 	compatibilityModules := catalog.ListFiltered(layoutcatalog.ListFilter{Lifecycle: layoutcatalog.LifecycleCompatibility})
+	recommendedSyntaxCount := len(modules)
+	compatibilityModuleCount := len(compatibilityModules)
+	baseEnhancementCount := len(baseLayoutEnhancements)
+	renderSyntaxCount := recommendedSyntaxCount + compatibilityModuleCount + baseEnhancementCount
 	categorySet := map[string]struct{}{}
 	for _, module := range modules {
 		categorySet[module.Category] = struct{}{}
@@ -576,12 +584,12 @@ func buildLayoutCapabilityData() map[string]any {
 
 	return map[string]any{
 		"available":                  true,
-		"module_count":               len(modules),
-		"recommended_syntax_count":   len(modules),
+		"module_count":               recommendedSyntaxCount,
+		"recommended_syntax_count":   recommendedSyntaxCount,
 		"recommended_scenario_count": recommendedLayoutScenarioCount,
-		"compatibility_module_count": len(compatibilityModules),
-		"base_enhancement_count":     baseLayoutEnhancementCount,
-		"render_syntax_count":        renderLayoutSyntaxCount,
+		"compatibility_module_count": compatibilityModuleCount,
+		"base_enhancement_count":     baseEnhancementCount,
+		"render_syntax_count":        renderSyntaxCount,
 		"supports_validate":          true,
 		"api_mode_only":              true,
 		"schema_version":             layoutcatalog.SchemaVersion,

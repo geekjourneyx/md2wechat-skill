@@ -168,6 +168,11 @@ func validateOpener(parsed ParsedOpener, spec *OpenerSpec) (ParsedOpener, error)
 		style = ParamStyleBracket
 	}
 	if parsed.RawParams == "" && len(parsed.Params) == 0 {
+		for _, param := range spec.Params {
+			if param.Required && param.Default == "" {
+				return ParsedOpener{}, fmt.Errorf("required opener parameter %s is missing", param.Name)
+			}
+		}
 		return parsed, nil
 	}
 	if style != spec.ParamStyle {
@@ -187,6 +192,11 @@ func validateOpener(parsed ParsedOpener, spec *OpenerSpec) (ParsedOpener, error)
 		}
 		if !stringAllowed(value, param.Enum) {
 			return ParsedOpener{}, fmt.Errorf("opener parameter %s must be one of %v, got %q", name, param.Enum, value)
+		}
+	}
+	for _, param := range spec.Params {
+		if param.Required && strings.TrimSpace(parsed.Params[param.Name]) == "" && param.Default == "" {
+			return ParsedOpener{}, fmt.Errorf("required opener parameter %s is missing", param.Name)
 		}
 	}
 	return parsed, nil
@@ -250,6 +260,9 @@ func renderOpenerWithOrder(spec *LayoutSpec, vars map[string]any, order openerPa
 			value = param.Default
 		}
 		if value == "" {
+			if param.Required {
+				return "", fmt.Errorf("%w: %s.%s", ErrMissingRequiredField, spec.Name, param.Name)
+			}
 			continue
 		}
 		if err := validateRenderedOpenerValue(spec.Opener.ParamStyle, param.Name, value); err != nil {

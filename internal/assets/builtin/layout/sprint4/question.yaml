@@ -6,6 +6,7 @@ compatible_body_formats: [json_array]
 version: "1.0.0"
 since: "1.5.0"
 category: sprint4
+input_positions: [prefix-dsl]
 serves: [readability, conversion]
 content_types: [tutorial, report]
 industry: [general]
@@ -35,6 +36,7 @@ fields:
       example: "是的，所有主题都会渲染这些模块。"
       value_type: string
   optional: []
+fields_compatibility_only: true
 body:
   min_items: 2
   allowed_prefixes: ["Q:", "A:"]
@@ -49,6 +51,23 @@ example: |
   A: 给一篇草稿或一个选题，先让 Agent 30 分钟内出一版高级稿。
   :::
 example_assert_contains: "md2wechat 是排版工具吗？"
+agent_contract:
+  body_format: dialogue
+  required:
+    - Q
+    - A
+  optional: []
+  enums: {}
+  defaults: {}
+  invalid:
+    - lowercase-prefix
+    - missing-Q-or-A
+    - blank-Q-or-A
+    - zero-pairs
+  ignored: []
+  legacy:
+    - json-array
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

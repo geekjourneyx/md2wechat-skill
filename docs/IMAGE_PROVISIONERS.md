@@ -18,7 +18,7 @@ md2wechat 支持多种图片生成服务，可以在 Markdown 中使用 AI 生�
 
 ```yaml
 api:
-  # 图片服务提供者: openai, atlascloud, tuzi, modelscope, openrouter, gemini, volcengine
+  # 图片服务提供者: openai, minimax, atlascloud, tuzi, modelscope, openrouter, gemini, volcengine
   image_provider: "tuzi"
 
   # API 配置
@@ -36,10 +36,90 @@ image:
 
 ## 支持的图片服务
 
+### MiniMax
+
+MiniMax 提供 `image-01` 系列图片生成能力，并且是当前唯一支持主体参考（subject reference / 图生图）的 provider。
+
+如果省略 `image_base_url` / `IMAGE_API_BASE`，默认使用全球站 `https://api.minimax.io`；国内站请显式配置 `https://api.minimaxi.com`。
+如果省略 `image_model` / `IMAGE_MODEL`，默认值是 `image-01`；如果省略 `image_size` / `IMAGE_SIZE`，默认值是 `1:1`。
+#### 配置示例
+
+```yaml
+api:
+  image_provider: "minimax"
+  image_key: "minimax-..."
+  image_base_url: "https://api.minimax.io"  # 国内站: https://api.minimaxi.com
+  image_model: "image-01"
+  image_size: "1:1"
+```
+
+或使用环境变量：
+
+```bash
+export IMAGE_PROVIDER="minimax"
+export IMAGE_API_KEY="minimax-..."
+export IMAGE_API_BASE="https://api.minimax.io"   # 国内站: https://api.minimaxi.com
+export IMAGE_MODEL="image-01"
+export IMAGE_SIZE="1:1"
+```
+
+#### 区域 endpoint
+
+| 区域 | Base URL |
+|------|----------|
+| 全球站（默认） | `https://api.minimax.io` |
+| 国内站 | `https://api.minimaxi.com` |
+
+请求路径为 `POST /v1/image_generation`，鉴权方式为 `Authorization: Bearer <IMAGE_API_KEY>`。
+
+#### 支持的模型
+
+| 模型 | 说明 | 支持主体参考 |
+|------|------|--------------|
+| `image-01` | MiniMax 图片模型（默认） | 是 |
+| `image-01-live` | MiniMax live 图片模型 | 否 |
+
+#### 支持的尺寸
+
+`image_size` 既可以是宽高比，也可以是 `宽x高` 形式：
+
+| 写法 | 说明 |
+|------|------|
+| `1:1`（默认） | 按宽高比生成，另支持 `16:9`、`4:3`、`3:2`、`2:3`、`3:4`、`9:16`、`21:9` |
+| `1024x768` | 显式像素尺寸，会作为 `width` / `height` 传给 API |
+
+补充说明：
+
+- 使用 `宽x高` 时不再发送 `aspect_ratio`，两者不会同时出现
+- `image_size` 写成无法解析的值（例如 `2K`）会直接返回 `invalid_size`，不会发出请求
+
+#### 主体参考（图生图）
+
+`--subject-reference` 会把人像参考图作为 `subject_reference` 传给 MiniMax，用于在生成结果中保持同一人物形象：
+
+```bash
+md2wechat generate_image "保持同一人物形象的秋日封面" \
+  --subject-reference "https://cdn.example.com/portrait.png"
+```
+
+限制说明：
+
+- 只支持 `minimax` provider，其他 provider 传入该参数会立即返回 `CONFIG_INVALID`
+- 只支持 `image-01`，`image-01-live` 或未知模型会立即返回 `CONFIG_INVALID`
+- 参考图必须是可公开访问的 `http://` 或 `https://` 图片 URL；当前不支持内联 data URL 和本地路径
+- 建议使用单人正脸照片，格式 `JPG` / `JPEG` / `PNG`
+- 参考类型固定为 `character`（人像）
+- 可以和 `--size`、`--model` 组合使用
+- 想确认当前 CLI 是否识别到该能力，执行 `md2wechat providers show minimax --json`，查看 `supports_subject_reference`
+
+#### 官方文档
+
+- https://platform.minimax.io/docs/api-reference/api-overview
+- https://platform.minimaxi.com/docs/api-reference/api-overview
+
 ### Atlas Cloud
 
 Atlas Cloud 使用异步 Media API 生成图片。md2wechat 会提交任务并按 API 返回的轮询地址等待结果，支持 `atlascloud`、`atlas-cloud` 和 `atlas` 三个 provider 名称。
-
 #### 配置示例
 
 ```yaml
@@ -530,12 +610,13 @@ md2wechat convert article.md --preview
 ### Q: 提示 "参数配置有误" 怎么办？
 
 **A:** 请检查：
-1. `image_provider` 是否为 `openai`、`tuzi`、`modelscope`、`openrouter`、`gemini` 或 `volcengine`
+1. `image_provider` 是否为 `openai`、`minimax`、`atlascloud`（或 `atlas-cloud` / `atlas`）、`tuzi`、`modelscope`、`openrouter`、`gemini` 或 `volcengine`
 2. `image_model` 是否在支持的模型列表中
 3. `image_size` 是否在支持的尺寸列表中
 4. **ModelScope 只支持 `WIDTHxHEIGHT`**
-5. **OpenRouter / Gemini 支持比例格式如 `16:9`**
-6. **Volcengine Ark 当前使用尺寸等级，如 `2K`、`3K`**
+5. **Atlas Cloud 只支持 `WIDTHxHEIGHT`，取值需在所选模型 schema 支持的尺寸内**
+6. **OpenRouter / Gemini 支持比例格式如 `16:9`**
+7. **Volcengine Ark 当前使用尺寸等级，如 `2K`、`3K`**
 
 ---
 
@@ -603,3 +684,20 @@ export IMAGE_SIZE="2048x2048"  # TuZi 要求最小 3686400 像素
 | `bad_request` | 参数错误 | 检查模型和尺寸配置 |
 | `network_error` | 网络错误 | 检查网络连接和 API 地址 |
 | `no_image` | 未生成图片 | 检查提示词是否符合内容政策 |
+| `safety_blocked` | 提示词被内容安全策略拦截 | 修改提示词后重试 |
+| `server_error` | 上游服务错误（HTTP 5xx） | 稍后重试 |
+| `invalid_size` | 尺寸既不是宽高比也不是 `宽x高` | 检查 `image_size` / `--size` |
+| `invalid_subject_reference` | 主体参考图不是可公开访问的 http(s) 图片 URL | 上传参考图后传入其公开 URL |
+| `subject_reference_unsupported` | 当前模型不支持主体参考 | 改用 `image-01` |
+
+MiniMax 返回的 `base_resp.status_code` 会映射到上面的错误代码，并在错误信息中保留上游状态码和状态信息：
+
+| `base_resp.status_code` | 错误代码 |
+|-------------------------|----------|
+| `1004` / `2049` | `unauthorized` |
+| `1002` | `rate_limit` |
+| `1008` | `payment_required` |
+| `1026` | `safety_blocked` |
+| `1027` | `safety_blocked` |
+| `2013` | `bad_request` |
+| 其他非 0 值 | `api_error` |

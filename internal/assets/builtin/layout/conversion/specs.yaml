@@ -5,6 +5,7 @@ body_format: rows
 version: "1.0.0"
 since: "1.5.0"
 category: conversion
+input_positions: [row-dsl]
 serves: [readability, conversion]
 content_types: [report, announcement, product-launch]
 industry: [general]
@@ -22,11 +23,14 @@ anti_pattern: |
   没有任何满足 2 列的行导致渲染失败；
   参数名写太长影响对齐；
   值列和说明列混用（值应简洁，说明可展开）。
+opener:
+  caption: true
+  caption_default: 参数信息
 rows:
   delimiter: "|"
   min_columns: 2
   schema:
-    - name: spec
+    - name: label
       description: 参数名称
     - name: value
       description: 参数值
@@ -38,6 +42,25 @@ example: |
   交付方式 | 在线编辑器 + API | 既能手工写，也能接自动化
   更新频率 | 持续迭代 | 主题和模块会一起升级
   :::
+agent_contract:
+  body_format: rows
+  required:
+    - label
+    - value
+  optional:
+    - header-title
+    - note
+  enums: {}
+  defaults:
+    header-title: 参数信息
+  invalid:
+    - blank-label
+    - blank-value
+    - trailing-empty-note
+  ignored:
+    - cells-after-note
+  legacy: []
+  applicability: {}
 metadata:
   author: md2wechat
   provenance: builtin

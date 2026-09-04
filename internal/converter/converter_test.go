@@ -319,7 +319,7 @@ func TestConvertViaAPIStripsFrontMatterBeforeSendingMarkdown(t *testing.T) {
 			t.Fatalf("decode request: %v", err)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"code":0,"msg":"ok","data":{"html":"<p>ok</p>"}}`))
+		_, _ = w.Write([]byte(`{"code":0,"msg":"ok","data":{"html":"<p>ok</p>","theme":"default","fontSize":"medium","backgroundType":"none","wordCount":2,"estimatedReadTime":1}}`))
 	}))
 	defer server.Close()
 
@@ -366,7 +366,7 @@ func TestAPIConverterRejectsSuccessfulResponseWithoutHTML(t *testing.T) {
 				_ = json.NewEncoder(w).Encode(map[string]any{
 					"code": 0,
 					"msg":  "ok",
-					"data": map[string]any{"html": html},
+					"data": map[string]any{"html": html, "theme": "default", "fontSize": "medium", "backgroundType": "none", "wordCount": 2, "estimatedReadTime": 1},
 				})
 			}))
 			defer server.Close()
