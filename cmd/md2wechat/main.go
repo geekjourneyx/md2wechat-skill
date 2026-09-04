@@ -295,6 +295,7 @@ func rootCommandManifest() []rootCommandEntry {
 		{Command: brandCmd, DiscoveryOrder: 21},
 		{Command: doctorCmd, DiscoveryOrder: 22},
 		{Command: skillsCmd, DiscoveryOrder: 23},
+		{Command: newFactsCommand(), DiscoveryOrder: 26},
 	}
 }
 
