@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	codeFactsExported        = "FACTS_EXPORTED"
+	codeFactsExported         = "FACTS_EXPORTED"
 	runtimeFactsSchemaVersion = "v1"
 )
 
