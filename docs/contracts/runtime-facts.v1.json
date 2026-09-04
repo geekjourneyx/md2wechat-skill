@@ -1,0 +1,15 @@
+{
+  "schema_version": "v1",
+  "version": "3.4.0",
+  "source_commit": "07fdea284e71ddaf5c6b5311238d7e9c2df3b8af",
+  "counts": {
+    "api_themes": 48,
+    "recommended_scenarios": 77,
+    "recommended_syntax": 56,
+    "render_syntax": 63
+  },
+  "side_effects": {
+    "convert": false,
+    "create_draft": true
+  }
+}
