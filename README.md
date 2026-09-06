@@ -5,7 +5,7 @@
   md2wechat
 </h1>
 
-<img src="assets/readme-header.gif" alt="md2wechat：写好内容，排版交给 Agent；原稿、编排与成稿的立体创作工作台" width="720" />
+<img src="assets/readme-header.gif" alt="md2wechat：原稿中的标题、配图与正文依次编排成文章的 3D 动画" width="720" />
 
 **面向 AI Agent 的微信公众号创作与发布 CLI**
 
