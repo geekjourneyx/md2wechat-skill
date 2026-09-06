@@ -5,9 +5,7 @@
   md2wechat
 </h1>
 
-<a href="assets/readme-demo.mp4"><img src="assets/readme-header.gif" alt="md2wechat 立体创作工作台：原稿、编排与成稿；点击观看无声演示" width="720" /></a>
-
-[观看 14 秒无声演示](assets/readme-demo.mp4)
+<img src="assets/readme-header.gif" alt="md2wechat：写好内容，排版交给 Agent；原稿、编排与成稿的立体创作工作台" width="720" />
 
 **面向 AI Agent 的微信公众号创作与发布 CLI**
 
