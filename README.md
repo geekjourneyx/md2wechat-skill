@@ -5,7 +5,9 @@
   md2wechat
 </h1>
 
-<a href="https://www.md2wechat.cn/api-docs?utm_source=github&utm_medium=readme&utm_campaign=readme-hero"><img src="assets/readme-header.gif" alt="md2wechat：从 Markdown 检查、排版、预览到微信公众号草稿" width="720" /></a>
+<a href="assets/readme-demo.mp4"><img src="assets/readme-header.gif" alt="md2wechat 立体创作工作台：原稿、编排与成稿；点击观看无声演示" width="720" /></a>
+
+[观看 14 秒无声演示](assets/readme-demo.mp4)
 
 **面向 AI Agent 的微信公众号创作与发布 CLI**
 
