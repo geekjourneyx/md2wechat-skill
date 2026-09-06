@@ -231,6 +231,16 @@ func applyImageProviderDefaults(cfg *Config) {
 		if cfg.ImageSize == "" {
 			cfg.ImageSize = "1024x1024"
 		}
+	case "atlascloud", "atlas-cloud", "atlas":
+		if cfg.ImageAPIBase == "" {
+			cfg.ImageAPIBase = "https://api.atlascloud.ai/api/v1/model"
+		}
+		if cfg.ImageModel == "" {
+			cfg.ImageModel = "openai/gpt-image-2/text-to-image"
+		}
+		if cfg.ImageSize == "" {
+			cfg.ImageSize = "1024x1024"
+		}
 	case "openrouter", "or":
 		if cfg.ImageAPIBase == "" {
 			cfg.ImageAPIBase = "https://openrouter.ai/api/v1"

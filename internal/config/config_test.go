@@ -748,6 +748,21 @@ func TestLoadStrictRejectsMalformedConfigWhileLoadFallsBack(t *testing.T) {
 	}
 }
 
+func TestApplyImageProviderDefaultsAtlasCloudAlias(t *testing.T) {
+	cfg := &Config{ImageProvider: "atlas"}
+	applyImageProviderDefaults(cfg)
+
+	if cfg.ImageAPIBase != "https://api.atlascloud.ai/api/v1/model" {
+		t.Fatalf("ImageAPIBase = %q", cfg.ImageAPIBase)
+	}
+	if cfg.ImageModel != "openai/gpt-image-2/text-to-image" {
+		t.Fatalf("ImageModel = %q", cfg.ImageModel)
+	}
+	if cfg.ImageSize != "1024x1024" {
+		t.Fatalf("ImageSize = %q", cfg.ImageSize)
+	}
+}
+
 func writeTempConfig(t *testing.T, content string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "config.yaml")

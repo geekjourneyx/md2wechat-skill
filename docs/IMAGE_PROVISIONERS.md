@@ -18,7 +18,7 @@ md2wechat 支持多种图片生成服务，可以在 Markdown 中使用 AI 生�
 
 ```yaml
 api:
-  # 图片服务提供者: openai, minimax, tuzi, modelscope, openrouter, gemini, volcengine
+  # 图片服务提供者: openai, minimax, atlascloud, tuzi, modelscope, openrouter, gemini, volcengine
   image_provider: "tuzi"
 
   # API 配置
@@ -42,7 +42,6 @@ MiniMax 提供 `image-01` 系列图片生成能力，并且是当前唯一支持
 
 如果省略 `image_base_url` / `IMAGE_API_BASE`，默认使用全球站 `https://api.minimax.io`；国内站请显式配置 `https://api.minimaxi.com`。
 如果省略 `image_model` / `IMAGE_MODEL`，默认值是 `image-01`；如果省略 `image_size` / `IMAGE_SIZE`，默认值是 `1:1`。
-
 #### 配置示例
 
 ```yaml
@@ -117,6 +116,32 @@ md2wechat generate_image "保持同一人物形象的秋日封面" \
 
 - https://platform.minimax.io/docs/api-reference/api-overview
 - https://platform.minimaxi.com/docs/api-reference/api-overview
+
+### Atlas Cloud
+
+Atlas Cloud 使用异步 Media API 生成图片。md2wechat 会提交任务并按 API 返回的轮询地址等待结果，支持 `atlascloud`、`atlas-cloud` 和 `atlas` 三个 provider 名称。
+#### 配置示例
+
+```yaml
+api:
+  image_provider: "atlascloud"
+  image_key: "your-atlascloud-api-key"
+  image_base_url: "https://api.atlascloud.ai/api/v1/model"
+  image_model: "openai/gpt-image-2/text-to-image"
+  image_size: "1024x1024"
+```
+
+或使用项目现有的通用图片环境变量：
+
+```bash
+export IMAGE_PROVIDER="atlascloud"
+export IMAGE_API_KEY="your-atlascloud-api-key"
+export IMAGE_API_BASE="https://api.atlascloud.ai/api/v1/model"
+export IMAGE_MODEL="openai/gpt-image-2/text-to-image"
+export IMAGE_SIZE="1024x1024"
+```
+
+当前内置并验证的默认模型是 `openai/gpt-image-2/text-to-image`。可用模型和输入参数会随服务更新，切换模型前请查看 Atlas Cloud 实时模型目录及对应 schema。
 
 ---
 
@@ -585,12 +610,13 @@ md2wechat convert article.md --preview
 ### Q: 提示 "参数配置有误" 怎么办？
 
 **A:** 请检查：
-1. `image_provider` 是否为 `openai`、`minimax`、`tuzi`、`modelscope`、`openrouter`、`gemini` 或 `volcengine`
+1. `image_provider` 是否为 `openai`、`minimax`、`atlascloud`（或 `atlas-cloud` / `atlas`）、`tuzi`、`modelscope`、`openrouter`、`gemini` 或 `volcengine`
 2. `image_model` 是否在支持的模型列表中
 3. `image_size` 是否在支持的尺寸列表中
 4. **ModelScope 只支持 `WIDTHxHEIGHT`**
-5. **OpenRouter / Gemini 支持比例格式如 `16:9`**
-6. **Volcengine Ark 当前使用尺寸等级，如 `2K`、`3K`**
+5. **Atlas Cloud 只支持 `WIDTHxHEIGHT`，取值需在所选模型 schema 支持的尺寸内**
+6. **OpenRouter / Gemini 支持比例格式如 `16:9`**
+7. **Volcengine Ark 当前使用尺寸等级，如 `2K`、`3K`**
 
 ---
 
