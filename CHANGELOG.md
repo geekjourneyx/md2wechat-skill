@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0] - 2026-09-07
+
+### Added
+- Added Atlas Cloud image generation with `atlascloud`, `atlas-cloud`, and `atlas` provider names, generic `IMAGE_*` configuration, and the default `openai/gpt-image-2/text-to-image` model at `1024x1024`.
+- Added asynchronous task submission and same-origin result polling for Atlas Cloud, with authentication, balance, rate-limit, and task-failure handling.
+
+### Changed
+- Updated image-provider discovery and configuration documentation for Atlas Cloud, and aligned installation instructions with v3.5.0.
+- Refreshed the README with a continuously looping article-transformation demonstration.
+
 ## [3.4.0] - 2026-09-01
 
 ### Added

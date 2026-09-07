@@ -163,7 +163,7 @@ md2wechat generate_infographic --article article.md --preset infographic-claude-
 
 完整 preset 清单、用途和默认画幅以 `prompts list/show --json` 为准，文档只保留代表性示例。
 
-支持 Volcengine、ModelScope、OpenRouter、OpenAI、Gemini、MiniMax 等服务。配置见 [docs/IMAGE_PROVISIONERS.md](docs/IMAGE_PROVISIONERS.md)。
+支持 Volcengine、ModelScope、OpenRouter、OpenAI、Gemini、MiniMax、Atlas Cloud 等服务。配置见 [docs/IMAGE_PROVISIONERS.md](docs/IMAGE_PROVISIONERS.md)。
 
 需要在生成结果中保持同一人物形象时，可以用 MiniMax 的主体参考（图生图）：
 

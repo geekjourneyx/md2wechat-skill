@@ -770,4 +770,4 @@ JSON envelope 格式（v1）：
 
 ---
 
-*最后更新：与 md2wechat v3.4.0 同步*
+*最后更新：与 md2wechat v3.5.0 同步*
