@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Added Requesty image generation with `requesty` and `rq` provider names, generic `IMAGE_*` configuration, and the default `vertex/gemini-3.1-flash-image` model at `1:1` / `1K`.
+- Added Requesty specific `IMAGE_SIZE` parsing that accepts an aspect ratio, a `1K` / `2K` / `4K` tier, or an exact `WIDTHxHEIGHT` from the Requesty dimension table, and rejects anything else instead of silently substituting a size.
+- Added Requesty error handling that keeps the router message and code and distinguishes authentication, forbidden, balance, rate limit, model not found, and bad request failures.
+
 ## [3.5.0] - 2026-09-07
 
 ### Added
