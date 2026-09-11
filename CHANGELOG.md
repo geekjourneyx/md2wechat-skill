@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Added Requesty image generation with `requesty` and `rq` provider names, generic `IMAGE_*` configuration, and the default `vertex/gemini-3.1-flash-image` model at `1:1` / `1K`.
+- Added Requesty specific `IMAGE_SIZE` parsing that accepts an aspect ratio, a `1K` / `2K` / `4K` tier, or an exact `WIDTHxHEIGHT` from the Requesty dimension table, and rejects anything else instead of silently substituting a size.
+- Added Requesty error handling that keeps the router message and code and distinguishes authentication, forbidden, balance, rate limit, model not found, and bad request failures.
+
 ## [3.5.0] - 2026-09-07
 
 ### Added
@@ -101,14 +108,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Documented `inspect --json data.readiness.targets/blockers` as the publish preflight truth source, while keeping `advise --json` scoped to optional enhancement decisions.
 - Tightened Agent-facing repository rules to keep deterministic routing free of subjective hardcoded phrase lists and style-quality heuristics.
-
-### Added
-- **Requesty Image Provider**: Dedicated OpenAI-compatible image generation provider (aliases `requesty` / `rq`)
-  - Base URL `https://router.requesty.ai/v1`, `/chat/completions` endpoint returning an image URL
-  - Verified image models: `google/gemini-3.1-flash-image-preview` (default), `vertex/gemini-2.5-flash-image`
-  - Configuration: `image_provider: requesty`
-  - New files: `internal/image/requesty.go`, `internal/image/requesty_test.go`
-  - Updated: `internal/image/provider.go`, `internal/config/config.go`, and provider docs
 
 ## [2.9.0] - 2026-06-26
 

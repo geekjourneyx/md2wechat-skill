@@ -8,21 +8,50 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 )
 
 // RequestyProvider is the Requesty image generation provider.
-// Requesty offers a unified OpenAI-compatible API supporting multiple image models.
+// Requesty exposes image models through its OpenAI compatible chat completions endpoint.
+// Contract: https://docs.requesty.ai/features/image-generation
 type RequestyProvider struct {
 	apiKey      string
 	baseURL     string
 	model       string
-	aspectRatio string // Requesty uses aspect_ratio rather than WIDTHxHEIGHT
-	imageSize   string // 1K/2K/4K
+	aspectRatio string // Requesty image_config.aspect_ratio, for example "16:9"
+	imageSize   string // Requesty image_config.image_size: 1K, 2K or 4K
 	client      *http.Client
 }
+
+// requestyAspectRatios lists the aspect ratios accepted by Requesty's image_config, with the
+// pixel dimensions produced at each size tier (1K, 2K, 4K). The table mirrors the Requesty docs.
+var requestyAspectRatios = []struct {
+	ratio      string
+	dimensions [3]string // 1K, 2K, 4K
+}{
+	{"1:1", [3]string{"1024x1024", "2048x2048", "4096x4096"}},
+	{"2:3", [3]string{"848x1264", "1696x2528", "3392x5056"}},
+	{"3:2", [3]string{"1264x848", "2528x1696", "5056x3392"}},
+	{"3:4", [3]string{"896x1200", "1792x2400", "3584x4800"}},
+	{"4:3", [3]string{"1200x896", "2400x1792", "4800x3584"}},
+	{"4:5", [3]string{"928x1152", "1856x2304", "3712x4608"}},
+	{"5:4", [3]string{"1152x928", "2304x1856", "4608x3712"}},
+	{"9:16", [3]string{"768x1376", "1536x2752", "3072x5504"}},
+	{"16:9", [3]string{"1376x768", "2752x1536", "5504x3072"}},
+	{"21:9", [3]string{"1584x672", "3168x1344", "6336x2688"}},
+}
+
+// requestyImageSizes lists the size tiers accepted by Requesty's image_config.image_size.
+// 1K is what Requesty applies when image_size is omitted.
+var requestyImageSizes = []string{"1K", "2K", "4K"}
+
+const (
+	requestyDefaultAspectRatio = "1:1"
+	requestyDefaultImageSize   = "1K"
+)
 
 // NewRequestyProvider creates a Requesty Provider.
 func NewRequestyProvider(cfg *config.Config) (*RequestyProvider, error) {
@@ -31,13 +60,16 @@ func NewRequestyProvider(cfg *config.Config) (*RequestyProvider, error) {
 		model = DefaultProviderModel("requesty")
 	}
 
-	// Map IMAGE_SIZE (WIDTHxHEIGHT) to Requesty's aspect_ratio and image_size.
-	aspectRatio, imageSize := mapSizeToOpenRouter(cfg.ImageSize)
+	aspectRatio, imageSize, err := mapSizeToRequesty(cfg.ImageSize)
+	if err != nil {
+		return nil, err
+	}
 
-	baseURL := cfg.ImageAPIBase
+	baseURL := strings.TrimSpace(cfg.ImageAPIBase)
 	if baseURL == "" {
 		baseURL = DefaultProviderBaseURL("requesty")
 	}
+	baseURL = strings.TrimRight(baseURL, "/")
 
 	return &RequestyProvider{
 		apiKey:      cfg.ImageAPIKey,
@@ -124,28 +156,19 @@ func (p *RequestyProvider) Generate(ctx context.Context, prompt string) (*Genera
 }
 
 // buildRequest builds the Requesty request body (Chat Completions format).
+// Requesty does not use the OpenRouter "modalities" field: an image model returns images from a
+// plain chat completion, and image_config carries the aspect ratio and size tier.
 func (p *RequestyProvider) buildRequest(prompt string) map[string]any {
-	req := map[string]any{
+	return map[string]any{
 		"model": p.model,
 		"messages": []map[string]string{
 			{"role": "user", "content": prompt},
 		},
-		"modalities": []string{"image"}, // image only
+		"image_config": map[string]string{
+			"aspect_ratio": p.aspectRatio,
+			"image_size":   p.imageSize,
+		},
 	}
-
-	// Add image_config (if aspect_ratio or image_size is set).
-	imageConfig := map[string]string{}
-	if p.aspectRatio != "" {
-		imageConfig["aspect_ratio"] = p.aspectRatio
-	}
-	if p.imageSize != "" {
-		imageConfig["image_size"] = p.imageSize
-	}
-	if len(imageConfig) > 0 {
-		req["image_config"] = imageConfig
-	}
-
-	return req
 }
 
 // requestyResponse is the Requesty API response structure.
@@ -154,17 +177,36 @@ type requestyResponse struct {
 		Message struct {
 			Content string `json:"content,omitempty"`
 			Images  []struct {
+				Type     string `json:"type,omitempty"`
 				ImageURL struct {
 					URL string `json:"url"`
 				} `json:"image_url"`
 			} `json:"images,omitempty"`
 		} `json:"message"`
 	} `json:"choices"`
-	Error *struct {
-		Message string `json:"message"`
-		Type    string `json:"type"`
-		Code    string `json:"code"`
-	} `json:"error,omitempty"`
+	Error *requestyError `json:"error,omitempty"`
+}
+
+// requestyError is the error envelope returned by the Requesty router.
+// Router-originated errors carry "origin":"router" and no code; errors forwarded from the upstream
+// model provider may carry a code, which can be a string or a number depending on the provider.
+type requestyError struct {
+	Message string          `json:"message"`
+	Type    string          `json:"type,omitempty"`
+	Origin  string          `json:"origin,omitempty"`
+	Code    json.RawMessage `json:"code,omitempty"`
+}
+
+// codeString returns the error code as text, whatever JSON type Requesty used for it.
+func (e *requestyError) codeString() string {
+	if e == nil || len(e.Code) == 0 {
+		return ""
+	}
+	var asString string
+	if err := json.Unmarshal(e.Code, &asString); err == nil {
+		return asString
+	}
+	return strings.TrimSpace(string(e.Code))
 }
 
 // parseResponseAndSave parses the response and saves the base64 image to a temp file.
@@ -181,11 +223,15 @@ func (p *RequestyProvider) parseResponseAndSave(body io.Reader) (string, error) 
 
 	// Check whether an image was returned.
 	if len(result.Choices) == 0 || len(result.Choices[0].Message.Images) == 0 {
+		hint := "提示词可能不符合内容政策，请尝试修改提示词"
+		if modelsHint := ProviderSupportedModelsHint("requesty"); modelsHint != "" {
+			hint += "；也请确认模型支持图片生成。" + modelsHint
+		}
 		return "", &GenerateError{
 			Provider: p.Name(),
 			Code:     "no_image",
 			Message:  "未生成图片",
-			Hint:     "提示词可能不符合内容政策，请尝试修改提示词",
+			Hint:     hint,
 		}
 	}
 
@@ -238,62 +284,135 @@ func (p *RequestyProvider) parseResponseAndSave(body io.Reader) (string, error) 
 }
 
 // handleErrorResponse handles error responses.
+// The HTTP status picks the error class; the Requesty message (and code, when present) is kept in
+// the user facing message so the real cause is not hidden behind a generic text.
 func (p *RequestyProvider) handleErrorResponse(resp *http.Response) error {
 	body, _ := io.ReadAll(resp.Body)
 
 	var errResp requestyResponse
 	_ = json.Unmarshal(body, &errResp)
 
-	errMsg := ""
+	detail := ""
 	if errResp.Error != nil {
-		errMsg = errResp.Error.Message
+		detail = strings.TrimSpace(errResp.Error.Message)
+		if code := errResp.Error.codeString(); code != "" {
+			detail = fmt.Sprintf("[%s] %s", code, detail)
+		}
 	}
+	withDetail := func(msg string) string {
+		if detail == "" {
+			return msg
+		}
+		return msg + ": " + detail
+	}
+	original := fmt.Errorf("status %d: %s", resp.StatusCode, string(body))
 
 	switch resp.StatusCode {
 	case http.StatusUnauthorized:
 		return &GenerateError{
 			Provider: p.Name(),
 			Code:     "unauthorized",
-			Message:  "Requesty API Key 无效或已过期",
-			Hint:     "请检查配置文件中的 api.image_key 是否正确，或前往 requesty.ai 获取新的 API Key",
-			Original: fmt.Errorf("status 401: %s", string(body)),
+			Message:  withDetail("Requesty API Key 无效或已过期"),
+			Hint:     "请检查配置文件中的 api.image_key 是否正确，或前往 https://app.requesty.ai/api-keys 获取新的 API Key",
+			Original: original,
+		}
+	case http.StatusForbidden:
+		return &GenerateError{
+			Provider: p.Name(),
+			Code:     "forbidden",
+			Message:  withDetail("Requesty 拒绝了本次请求"),
+			Hint:     "请确认 API Key 有效，且该 Key 允许访问所选模型（在 app.requesty.ai 检查 Key 的模型和策略限制）",
+			Original: original,
+		}
+	case http.StatusPaymentRequired:
+		return &GenerateError{
+			Provider: p.Name(),
+			Code:     "payment_required",
+			Message:  withDetail("Requesty 账户余额不足"),
+			Hint:     "请前往 app.requesty.ai 充值或检查账户余额",
+			Original: original,
 		}
 	case http.StatusTooManyRequests:
 		return &GenerateError{
 			Provider: p.Name(),
 			Code:     "rate_limit",
-			Message:  "请求过于频繁，请稍后重试",
+			Message:  withDetail("请求过于频繁，请稍后重试"),
 			Hint:     "Requesty API 有速率限制，请等待一段时间后再试",
-			Original: fmt.Errorf("status 429: %s", string(body)),
+			Original: original,
+		}
+	case http.StatusNotFound:
+		hint := "请检查模型名称是否正确"
+		if modelsHint := ProviderSupportedModelsHint("requesty"); modelsHint != "" {
+			hint += "。" + modelsHint
+		}
+		return &GenerateError{
+			Provider: p.Name(),
+			Code:     "model_not_found",
+			Message:  withDetail("Requesty 未找到所选模型"),
+			Hint:     hint,
+			Original: original,
 		}
 	case http.StatusBadRequest:
-		hint := "请检查模型名称、aspect_ratio 等参数是否正确"
+		hint := "请检查模型名称、aspect_ratio、image_size 等参数是否正确"
 		if modelsHint := ProviderSupportedModelsHint("requesty"); modelsHint != "" {
 			hint += "。" + modelsHint
 		}
 		return &GenerateError{
 			Provider: p.Name(),
 			Code:     "bad_request",
-			Message:  fmt.Sprintf("请求参数错误: %s", errMsg),
+			Message:  withDetail("请求参数错误"),
 			Hint:     hint,
-			Original: fmt.Errorf("status 400: %s", string(body)),
-		}
-	case http.StatusPaymentRequired, http.StatusForbidden:
-		return &GenerateError{
-			Provider: p.Name(),
-			Code:     "payment_required",
-			Message:  "Requesty 账户余额不足或访问受限",
-			Hint:     "请前往 requesty.ai 检查账户余额和 API 使用权限",
-			Original: fmt.Errorf("status %d: %s", resp.StatusCode, string(body)),
+			Original: original,
 		}
 	default:
 		return &GenerateError{
 			Provider: p.Name(),
 			Code:     "unknown",
-			Message:  fmt.Sprintf("Requesty API 返回错误 (HTTP %d)", resp.StatusCode),
-			Hint:     "请稍后重试，或访问 requesty.ai 查看服务状态",
-			Original: fmt.Errorf("status %d: %s", resp.StatusCode, string(body)),
+			Message:  withDetail(fmt.Sprintf("Requesty API 返回错误 (HTTP %d)", resp.StatusCode)),
+			Hint:     "请稍后重试，或访问 status.requesty.ai 查看服务状态",
+			Original: original,
 		}
+	}
+}
+
+// mapSizeToRequesty maps IMAGE_SIZE to Requesty's image_config aspect_ratio and image_size.
+//
+// Accepted forms:
+//   - empty: Requesty's own default, 1:1 at 1K
+//   - an aspect ratio such as "16:9": that ratio at 1K
+//   - a size tier such as "2K": 1:1 at that tier
+//   - exact WIDTHxHEIGHT from the Requesty dimension table, such as "2752x1536" (16:9 at 2K)
+//
+// Anything else is rejected instead of being silently replaced by a different size.
+func mapSizeToRequesty(size string) (aspectRatio, imageSize string, err error) {
+	size = strings.TrimSpace(size)
+	if size == "" {
+		return requestyDefaultAspectRatio, requestyDefaultImageSize, nil
+	}
+
+	for _, tier := range requestyImageSizes {
+		if strings.EqualFold(size, tier) {
+			return requestyDefaultAspectRatio, tier, nil
+		}
+	}
+
+	for _, entry := range requestyAspectRatios {
+		if size == entry.ratio {
+			return entry.ratio, requestyDefaultImageSize, nil
+		}
+		for i, dims := range entry.dimensions {
+			if strings.EqualFold(size, dims) {
+				return entry.ratio, requestyImageSizes[i], nil
+			}
+		}
+	}
+
+	return "", "", &config.ConfigError{
+		Field:   "ImageSize",
+		Message: fmt.Sprintf("Requesty 不支持的图片尺寸: %q", size),
+		Hint: "可填写宽高比（" + strings.Join(GetRequestySupportedAspectRatios(), ", ") +
+			"）、分辨率等级（" + strings.Join(GetRequestySupportedImageSizes(), ", ") +
+			"）或对应的精确尺寸，例如 16:9、2K、2752x1536；详见 docs/IMAGE_PROVISIONERS.md 的 Requesty 尺寸表",
 	}
 }
 
@@ -302,27 +421,28 @@ func GetRequestySupportedModels() []string {
 	return ProviderSupportedModelNames("requesty")
 }
 
-// GetRequestySupportedAspectRatios returns the list of aspect ratios supported by Requesty.
+// GetRequestySupportedAspectRatios returns the aspect ratios accepted by Requesty's image_config.
 func GetRequestySupportedAspectRatios() []string {
-	return []string{
-		"1:1",  // 1024x1024
-		"2:3",  // 832x1248
-		"3:2",  // 1248x832
-		"3:4",  // 864x1184
-		"4:3",  // 1184x864
-		"4:5",  // 896x1152
-		"5:4",  // 1152x896
-		"9:16", // 768x1344
-		"16:9", // 1344x768
-		"21:9", // 1536x672
+	ratios := make([]string, 0, len(requestyAspectRatios))
+	for _, entry := range requestyAspectRatios {
+		ratios = append(ratios, entry.ratio)
 	}
+	return ratios
 }
 
-// GetRequestySupportedImageSizes returns the image size tiers supported by Requesty.
+// GetRequestySupportedImageSizes returns the size tiers accepted by Requesty's image_config.
 func GetRequestySupportedImageSizes() []string {
-	return []string{
-		"1K", // standard resolution
-		"2K", // higher resolution (default)
-		"4K", // highest resolution
+	sizes := make([]string, len(requestyImageSizes))
+	copy(sizes, requestyImageSizes)
+	return sizes
+}
+
+// GetRequestySupportedDimensions returns every exact WIDTHxHEIGHT accepted for IMAGE_SIZE,
+// grouped by aspect ratio in 1K, 2K, 4K order.
+func GetRequestySupportedDimensions() map[string][]string {
+	dims := make(map[string][]string, len(requestyAspectRatios))
+	for _, entry := range requestyAspectRatios {
+		dims[entry.ratio] = append([]string(nil), entry.dimensions[:]...)
 	}
+	return dims
 }

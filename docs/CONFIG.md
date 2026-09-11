@@ -506,8 +506,9 @@ api:
 - 图片 prompt 里的 `default_aspect_ratio` 是 preset 的语义默认画幅，用于渲染 prompt 与默认视觉比例
 - 对于 Gemini / OpenRouter 这类支持比例格式的 provider，`api.image_size` 可以直接写成 `16:9`、`3:4`、`21:9`
 - 对于 Atlas Cloud，`api.image_size` 使用模型 schema 支持的 `WIDTHxHEIGHT`，默认是 `1024x1024`
+- 对于 Requesty，`api.image_size` 接受宽高比（`16:9`）、分辨率等级（`1K` / `2K` / `4K`）或 Requesty 尺寸表中的精确 `WIDTHxHEIGHT`（如 `2752x1536`）；省略时使用 `1:1` / `1K`，其他值会报配置错误，见 [docs/IMAGE_PROVISIONERS.md](IMAGE_PROVISIONERS.md)
 - 对于 Volcengine Ark 当前接入，`api.image_size` 使用尺寸等级，例如 `2K`、`3K`；如果省略，当前默认值是 `2K`
-- `api.image_base_url` 对 OpenAI、MiniMax、Atlas Cloud、TuZi、ModelScope、OpenRouter、Volcengine 生效；Gemini 直连模式当前固定走官方 Go SDK backend，不读取该配置
+- `api.image_base_url` 对 OpenAI、MiniMax、Atlas Cloud、TuZi、ModelScope、OpenRouter、Requesty、Volcengine 生效；Gemini 直连模式当前固定走官方 Go SDK backend，不读取该配置
 
 ---
 
