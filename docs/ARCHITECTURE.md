@@ -8,6 +8,8 @@ md2wechat-skill 的核心目标不是“把 Markdown 变好看”，而是把文
 
 `cmd -> inspect + converter/publish orchestrators -> asset pipeline -> draft/wechat adapters`
 
+`cmd -> syncprepare -> local HTML -> host Agent / embedded platform SOP`
+
 这条主线的含义是：
 
 - `cmd/md2wechat` 只负责参数解析、命令入口、输出 envelope 和错误出口。
@@ -16,6 +18,7 @@ md2wechat-skill 的核心目标不是“把 Markdown 变好看”，而是把文
 - `internal/publish` 负责应用层编排，承接文章转换、图片处理、草稿保存和图片帖子创建。
 - `internal/publish/AssetPipeline` 负责解析后的资产上传、生成、下载和 HTML 回填。
 - `internal/draft` 和 `internal/wechat` 负责平台适配，不再承担命令级业务编排。
+- `internal/syncprepare` 校验普通 Markdown 和本地图片，生成语义 HTML；宿主 Agent 按内置平台说明操作现有浏览器。CLI 不承担浏览器生命周期或内部平台请求。
 
 ## 平台适配层
 
@@ -79,7 +82,14 @@ md2wechat-skill 的核心目标不是“把 Markdown 变好看”，而是把文
 - 新建草稿 / newspic draft
 - 远程下载边界与 SSRF 防护
 
-## 两条发布流
+### `internal/syncprepare`
+
+- 普通 Markdown、标题与本地素材检查
+- 单个 `body.html`，返回标题、图片路径和标题级别
+- 不加载微信配置，不联网，不创建浏览器
+- 平台行为与核验要求放在 `skills/md2wechat/references/sync/`，通过已有 `skills read` 读取
+
+## 主要执行流
 
 ### 确认层
 
@@ -123,9 +133,17 @@ metadata 解析顺序：
 4. 通过 `AssetPipeline` 上传图片
 5. 通过 `draft` / `wechat` adapter 创建 `newspic` 草稿
 
+### `sync prepare` 与宿主执行
+
+1. 本地检查输入并生成正文；返回 `action_required`
+2. 宿主检查目标、账号、现有会话和必要操作能力
+3. 按平台说明正常上传图片、粘贴正文并填写标题
+4. 保存后保留唯一草稿地址，重开核验内容与未发布状态
+5. 不明结果先查已有草稿，继续同稿，不盲重建
+
 ## 稳定契约
 
-当前工程里有 5 个关键契约：
+当前工程里有 6 个关键契约：
 
 1. `internal/publish/model.go`
    - 统一 article / asset / artifact model
@@ -137,6 +155,8 @@ metadata 解析顺序：
    - 统一 resolved metadata / source / readiness（含 targets/blockers 投影）/ checks
 5. `AssetPipeline`
    - 统一图片上传、生成、下载、回填
+6. `internal/syncprepare` 与内置平台说明
+   - 本地准备不等于远端完成；宿主负责账号、正常编辑和重开核验
 
 ## 当前设计原则
 
@@ -153,4 +173,4 @@ metadata 解析顺序：
 
 1. 做真实微信/API 凭证的 smoke/staging 验证
 2. 继续收口外部系统契约，而不是继续刷局部覆盖率
-3. 只有在出现第二个发布后端时，才考虑把 `AssetPipeline` 再抽成独立 domain
+3. 继续用目标平台的真实草稿闭环校验外部契约，不把网页实现细节扩散到公共命令层

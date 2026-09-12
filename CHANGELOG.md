@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [3.6.0] - 2026-09-12
+
+### Added
+- Added `sync prepare` to prepare local semantic HTML, title, image paths, and heading levels for cross-platform drafts. Preparation stays offline, requires no WeChat credentials, and returns `action_required` rather than claiming a remote draft exists.
+- Added workflows embedded in the CLI for saving and reopening unpublished Zhihu, CSDN, and Toutiao drafts through the host Agent's logged-in browser. Read them with `skills read`; an outdated local Skill does not need to supply the platform instructions.
+- Added a multi-platform draft tutorial covering browser requirements, image handling, per-platform results, and recovery of the same draft after interruption.
+
+### Fixed
+- Reject unknown `sync` subcommands instead of displaying help with a successful exit status.
+- Reject corrupt local images during preparation before the Agent starts creating platform drafts.
+
+### Security
+- Improved safety checks when downloading remote images for WeChat, including redirected image links.
+
+### Limitations
+- Draft creation requires an Agent with suitable browser access; the CLI does not execute browser actions or publish publicly. agent-browser is an optional fallback pending three-platform end-to-end validation.
+- Preparation accepts ordinary Markdown and local raster images; remote images and unsupported source constructs must be resolved first. Toutiao cannot preserve mixed heading levels in the current workflow, so those inputs stop before remote editing.
+
 ## [3.5.0] - 2026-09-07
 
 ### Added

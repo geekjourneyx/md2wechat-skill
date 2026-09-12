@@ -55,13 +55,13 @@ npm install -g @geekjourneyx/md2wechat
 如果你已经有稳定可用的 Go 环境，也可以：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.5.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.6.0
 ```
 
 如果以上都不适合，再走固定版本安装脚本：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.5.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.6.0/install.sh | bash
 ```
 
 安装脚本默认会把 CLI 放到：
@@ -152,13 +152,13 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果你已经有 Go 环境，再把第一步改成：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.5.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.6.0
 ```
 
 如果以上都不适合，再把第一步改成：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.5.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.6.0/install.sh | bash
 ```
 
 如果你懒得自己操作，也可以直接把下面的话发给 Claude Code / Codex / OpenCode：
@@ -167,8 +167,8 @@ curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.
 请先安装 md2wechat CLI，再安装 md2wechat skill，并验证版本和能力发现都正常。
 执行：
 1. 如果我是 mac 用户，先运行：brew install geekjourneyx/tap/md2wechat
-2. 如果我已经有稳定可用的 Go 环境，也可以改成：go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.5.0
-3. 如果以上两种都不适合，再运行：curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.5.0/install.sh | bash
+2. 如果我已经有稳定可用的 Go 环境，也可以改成：go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.6.0
+3. 如果以上两种都不适合，再运行：curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.6.0/install.sh | bash
 4. 运行：npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 5. 如果我是通过 install.sh 安装的，再执行：export PATH="$HOME/.local/bin:$PATH"
 6. md2wechat version --json
@@ -213,7 +213,7 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果你已经有 Go 环境，再改成：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.5.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.6.0
 md2wechat version --json
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 ```
@@ -221,7 +221,7 @@ npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
 如果以上都不适合，再改成：
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.5.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.6.0/install.sh | bash
 export PATH="$HOME/.local/bin:$PATH"
 md2wechat version --json
 npx skills add https://github.com/geekjourneyx/md2wechat-skill --skill md2wechat
@@ -830,6 +830,14 @@ md2wechat convert article.md --draft --cover-media-id PERMANENT_MEDIA_ID --json
 ```bash
 md2wechat convert article.md --upload --draft --cover cover.png --json
 ```
+
+### Q16.1：跨平台准备成功后，文章已经保存了吗？
+
+没有。`sync prepare` 只生成本地正文，返回 `SYNC_PREPARED` 和 `action_required`。宿主 Agent 还需复用已登录浏览器，按内置步骤上传图片、填写正文、保存并重新打开核验。
+
+操作中断时，先检查已有草稿地址或原生草稿列表，继续同一稿，不盲目重复创建。没有 `sync auth`、`sync draft` 或结果登记命令；无效子命令返回失败。完整操作示例、浏览器要求和限制见 [多平台草稿教程](SYNC.md)。
+
+头条不能保留多级标题；特殊字符须在保存后逐字符核对，不能从一个字符丢失推导整类字符禁用。无法保留内容时停止该目标，不擅自删改原稿。详见 [多平台草稿](SYNC.md)。
 
 ---
 

@@ -15,6 +15,7 @@ Agent 应把 CLI discovery 当成事实来源，但不要把所有发现命令�
 - 图片生成或图片 prompt 选择：运行 `providers list --json` 和相关 `prompts list --kind image --json`
 - 草稿、上传、API 本地可尝试性或配置排障：运行 `doctor --json` 和必要的 `config show --format json`
 - CLI 版本、命令能力或行为边界不确定：运行 `version --json`、`capabilities --json`，必要时再运行 `skills list --json` 和 `skills read md2wechat --json`
+- 知乎、CSDN、头条未发布草稿：使用 `sync prepare` 本地准备，再读取 `skills read md2wechat references/sync/workflow.md` 与目标平台说明；由宿主操作已登录浏览器并核验。准备不代表完成，完整边界见 [SYNC.md](SYNC.md)
 - 当前外部 skill、README 或仓库 checkout 可能滞后于 PATH 上的二进制：运行 `skills read md2wechat --json` 读取当前二进制内置 SOP
 
 简单本地操作（例如 `preview`、`humanize`，或用户已经给出完整命令和 flags）不需要运行无关的 provider/theme/prompt/layout discovery。
@@ -770,4 +771,4 @@ JSON envelope 格式（v1）：
 
 ---
 
-*最后更新：与 md2wechat v3.5.0 同步*
+*最后更新：与 md2wechat v3.6.0 同步*

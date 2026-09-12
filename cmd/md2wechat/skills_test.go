@@ -91,3 +91,33 @@ func TestSkillsReadRejectsTraversal(t *testing.T) {
 		t.Fatalf("RunE traversal error = %v", err)
 	}
 }
+
+// A binary-only host must be able to follow the entire draft workflow offline.
+func TestSkillsReadEmbeddedSyncWorkflow(t *testing.T) {
+	oldJSON := skillsReadJSON
+	t.Cleanup(func() { skillsReadJSON = oldJSON })
+	skillsReadJSON = true
+	for _, name := range []string{"workflow", "zhihu", "csdn", "toutiao"} {
+		t.Run(name, func(t *testing.T) {
+			path := "references/sync/" + name + ".md"
+			stdout := captureStdout(t, func() {
+				if err := skillsReadCmd.RunE(skillsReadCmd, []string{"md2wechat", path}); err != nil {
+					t.Fatal(err)
+				}
+			})
+			var response struct {
+				Success bool `json:"success"`
+				Data    struct {
+					Path    string `json:"path"`
+					Content string `json:"content"`
+				} `json:"data"`
+			}
+			if err := json.Unmarshal(stdout, &response); err != nil {
+				t.Fatal(err)
+			}
+			if !response.Success || response.Data.Path != path || !strings.HasPrefix(response.Data.Content, "# ") {
+				t.Fatalf("embedded workflow unavailable: %s", path)
+			}
+		})
+	}
+}

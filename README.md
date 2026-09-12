@@ -36,6 +36,7 @@ md2wechat 把公众号发布流程拆成一组可验证的 CLI 命令：
 | 稳定排版 | API 模式成功时返回最终 HTML，覆盖 77 个主推高级排版场景条目和 56 个主推 `:::` 语法名 |
 | Agent 自动化 | `capabilities`、`doctor`、`themes`、`layout`、`providers` 等 discovery 命令 |
 | 内容生产 | `write`、`humanize`、`title suggest`、`generate_cover`、`generate_infographic` |
+| 多平台草稿 | 本地准备正文，宿主复用已登录浏览器，按内置步骤写入知乎、CSDN、头条草稿 |
 | 多账号发布 | 命名公众号账号，本地只读发现，不输出 Secret |
 | 微信白名单 | 高级 API 服务可提供微信接口固定出口能力 |
 
@@ -66,6 +67,15 @@ md2wechat convert article.md --draft --cover cover.jpg
 ```
 
 如果使用可选的 `--wechat-account`，必须在 `inspect` 和 `convert` 两条命令中传入同一个账号名。
+
+v3.6.0 新增跨平台草稿流程：先准备正文，再由宿主 Agent 按内置步骤操作已登录的浏览器。已安装版本先用 `capabilities --json` 确认支持：
+
+```bash
+md2wechat sync prepare article.md --output ./article-prepared --json
+md2wechat skills read md2wechat references/sync/workflow.md --json
+```
+
+准备结果是等待宿主执行，不代表草稿已创建。平台步骤、图片处理、头条标题限制和恢复方式见 [多平台草稿](docs/SYNC.md)。
 
 安装方式、微信凭证和 IP 白名单配置见：
 
@@ -239,6 +249,7 @@ md2wechat layout validate --file article.md --json
 | `generate_infographic` | 生成信息图或图片计划 |
 | `upload_image` | 上传图片到微信素材库 |
 | `create_image_post` | 创建微信图片消息（小绿书/newspic） |
+| `sync prepare` | 本地准备跨平台正文，等待宿主创建和核验草稿 |
 | `config wechat-accounts` | 查看本地多公众号账号配置 |
 | `doctor` | 本地配置体检 |
 
@@ -251,6 +262,7 @@ md2wechat layout validate --file article.md --json
 | [QUICKSTART](docs/QUICKSTART.md) | 新手主路径 |
 | [USAGE](docs/USAGE.md) | 命令完整说明 |
 | [DISCOVERY](docs/DISCOVERY.md) | Agent discovery 契约 |
+| [SYNC](docs/SYNC.md) | 知乎、CSDN、头条草稿同步 |
 | [WORKBUDDY](docs/WORKBUDDY.md) | WorkBuddy 安装、检查、预览与草稿确认流程 |
 | [ADVISE](docs/ADVISE.md) | 已有文章的可选增强建议 |
 | [LAYOUT](docs/LAYOUT.md) | 高级排版模块教程与 discovery 用法 |

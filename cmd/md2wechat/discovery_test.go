@@ -704,9 +704,44 @@ func TestBuildCapabilitiesDataDerivesCommandsFromRootManifest(t *testing.T) {
 		"skills",
 		"capabilities",
 		"version",
+		"sync",
 	} {
 		if !contains(commands, want) {
 			t.Fatalf("commands missing %q: %#v", want, commands)
+		}
+	}
+}
+
+func TestBuildCapabilitiesDataIncludesHostAgentPreparationContract(t *testing.T) {
+	oldCfg := cfg
+	t.Cleanup(func() { cfg = oldCfg })
+	cfg = &config.Config{DefaultTheme: "default"}
+	data, err := buildCapabilitiesData()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, ok := data["sync"].(map[string]any)
+	if !ok {
+		t.Fatalf("sync type = %T", data["sync"])
+	}
+	want := map[string]any{
+		"available": true, "commands": []string{"sync prepare"},
+		"execution_owner": "host_agent", "status": "action_required", "local_only": true,
+		"create_draft": false, "direct_publish": false,
+		"response_codes": []string{"SYNC_PREPARED", "SYNC_PREPARE_FAILED"},
+		"sop":            "md2wechat skills read md2wechat references/sync/workflow.md --json",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("sync = %#v, want %#v", got, want)
+	}
+	cmd := newSyncCommand()
+	children := cmd.Commands()
+	if len(children) != 1 || children[0].Name() != "prepare" {
+		t.Fatalf("sync exposes unexpected commands: %v", children)
+	}
+	for _, retired := range []string{"draft", "auth", "accounts", "platforms", "record", "status"} {
+		if found, _, err := cmd.Find([]string{retired}); err == nil && found != cmd {
+			t.Errorf("retired command %q still resolves", retired)
 		}
 	}
 }
@@ -946,6 +981,7 @@ func TestBuildCapabilitiesDataKeepsStableCommandOrderFromRootManifest(t *testing
 		"skills",
 		"capabilities",
 		"version",
+		"sync",
 	}
 	if len(commands) != len(want) {
 		t.Fatalf("commands length = %d, want %d: %#v", len(commands), len(want), commands)

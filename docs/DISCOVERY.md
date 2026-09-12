@@ -15,6 +15,7 @@ Discovery 的责任分层是：`capabilities` 返回聚合路由事实；资源 
 - 版本、能力或行为不确定：`md2wechat version --json`、`md2wechat capabilities --json`
 - API、草稿、上传或配置 readiness：`md2wechat doctor --json`，必要时再 `md2wechat config show --format json`
 - 多公众号本地配置检查：`md2wechat config wechat-accounts --json`
+- 多平台草稿执行方式不确定：只运行 `md2wechat capabilities --json` 并读取 `data.sync`
 - 文章排版且用户未指定主题或模块：`md2wechat themes list --json`、`md2wechat layout list --json`
 - 已有文章或初稿，不确定下一步是否需要标题、封面或排版：`md2wechat advise <article.md> --json`
 - 已指定某个资源：使用对应的 `providers show`、`themes show`、`prompts show` 或 `layout show`
@@ -66,11 +67,28 @@ md2wechat capabilities --json
     "api_mode_only": true,
     "schema_version": "1"
   },
-  "commands": ["convert", "inspect", "advise", "preview", "layout", "themes", "skills"]
+  "sync": {
+    "available": true,
+    "commands": ["sync prepare"],
+    "execution_owner": "host_agent",
+    "status": "action_required",
+    "local_only": true,
+    "create_draft": false,
+    "direct_publish": false,
+    "response_codes": ["SYNC_PREPARED", "SYNC_PREPARE_FAILED"],
+    "sop": "md2wechat skills read md2wechat references/sync/workflow.md --json"
+  },
+  "commands": ["convert", "inspect", "advise", "preview", "layout", "themes", "skills", "sync"]
 }
 ```
 
 未出现在 `commands` 中的命令不应被 Agent 当成可执行能力。未来工作流不通过 `capabilities` 预告。
+
+## 多平台草稿
+
+`data.sync` 只声明本地准备与宿主接手的边界。`sync prepare` 不创建远端草稿；`action_required` 表示仍需宿主执行。通过 `data.sync.sop` 读取公共步骤，再读取其中链接的知乎、CSDN 或头条说明。平台限制、账号核对和保存后核验均是执行要求，不能把准备完成当作同步成功。
+
+完整流程见 [SYNC.md](SYNC.md)。
 
 ## 内置 Skill SOP
 

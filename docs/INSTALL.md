@@ -5,6 +5,7 @@
 ## 目录
 
 - [系统要求](#系统要求)
+- [可选的浏览器要求](#可选的浏览器要求)
 - [方式一：NPM 全局安装](#方式一npm-全局安装推荐)
 - [方式二：Homebrew tap（macOS / Linux）](#方式二homebrew-tapmacos--linux)
 - [方式三：Go install（已有 Go 环境时可选）](#方式三go-install已有-go-环境时可选)
@@ -21,7 +22,13 @@
 - **操作系统**：Linux / macOS / Windows
 - **Node 版本**：18 或更高（如果使用 NPM 安装）
 - **Go 版本**：1.26.1 或更高（如果从源码编译）
-- **网络**：需要访问微信公众号 API
+- **网络**：远程转换、上传、图片生成或草稿同步时，需要访问对应服务
+
+## 可选的浏览器要求
+
+`sync prepare` 是纯本地命令，不需要浏览器。知乎、CSDN、头条的草稿操作由宿主 Agent 复用用户已登录的浏览器完成；宿主需提供页面读取、正常编辑、HTML 粘贴与本地文件上传能力。
+
+CLI 不启动或安装浏览器，不管理登录资料，也不要求固定扩展。宿主能力不足时，按内置流程检查可选工具；仍缺少必要能力时交接给用户。完整流程和备选工具验证范围见 [多平台草稿](SYNC.md)。
 
 ---
 
@@ -92,7 +99,7 @@ brew upgrade geekjourneyx/tap/md2wechat
 如果你的机器上已经有稳定可用的 Go 环境，也可以直接执行：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.5.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.6.0
 ```
 
 这是一个可选路径，不是默认推荐路径。
@@ -112,13 +119,13 @@ go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.5.0
 ### macOS / Linux
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.5.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.6.0/install.sh | bash
 ```
 
 ### Windows PowerShell
 
 ```powershell
-$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.5.0"
+$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.6.0"
 iex ((New-Object System.Net.WebClient).DownloadString("$env:MD2WECHAT_RELEASE_BASE_URL/install.ps1"))
 ```
 
@@ -163,7 +170,7 @@ md2wechat skills read md2wechat --json
 #### Linux / macOS
 
 ```bash
-VERSION=v3.5.0
+VERSION=v3.6.0
 ASSET=md2wechat-linux-amd64
 # macOS 请改成 md2wechat-darwin-amd64 或 md2wechat-darwin-arm64
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/${VERSION}/${ASSET}

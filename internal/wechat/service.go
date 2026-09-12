@@ -2,6 +2,7 @@ package wechat
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
+	"github.com/geekjourneyx/md2wechat-skill/internal/remotefile"
 	"github.com/silenceper/wechat/v2"
 	wechatcache "github.com/silenceper/wechat/v2/cache"
 	"github.com/silenceper/wechat/v2/officialaccount"
@@ -30,17 +32,6 @@ import (
 var (
 	downloadLookupIP      = net.LookupIP
 	wechatSDKHTTPClientMu sync.Mutex
-	newDownloadHTTPClient = func() *http.Client {
-		return &http.Client{
-			Timeout: 60 * time.Second,
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				if len(via) >= 5 {
-					return errors.New("stopped after 5 redirects")
-				}
-				return validateRemoteDownloadURL(req.URL)
-			},
-		}
-	}
 )
 
 // Service 微信服务
@@ -272,9 +263,7 @@ func DownloadFile(urlOrPath string) (string, error) {
 		return "", fmt.Errorf("local file not found: %s", urlOrPath)
 	}
 
-	// HTTP URL - 下载文件
-	url := urlOrPath
-	parsedURL, err := neturl.Parse(url)
+	parsedURL, err := neturl.Parse(urlOrPath)
 	if err != nil {
 		return "", fmt.Errorf("parse download url: %w", err)
 	}
@@ -282,45 +271,11 @@ func DownloadFile(urlOrPath string) (string, error) {
 		return "", err
 	}
 
-	// 创建 HTTP 客户端
-	client := newDownloadHTTPClient()
-
-	// 发起请求
-	resp, err := client.Get(url)
+	result, err := remotefile.DownloadUnbounded(context.Background(), urlOrPath, 60*time.Second)
 	if err != nil {
-		return "", fmt.Errorf("download file: %w", err)
+		return "", downloadFileError(err)
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("download failed with status: %d", resp.StatusCode)
-	}
-
-	// 从 URL 路径中提取扩展名，排除查询参数
-	ext := ".jpg" // 默认扩展名
-	if pathExt := filepath.Ext(parsedURL.Path); pathExt != "" {
-		ext = pathExt
-	}
-	tmpFile, err := os.CreateTemp("", "md2wechat-download-*"+ext)
-	if err != nil {
-		return "", fmt.Errorf("create temp file: %w", err)
-	}
-	tmpPath := tmpFile.Name()
-
-	// 写入文件
-	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
-		_ = tmpFile.Close()
-		_ = os.Remove(tmpPath)
-		return "", fmt.Errorf("write file: %w", err)
-	}
-	if err := tmpFile.Close(); err != nil {
-		_ = os.Remove(tmpPath)
-		return "", fmt.Errorf("close temp file: %w", err)
-	}
-
-	return tmpPath, nil
+	return result.Path, nil
 }
 
 func validateRemoteDownloadURL(parsedURL *neturl.URL) error {
@@ -338,10 +293,7 @@ func validateRemoteDownloadURL(parsedURL *neturl.URL) error {
 	if err := validateDownloadPort(parsedURL.Port()); err != nil {
 		return err
 	}
-	if err := validateDownloadHost(host); err != nil {
-		return err
-	}
-	return nil
+	return validateDownloadHost(host)
 }
 
 func validateDownloadPort(port string) error {
@@ -390,6 +342,21 @@ func validateDownloadIP(ip net.IP) error {
 		return fmt.Errorf("ip %s is private or local", ip.String())
 	}
 	return nil
+}
+
+func downloadFileError(err error) error {
+	var remoteErr *remotefile.Error
+	if errors.As(err, &remoteErr) {
+		switch remoteErr.Kind {
+		case remotefile.ErrorHTTPStatus:
+			return fmt.Errorf("download failed with status: %d", remoteErr.StatusCode)
+		case remotefile.ErrorInvalidInput, remotefile.ErrorBlockedAddress:
+			return remoteErr.Err
+		default:
+			return fmt.Errorf("download file: %w", remoteErr.Err)
+		}
+	}
+	return fmt.Errorf("download file: %w", err)
 }
 
 // CreateMultipartFormData 创建 multipart 表单数据

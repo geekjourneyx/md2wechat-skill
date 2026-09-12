@@ -82,6 +82,19 @@ func TestConfigShowJSONEnvelope(t *testing.T) {
 }
 
 func TestConfigShowYAMLOutput(t *testing.T) {
+	configHome := t.TempDir()
+	t.Setenv("HOME", configHome)
+	t.Setenv("USERPROFILE", configHome)
+	t.Chdir(configHome)
+	for _, name := range []string{
+		"WECHAT_PROXY_URL", "WECHAT_ACCOUNT", "MD2WECHAT_API_KEY", "MD2WECHAT_BASE_URL",
+		"CONVERT_MODE", "DEFAULT_THEME", "DEFAULT_BACKGROUND_TYPE", "IMAGE_API_KEY",
+		"IMAGE_API_BASE", "IMAGE_PROVIDER", "IMAGE_MODEL", "IMAGE_SIZE", "COMPRESS_IMAGES",
+		"MAX_IMAGE_WIDTH", "MAX_IMAGE_SIZE", "HTTP_TIMEOUT",
+	} {
+		t.Setenv(name, "")
+	}
+
 	oldFormat, oldShowSecret := configFormat, configShowSecret
 	oldJSON := jsonOutput
 	t.Cleanup(func() {

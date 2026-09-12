@@ -62,3 +62,6 @@ coverage.html
 .cache/
 .worktrees/
 docs/superpowers/
+
+# Local real-smoke inputs, screenshots, and inspection notes
+/.sync-smoke/

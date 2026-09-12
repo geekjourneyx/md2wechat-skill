@@ -447,12 +447,27 @@ func buildCapabilitiesData() (map[string]any, error) {
 			"default": defaultTheme,
 		},
 		"layout": buildLayoutCapabilityData(),
+		"sync":   buildSyncDiscoveryCapabilityData(),
 		"prompts": map[string]any{
 			"count":      len(allPrompts),
 			"kinds":      sortedPromptKinds(allPrompts),
 			"archetypes": sortedPromptArchetypes(allPrompts),
 		},
 	}, nil
+}
+
+func buildSyncDiscoveryCapabilityData() map[string]any {
+	return map[string]any{
+		"available":       true,
+		"commands":        []string{"sync prepare"},
+		"execution_owner": "host_agent",
+		"status":          "action_required",
+		"local_only":      true,
+		"create_draft":    false,
+		"direct_publish":  false,
+		"response_codes":  []string{"SYNC_PREPARED", "SYNC_PREPARE_FAILED"},
+		"sop":             "md2wechat skills read md2wechat references/sync/workflow.md --json",
+	}
 }
 
 func effectiveDefaultTheme(currentCfg *config.Config) string {

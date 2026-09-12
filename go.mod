@@ -6,8 +6,11 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/silenceper/wechat/v2 v2.1.9
 	github.com/spf13/cobra v1.8.1
+	github.com/yuin/goldmark v1.8.5
 	go.uber.org/zap v1.27.0
-	golang.org/x/sys v0.31.0
+	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8
+	golang.org/x/net v0.38.0
+	golang.org/x/sys v0.47.0
 	google.golang.org/genai v1.46.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -36,8 +39,6 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8 // indirect
-	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1 // indirect
 	google.golang.org/grpc v1.66.2 // indirect

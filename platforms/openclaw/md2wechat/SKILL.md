@@ -1,6 +1,6 @@
 ---
 name: md2wechat
-description: Convert Markdown to WeChat Official Account HTML, inspect supported providers/themes/prompts, generate article images, create drafts, write with creator styles, prepare title suggestions, and remove AI writing traces.
+description: Convert Markdown to WeChat Official Account HTML, inspect supported providers/themes/prompts, generate article images, create drafts, write with creator styles, prepare title suggestions, and remove AI writing traces. Also use for unpublished Zhihu, CSDN, or Toutiao drafts through a browser.
 homepage: https://github.com/geekjourneyx/md2wechat-skill
 metadata: {"openclaw":{"emoji":"📝","requires":{"bins":["md2wechat"]},"install":[{"id":"node","kind":"node","package":"@geekjourneyx/md2wechat","bins":["md2wechat"],"label":"Install md2wechat (npm)"}]}}
 ---
@@ -14,6 +14,7 @@ Use this skill to operate the `md2wechat` CLI. Keep the skill focused on executi
 Choose the command family before taking any publish or generation action:
 
 - Standard article HTML, article preview, metadata inspection, or WeChat article draft: use `inspect`, `preview`, and `convert`.
+- Unpublished Zhihu, CSDN, or Toutiao draft: run `md2wechat skills read md2wechat references/sync/workflow.md --json` for the current CLI's embedded workflow; the CLI prepares content and the Agent operates the browser.
 - Image-first post, image note, image-text note, `newspic`, or multi-image post: use `create_image_post`, not `convert --draft`.
 - Article cover or article infographic: prefer `generate_cover` or `generate_infographic` over raw `generate_image` when a bundled preset fits.
 - Host-agent image generation request with no provider configured: use image plan mode (`--plan --json`) to get prompt intent, then hand it to the host image-generation tool if one is available outside md2wechat.
@@ -195,14 +196,14 @@ Do not create drafts, upload images, publish, or call remote image generation un
 
 Before every explicit WeChat side effect—image upload, article draft creation, or `create_image_post`—require configured WeChat credentials and use the target-matched readiness/preflight path. Discovery and inspection remain non-publishing paths; preview and plain conversion are free of any global WeChat publishing credential requirement, while API mode still requires a valid `MD2WECHAT_API_KEY`.
 
-Before draft creation:
+Before WeChat article draft creation through `convert`:
 
 - Use `inspect --json` and check `data.readiness.targets.draft`; when blocked, read matching `data.readiness.blockers`.
 - Draft creation requires a cover via `--cover` or `--cover-media-id`.
 - Do not assume a WeChat URL or `mmbiz.qpic.cn` URL can be reused as `thumb_media_id`.
 - If draft creation returns `45004`, check digest, summary, and description before assuming the body is too long.
 
-Markdown images are uploaded or replaced only during `--upload` or `--draft`, not during plain conversion or preview.
+In the WeChat `convert` flow, Markdown images are uploaded or replaced only during `--upload` or `--draft`, not during plain conversion or preview.
 
 ## Failure Handling
 

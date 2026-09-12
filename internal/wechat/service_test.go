@@ -2,9 +2,9 @@ package wechat
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	neturl "net/url"
 	"os"
@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
+	"github.com/geekjourneyx/md2wechat-skill/internal/remotefile"
 	"github.com/silenceper/wechat/v2/officialaccount/draft"
 	"github.com/silenceper/wechat/v2/util"
 	"go.uber.org/zap"
@@ -276,83 +277,97 @@ func TestDownloadFileReturnsLocalPathForExistingFiles(t *testing.T) {
 	}
 }
 
-func TestValidateRemoteDownloadURLRejectsLocalTargets(t *testing.T) {
-	oldLookup := downloadLookupIP
-	downloadLookupIP = func(host string) ([]net.IP, error) {
-		if host != "internal.example" {
-			t.Fatalf("unexpected host lookup: %s", host)
-		}
-		return []net.IP{net.ParseIP("10.0.0.5")}, nil
-	}
-	t.Cleanup(func() {
-		downloadLookupIP = oldLookup
+func TestDownloadFileKeepsHTTPStatusPresentation(t *testing.T) {
+	err := downloadFileError(&remotefile.Error{
+		Kind:       remotefile.ErrorHTTPStatus,
+		StatusCode: http.StatusTooManyRequests,
+		Err:        fmt.Errorf("upstream status"),
 	})
-
-	cases := []string{
-		"http://localhost/image.png",
-		"http://127.0.0.1/image.png",
-		"http://169.254.169.254/image.png",
-		"http://internal.example/image.png",
-		"http://example.com:8080/image.png",
-	}
-
-	for _, rawURL := range cases {
-		parsed, err := neturl.Parse(rawURL)
-		if err != nil {
-			t.Fatalf("Parse(%q): %v", rawURL, err)
-		}
-		if err := validateRemoteDownloadURL(parsed); err == nil {
-			t.Fatalf("validateRemoteDownloadURL(%q) expected error", rawURL)
-		}
+	if err.Error() != "download failed with status: 429" {
+		t.Fatalf("download error = %q", err)
 	}
 }
 
-func TestDownloadFileDownloadsPublicRemoteImages(t *testing.T) {
-	oldLookup := downloadLookupIP
-	oldFactory := newDownloadHTTPClient
-	downloadLookupIP = func(host string) ([]net.IP, error) {
-		if host != "example.com" {
-			t.Fatalf("unexpected host lookup: %s", host)
-		}
-		return []net.IP{net.ParseIP("93.184.216.34")}, nil
+func TestDownloadFileKeepsNonHTTPErrorPresentation(t *testing.T) {
+	cases := []struct {
+		name  string
+		kind  remotefile.ErrorKind
+		cause error
+		want  string
+	}{
+		{
+			name:  "invalid URL",
+			kind:  remotefile.ErrorInvalidInput,
+			cause: errors.New("invalid download URL"),
+			want:  "invalid download URL",
+		},
+		{
+			name:  "blocked address",
+			kind:  remotefile.ErrorBlockedAddress,
+			cause: errors.New("download host is not allowed: localhost"),
+			want:  "download host is not allowed: localhost",
+		},
+		{
+			name:  "transport failure",
+			kind:  remotefile.ErrorTransport,
+			cause: errors.New("dial remote host: connection refused"),
+			want:  "download file: dial remote host: connection refused",
+		},
 	}
-	newDownloadHTTPClient = func() *http.Client {
-		return &http.Client{
-			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-				if req.URL.String() != "https://example.com/path/image.png?size=large" {
-					t.Fatalf("unexpected request url: %s", req.URL.String())
-				}
-				return &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       io.NopCloser(strings.NewReader("image-bytes")),
-					Header:     make(http.Header),
-					Request:    req,
-				}, nil
-			}),
-		}
-	}
-	t.Cleanup(func() {
-		downloadLookupIP = oldLookup
-		newDownloadHTTPClient = oldFactory
-	})
 
-	path, err := DownloadFile("https://example.com/path/image.png?size=large")
-	if err != nil {
-		t.Fatalf("DownloadFile() error = %v", err)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := downloadFileError(&remotefile.Error{Kind: tc.kind, Err: tc.cause})
+			if err.Error() != tc.want {
+				t.Fatalf("download error = %q, want %q", err, tc.want)
+			}
+		})
 	}
-	defer func() {
-		_ = os.Remove(path)
-	}()
+}
 
-	if filepath.Ext(path) != ".png" {
-		t.Fatalf("download path ext = %q, want .png", filepath.Ext(path))
+func TestDownloadFileKeepsLegacyInputValidationErrors(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "malformed URL",
+			input: "http://%",
+			want:  "parse download url: parse \"http://%\": invalid URL escape \"%\"",
+		},
+		{
+			name:  "missing host",
+			input: "http:///cover.png",
+			want:  "download url missing host",
+		},
+		{
+			name:  "disallowed port",
+			input: "http://example.com:8080/cover.png",
+			want:  "download url uses disallowed port: 8080",
+		},
+		{
+			name:  "blocked literal address",
+			input: "http://127.0.0.1/cover.png",
+			want:  "download host is not allowed: ip 127.0.0.1 is private or local",
+		},
+		{
+			name:  "non HTTP protocol remains local path",
+			input: "ftp://example.com/cover.png",
+			want:  "local file not found: ftp://example.com/cover.png",
+		},
 	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("ReadFile(%q): %v", path, err)
-	}
-	if string(data) != "image-bytes" {
-		t.Fatalf("downloaded body = %q", string(data))
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := DownloadFile(tc.input)
+			if err == nil {
+				t.Fatal("DownloadFile() error = nil")
+			}
+			if err.Error() != tc.want {
+				t.Fatalf("DownloadFile() error = %q, want %q", err, tc.want)
+			}
+		})
 	}
 }
 
