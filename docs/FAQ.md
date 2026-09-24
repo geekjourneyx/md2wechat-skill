@@ -599,6 +599,8 @@ md2wechat config show --format json
 
 MiniMax status code `1027` indicates that generated output was blocked by content safety policy and maps to `safety_blocked`.
 
+如果是 Requesty（`requesty` / `rq`），错误信息里会保留路由器返回的原始 message 和 code：`401` 是 API Key 无效，`403` 是 Key 无权访问所选模型，`402` 是余额不足，`404` 是模型 id 不存在，`400` 通常是 `image_size` 不在 Requesty 尺寸表里。`image_size` 只接受宽高比（`16:9`）、`1K` / `2K` / `4K` 或尺寸表中的精确 `WIDTHxHEIGHT`，其他值会在发起请求前直接报配置错误，不会被替换成别的尺寸。模型 id 请以 [Requesty 模型库](https://app.requesty.ai/model-library) 为准，默认是 `vertex/gemini-3.1-flash-image`。配置示例见 [Requesty](IMAGE_PROVISIONERS.md#requesty)。
+
 Atlas Cloud 可用 `md2wechat providers show atlascloud --json` 查看当前配置要求，也接受 `atlas-cloud` / `atlas` 别名。默认模型是 `openai/gpt-image-2/text-to-image`，默认尺寸为 `1024x1024`；切换模型时，尺寸必须符合所选模型支持的范围。配置示例见 [Atlas Cloud](IMAGE_PROVISIONERS.md#atlas-cloud)。
 
 然后再试最小命令：

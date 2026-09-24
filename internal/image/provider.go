@@ -120,6 +120,21 @@ var providerRegistry = []ProviderMeta{
 		SupportsSize: true,
 	},
 	{
+		Name:           "requesty",
+		Aliases:        []string{"rq"},
+		Description:    "Requesty image generation provider",
+		RequiredConfig: []string{"IMAGE_API_KEY"},
+		OptionalConfig: []string{"IMAGE_API_BASE", "IMAGE_MODEL", "IMAGE_SIZE"},
+		DefaultBaseURL: "https://router.requesty.ai/v1",
+		DefaultModel:   "vertex/gemini-3.1-flash-image",
+		SupportedModels: []ProviderModelMeta{
+			{Name: "vertex/gemini-3.1-flash-image", Description: "Gemini 3.1 Flash image via Requesty (Vertex AI)", Default: true},
+			{Name: "vertex/gemini-3-pro-image", Description: "Gemini 3 Pro image via Requesty (Vertex AI)"},
+			{Name: "vertex/gemini-2.5-flash-image", Description: "Gemini 2.5 Flash image via Requesty (Vertex AI)"},
+		},
+		SupportsSize: true,
+	},
+	{
 		Name:           "gemini",
 		Aliases:        []string{"google"},
 		Description:    "Google Gemini image generation provider",
@@ -383,6 +398,11 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 			return nil, err
 		}
 		return NewOpenRouterProvider(cfg)
+	case "requesty", "rq":
+		if err := validateRequestyConfig(cfg); err != nil {
+			return nil, err
+		}
+		return NewRequestyProvider(cfg)
 	case "gemini", "google":
 		if err := validateGeminiConfig(cfg); err != nil {
 			return nil, err
@@ -402,7 +422,7 @@ func NewProvider(cfg *config.Config) (Provider, error) {
 		return nil, &config.ConfigError{
 			Field:   "ImageProvider",
 			Message: fmt.Sprintf("未知的图片服务提供者: %s", cfg.ImageProvider),
-			Hint:    "支持的提供者: openai, minimax, atlascloud (或 atlas-cloud/atlas), tuzi, modelscope (或 ms), openrouter (或 or), gemini (或 google), volcengine (或 volc)",
+			Hint:    "支持的提供者: openai, minimax, atlascloud (或 atlas-cloud/atlas), tuzi, modelscope (或 ms), openrouter (或 or), requesty (或 rq), gemini (或 google), volcengine (或 volc)",
 		}
 	}
 }
@@ -490,6 +510,19 @@ func validateOpenRouterConfig(cfg *config.Config) error {
 		}
 	}
 	// OpenRouter API Base 有默认值，可以为空
+	return nil
+}
+
+// validateRequestyConfig 验证 Requesty 配置
+func validateRequestyConfig(cfg *config.Config) error {
+	if cfg.ImageAPIKey == "" {
+		return &config.ConfigError{
+			Field:   "ImageAPIKey",
+			Message: "使用 Requesty 图片服务需要配置 API Key",
+			Hint:    "在配置文件中设置 api.image_key 或环境变量 IMAGE_API_KEY，前往 requesty.ai 获取",
+		}
+	}
+	// Requesty API Base 有默认值，可以为空
 	return nil
 }
 

@@ -317,6 +317,7 @@ func TestBuildProviderViewsUsesCurrentRuntimeDefaults(t *testing.T) {
 		"openrouter": "google/gemini-3-pro-image-preview",
 		"gemini":     "gemini-3.1-flash-image-preview",
 		"volcengine": "doubao-seedream-5-0-pro-260628",
+		"requesty":   "vertex/gemini-3.1-flash-image",
 	}
 
 	for name, wantModel := range defaults {
@@ -336,6 +337,62 @@ func TestBuildProviderViewsUsesCurrentRuntimeDefaults(t *testing.T) {
 		if !found {
 			t.Fatalf("expected %s provider", name)
 		}
+	}
+}
+
+func TestProvidersShowRequestyAliasExposesImageContract(t *testing.T) {
+	oldCfg, oldJSON := cfg, jsonOutput
+	t.Cleanup(func() {
+		cfg, jsonOutput = oldCfg, oldJSON
+	})
+
+	cfg = &config.Config{
+		ImageProvider: "rq",
+		ImageAPIKey:   "configured-key",
+	}
+	jsonOutput = true
+
+	showOutput := captureStdout(t, func() {
+		if err := providersShowCmd.RunE(providersShowCmd, []string{"rq"}); err != nil {
+			t.Fatalf("providers show rq: %v", err)
+		}
+	})
+	var showResponse struct {
+		Data struct {
+			Provider providerView `json:"provider"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(showOutput, &showResponse); err != nil {
+		t.Fatalf("decode provider show: %v\n%s", err, showOutput)
+	}
+
+	provider := showResponse.Data.Provider
+	if provider.Name != "requesty" || !provider.Current || !provider.Configured {
+		t.Fatalf("shown provider = %#v, want current configured requesty", provider)
+	}
+	if !contains(provider.Aliases, "rq") {
+		t.Fatalf("aliases = %#v, want rq", provider.Aliases)
+	}
+	if provider.DefaultBaseURL != "https://router.requesty.ai/v1" {
+		t.Fatalf("default base url = %q", provider.DefaultBaseURL)
+	}
+	if provider.DefaultModel != "vertex/gemini-3.1-flash-image" {
+		t.Fatalf("default model = %q", provider.DefaultModel)
+	}
+	if !provider.SupportsSize {
+		t.Fatal("requesty must report size support")
+	}
+	defaultCount := 0
+	for _, model := range provider.SupportedModels {
+		if model.Default {
+			defaultCount++
+			if model.Name != provider.DefaultModel {
+				t.Fatalf("default flagged model %q does not match DefaultModel %q", model.Name, provider.DefaultModel)
+			}
+		}
+	}
+	if defaultCount != 1 {
+		t.Fatalf("expected exactly one default model, got %d", defaultCount)
 	}
 }
 

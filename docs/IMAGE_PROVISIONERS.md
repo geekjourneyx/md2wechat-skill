@@ -18,7 +18,7 @@ md2wechat 支持多种图片生成服务，可以在 Markdown 中使用 AI 生�
 
 ```yaml
 api:
-  # 图片服务提供者: openai, minimax, atlascloud, tuzi, modelscope, openrouter, gemini, volcengine
+  # 图片服务提供者: openai, minimax, atlascloud, tuzi, modelscope, openrouter, requesty, gemini, volcengine
   image_provider: "tuzi"
 
   # API 配置
@@ -472,6 +472,86 @@ OpenRouter 支持三种分辨率等级（通过尺寸自动判断）：
 
 ---
 
+### Requesty
+
+Requesty 提供统一的 OpenAI 兼容路由，图片模型通过 `/chat/completions` 接口调用，返回 base64 图片。接口契约见 [Requesty 图片生成文档](https://docs.requesty.ai/features/image-generation)。
+
+#### 配置示例
+
+```yaml
+api:
+  image_provider: "requesty"
+  image_key: "sk-..."
+  # image_base_url 可选，默认为 https://router.requesty.ai/v1
+  image_model: "vertex/gemini-3.1-flash-image"
+  image_size: "16:9"  # 宽高比、分辨率等级或精确尺寸，见下文
+```
+
+或使用环境变量：
+
+```bash
+export IMAGE_PROVIDER="requesty"
+export IMAGE_API_KEY="sk-..."
+export IMAGE_MODEL="vertex/gemini-3.1-flash-image"
+export IMAGE_SIZE="16:9"
+```
+
+#### 支持的模型
+
+| 模型 | 说明 |
+|------|------|
+| `vertex/gemini-3.1-flash-image` | Gemini 3.1 Flash 图片模型（默认，推荐）|
+| `vertex/gemini-3-pro-image` | Gemini 3 Pro 图片模型 |
+| `vertex/gemini-2.5-flash-image` | Gemini 2.5 Flash 图片模型 |
+
+模型 ID 与 Requesty 模型库保持一致，可在 [模型库](https://app.requesty.ai/model-library) 中筛选支持图片输出的模型。
+
+#### 支持的尺寸
+
+Requesty 的请求参数是 `image_config.aspect_ratio` 和 `image_config.image_size`，`image_size` 可选 `1K`（默认）、`2K`、`4K`。`IMAGE_SIZE` 接受以下三种写法，其余值会在启动时报配置错误，不会被静默替换：
+
+| 写法 | 示例 | 映射结果 |
+|------|------|----------|
+| 宽高比 | `16:9` | `aspect_ratio=16:9`，`image_size=1K` |
+| 分辨率等级 | `2K` | `aspect_ratio=1:1`，`image_size=2K` |
+| 精确尺寸 | `2752x1536` | 按下表反查为 `16:9` / `2K` |
+
+留空时使用 Requesty 的默认值 `1:1` / `1K`（1024x1024）。
+
+精确尺寸对照表（来自 Requesty 文档）：
+
+| 宽高比 | 1K | 2K | 4K |
+|--------|----|----|----|
+| `1:1` | 1024x1024 | 2048x2048 | 4096x4096 |
+| `2:3` | 848x1264 | 1696x2528 | 3392x5056 |
+| `3:2` | 1264x848 | 2528x1696 | 5056x3392 |
+| `3:4` | 896x1200 | 1792x2400 | 3584x4800 |
+| `4:3` | 1200x896 | 2400x1792 | 4800x3584 |
+| `4:5` | 928x1152 | 1856x2304 | 3712x4608 |
+| `5:4` | 1152x928 | 2304x1856 | 4608x3712 |
+| `9:16` | 768x1376 | 1536x2752 | 3072x5504 |
+| `16:9` | 1376x768 | 2752x1536 | 5504x3072 |
+| `21:9` | 1584x672 | 3168x1344 | 6336x2688 |
+
+#### 常见错误
+
+| HTTP 状态 | 错误码 | 含义 |
+|-----------|--------|------|
+| 401 | `unauthorized` | API Key 无效或已过期 |
+| 403 | `forbidden` | Key 无权访问所选模型，或触发了 Requesty 策略限制 |
+| 402 | `payment_required` | 账户余额不足 |
+| 404 | `model_not_found` | 模型 ID 不存在 |
+| 429 | `rate_limit` | 触发速率限制 |
+| 400 | `bad_request` | 参数错误（模型、aspect_ratio、image_size） |
+
+错误消息中会保留 Requesty 返回的原始 message 与 code，便于定位问题。
+
+#### 获取 API Key
+
+前往 [Requesty](https://app.requesty.ai/api-keys) 创建 API Key。
+
+---
+
 ### Google Gemini
 
 直接调用 Google Gemini API，使用官方 Go SDK，无需通过第三方平台。
@@ -610,7 +690,7 @@ md2wechat convert article.md --preview
 ### Q: 提示 "参数配置有误" 怎么办？
 
 **A:** 请检查：
-1. `image_provider` 是否为 `openai`、`minimax`、`atlascloud`（或 `atlas-cloud` / `atlas`）、`tuzi`、`modelscope`、`openrouter`、`gemini` 或 `volcengine`
+1. `image_provider` 是否为 `openai`、`minimax`、`atlascloud`（或 `atlas-cloud` / `atlas`）、`tuzi`、`modelscope`、`openrouter`、`requesty`、`gemini` 或 `volcengine`
 2. `image_model` 是否在支持的模型列表中
 3. `image_size` 是否在支持的尺寸列表中
 4. **ModelScope 只支持 `WIDTHxHEIGHT`**
