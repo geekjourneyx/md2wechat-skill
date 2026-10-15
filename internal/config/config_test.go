@@ -483,6 +483,36 @@ api:
 	}
 }
 
+func TestLoadWithDefaultsAppliesRequestyImageDefaults(t *testing.T) {
+	for _, providerName := range []string{"requesty", "rq"} {
+		t.Run(providerName, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "config.yaml")
+			content := strings.TrimSpace(`
+api:
+  image_provider: "` + providerName + `"
+`)
+			if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+				t.Fatalf("write config: %v", err)
+			}
+
+			cfg, err := LoadWithDefaults(path)
+			if err != nil {
+				t.Fatalf("LoadWithDefaults() error = %v", err)
+			}
+			if cfg.ImageAPIBase != "https://router.requesty.ai/v1" {
+				t.Fatalf("ImageAPIBase = %q", cfg.ImageAPIBase)
+			}
+			if cfg.ImageModel != "vertex/gemini-3.1-flash-image" {
+				t.Fatalf("ImageModel = %q", cfg.ImageModel)
+			}
+			if cfg.ImageSize != "1:1" {
+				t.Fatalf("ImageSize = %q", cfg.ImageSize)
+			}
+		})
+	}
+}
+
 func TestLoadWithDefaultsAppliesMiniMaxImageDefaults(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.yaml")
