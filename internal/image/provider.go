@@ -41,6 +41,8 @@ var providerRegistry = []ProviderMeta{
 		SupportedModels: []ProviderModelMeta{
 			{Name: "image-01", Description: "MiniMax image model", Default: true, SupportsSubjectReference: true},
 			{Name: "image-01-live", Description: "MiniMax live image model"},
+			{Name: miniMaxH3Image, Description: "MiniMax H3 text-to-image generation"},
+			{Name: miniMaxH3Highspeed, Description: "MiniMax H3 high-speed text-to-image generation"},
 		},
 		SupportsSize:             true,
 		SupportsSubjectReference: true,

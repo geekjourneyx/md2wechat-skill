@@ -19,6 +19,8 @@ const (
 	miniMaxDefaultModel   = "image-01"
 	miniMaxDefaultSize    = "1:1"
 	miniMaxImagePath      = "/v1/image_generation"
+	miniMaxH3Image        = "MiniMax-H3-Image"
+	miniMaxH3Highspeed    = "MiniMax-H3-Image-Highspeed"
 	miniMaxSubjectType    = "character"
 	miniMaxErrorBodyLimit = 8 << 10
 )
@@ -48,13 +50,23 @@ func NewMiniMaxProvider(cfg *config.Config) (*MiniMaxProvider, error) {
 	if size == "" {
 		size = miniMaxDefaultSize
 	}
+	client := &http.Client{Timeout: 60 * time.Second}
+	if isMiniMaxH3(model) {
+		client.Timeout = 10 * time.Minute
+		// A redirect can replay a billable generation request.
+		client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	}
 	return &MiniMaxProvider{
 		apiKey: cfg.ImageAPIKey, baseURL: baseURL, model: model, size: size,
-		client: &http.Client{Timeout: 60 * time.Second},
+		client: client,
 	}, nil
 }
 
 func (p *MiniMaxProvider) Name() string { return "MiniMax" }
+
+func isMiniMaxH3(model string) bool {
+	return model == miniMaxH3Image || model == miniMaxH3Highspeed
+}
 
 func (p *MiniMaxProvider) Generate(ctx context.Context, prompt string) (*GenerateResult, error) {
 	return p.generate(ctx, prompt, "")
@@ -100,7 +112,15 @@ func (p *MiniMaxProvider) generate(ctx context.Context, prompt, subjectReference
 		"model": p.model, "prompt": prompt,
 		"response_format": "url", "n": 1,
 	}
-	if dimensions := strings.Split(p.size, "x"); len(dimensions) == 2 {
+	path := miniMaxImagePath
+	if isMiniMaxH3(p.model) {
+		path = "/v1/images/generations"
+		if strings.Contains(p.size, ":") {
+			payload["aspect_ratio"] = p.size
+		} else {
+			payload["size"] = p.size
+		}
+	} else if dimensions := strings.Split(p.size, "x"); len(dimensions) == 2 {
 		width, widthErr := strconv.Atoi(dimensions[0])
 		height, heightErr := strconv.Atoi(dimensions[1])
 		if widthErr != nil || heightErr != nil {
@@ -118,7 +138,7 @@ func (p *MiniMaxProvider) generate(ctx context.Context, prompt, subjectReference
 	if err != nil {
 		return nil, &GenerateError{Provider: p.Name(), Code: "marshal_error", Message: "request encoding failed", Original: err}
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.baseURL+miniMaxImagePath, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.baseURL+path, bytes.NewReader(body))
 	if err != nil {
 		return nil, &GenerateError{Provider: p.Name(), Code: "request_error", Message: "request creation failed", Original: err}
 	}
@@ -133,6 +153,9 @@ func (p *MiniMaxProvider) generate(ctx context.Context, prompt, subjectReference
 	}()
 	if resp.StatusCode != http.StatusOK {
 		return nil, p.handleErrorResponse(resp)
+	}
+	if isMiniMaxH3(p.model) {
+		return p.decodeH3Image(resp.Body)
 	}
 	var response struct {
 		Data struct {
@@ -167,6 +190,40 @@ func (p *MiniMaxProvider) generate(ctx context.Context, prompt, subjectReference
 	return &GenerateResult{URL: response.Data.ImageURLs[0], Model: p.model, Size: p.size}, nil
 }
 
+// decodeH3Image reads the single URL requested by Generate.
+func (p *MiniMaxProvider) decodeH3Image(body io.Reader) (*GenerateResult, error) {
+	var response struct {
+		Data []struct {
+			URL   string `json:"url"`
+			Size  string `json:"size"`
+			Error *struct {
+				Code    flexibleInt `json:"code"`
+				Message string      `json:"message"`
+			} `json:"error"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(body).Decode(&response); err != nil {
+		return nil, &GenerateError{Provider: p.Name(), Code: "decode_error", Message: "response decoding failed", Original: err}
+	}
+	var firstError *GenerateError
+	for _, item := range response.Data {
+		if item.Error != nil && firstError == nil {
+			code := "api_error"
+			if item.Error.Code == 1027 {
+				code = "safety_blocked"
+			}
+			firstError = &GenerateError{Provider: p.Name(), Code: code, Message: fmt.Sprintf("image generation failed (%d): %s", item.Error.Code, item.Error.Message)}
+		}
+		if url := strings.TrimSpace(item.URL); item.Error == nil && url != "" {
+			return &GenerateResult{URL: url, Model: p.model, Size: item.Size}, nil
+		}
+	}
+	if firstError != nil {
+		return nil, firstError
+	}
+	return nil, &GenerateError{Provider: p.Name(), Code: "no_image", Message: "response did not include a generated image"}
+}
+
 // handleErrorResponse preserves the upstream HTTP status and MiniMax base_resp
 // details instead of discarding the response body.
 func (p *MiniMaxProvider) handleErrorResponse(resp *http.Response) error {
@@ -174,6 +231,9 @@ func (p *MiniMaxProvider) handleErrorResponse(resp *http.Response) error {
 	snippet := strings.TrimSpace(string(body))
 
 	var payload struct {
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
 		BaseResp struct {
 			StatusCode flexibleInt `json:"status_code"`
 			StatusMsg  string      `json:"status_msg"`
@@ -187,6 +247,12 @@ func (p *MiniMaxProvider) handleErrorResponse(resp *http.Response) error {
 	}
 
 	message := strings.TrimSpace(payload.BaseResp.StatusMsg)
+	if isMiniMaxH3(p.model) && payload.Error.Message != "" {
+		message = payload.Error.Message
+		if resp.StatusCode == http.StatusUnprocessableEntity {
+			return &GenerateError{Provider: p.Name(), Code: "safety_blocked", Message: message, Original: original}
+		}
+	}
 	if message == "" {
 		message = snippet
 	}
