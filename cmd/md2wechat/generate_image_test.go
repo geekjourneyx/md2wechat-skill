@@ -69,6 +69,8 @@ func TestRunGenerateImageSubjectReferenceUsesProviderMetadata(t *testing.T) {
 		wantText string
 	}{
 		{name: "unsupported_provider", provider: "openai", model: "gpt-image-2", wantText: "provider openai does not support"},
+		{name: "seedream55_reference", provider: "volcengine", model: "doubao-seedream-5-5-261028", wantText: "provider volcengine does not support"},
+		{name: "seedream_flash_reference", provider: "volcengine", model: "doubao-seedream-5-0-flash-260915", wantText: "provider volcengine does not support"},
 		{name: "default_provider", provider: "", wantText: "provider openai does not support"},
 		{name: "unsupported_model", provider: "minimax", model: "image-01-live", wantText: "model image-01-live does not support"},
 		{name: "unsupported_model_override", provider: "minimax", model: "image-01", override: "image-01-live", wantText: "model image-01-live does not support"},

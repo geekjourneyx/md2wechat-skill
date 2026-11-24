@@ -145,6 +145,8 @@ var providerRegistry = []ProviderMeta{
 		DefaultModel:   "doubao-seedream-5-0-pro-260628",
 		SupportedModels: []ProviderModelMeta{
 			{Name: "doubao-seedream-5-0-pro-260628", Description: "Doubao Seedream 5.0 Pro", Default: true},
+			{Name: "doubao-seedream-5-5-261028", Description: "Doubao Seedream 5.5 text-to-image"},
+			{Name: "doubao-seedream-5-0-flash-260915", Description: "Doubao Seedream 5.0 Flash text-to-image"},
 			{Name: "doubao-seedream-5-0-260128", Description: "Doubao Seedream 5.0"},
 			{Name: "doubao-seedream-5-0-lite-260128", Description: "Doubao Seedream 5.0 Lite"},
 		},

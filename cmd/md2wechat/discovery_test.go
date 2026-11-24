@@ -1582,3 +1582,38 @@ func TestProvidersExposeSubjectReferenceCapability(t *testing.T) {
 		t.Fatalf("models advertising subject reference support = %#v", subjectModels)
 	}
 }
+
+// Protect discovery without silently promoting a newly listed model to default.
+func TestSeedreamDiscoveryPreservesDefault(t *testing.T) {
+	oldCfg := cfg
+	t.Cleanup(func() { cfg = oldCfg })
+	cfg = nil
+	providers, err := buildProviderViews()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, provider := range providers {
+		if provider.Name != "volcengine" {
+			continue
+		}
+		if provider.DefaultModel != "doubao-seedream-5-0-pro-260628" || provider.SupportsSubjectReference {
+			t.Fatalf("unexpected provider contract: %#v", provider)
+		}
+		for _, name := range []string{"doubao-seedream-5-5-261028", "doubao-seedream-5-0-flash-260915"} {
+			found := false
+			for _, model := range provider.SupportedModels {
+				if model.Name == name {
+					found = true
+					if model.Default || model.SupportsSubjectReference {
+						t.Fatalf("unexpected new model capabilities: %#v", model)
+					}
+				}
+			}
+			if !found {
+				t.Fatalf("model %s missing from discovery", name)
+			}
+		}
+		return
+	}
+	t.Fatal("volcengine missing from discovery")
+}
