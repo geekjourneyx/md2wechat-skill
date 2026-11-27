@@ -2,7 +2,7 @@
 
 本文档详细说明 md2wechat 的各种安装方式。
 
-当前安装说明对应 v3.8.0。
+当前安装说明对应 v3.9.0。
 
 ## 目录
 
@@ -39,7 +39,7 @@ CLI 不启动或安装浏览器，不管理登录资料，也不要求固定扩�
 如果你的机器上已经有稳定可用的 Node/npm 环境，推荐直接执行：
 
 ```bash
-npm install -g @geekjourneyx/md2wechat@3.8.0
+npm install -g @geekjourneyx/md2wechat@3.9.0
 ```
 
 这个路径适合：
@@ -58,7 +58,7 @@ npm install -g @geekjourneyx/md2wechat@3.8.0
 如果你的 npm 默认指向 `https://registry.npmmirror.com`，而新版本刚发布，镜像 tarball 可能会短暂 `404`。先用官方源安装：
 
 ```bash
-npm install -g @geekjourneyx/md2wechat@3.8.0 --registry=https://registry.npmjs.org/
+npm install -g @geekjourneyx/md2wechat@3.9.0 --registry=https://registry.npmjs.org/
 ```
 
 维护者在 npm 发布新版本后，也应手动执行一次：
@@ -101,7 +101,7 @@ brew upgrade geekjourneyx/tap/md2wechat
 如果你的机器上已经有稳定可用的 Go 环境，也可以直接执行：
 
 ```bash
-go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.8.0
+go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.9.0
 ```
 
 这是一个可选路径，不是默认推荐路径。
@@ -121,13 +121,13 @@ go install github.com/geekjourneyx/md2wechat-skill/cmd/md2wechat@v3.8.0
 ### macOS / Linux
 
 ```bash
-curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.8.0/install.sh | bash
+curl -fsSL https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.9.0/install.sh | bash
 ```
 
 ### Windows PowerShell
 
 ```powershell
-$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.8.0"
+$env:MD2WECHAT_RELEASE_BASE_URL = "https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.9.0"
 iex ((New-Object System.Net.WebClient).DownloadString("$env:MD2WECHAT_RELEASE_BASE_URL/install.ps1"))
 ```
 
@@ -172,7 +172,7 @@ md2wechat skills read md2wechat --json
 #### Linux / macOS
 
 ```bash
-VERSION=v3.8.0
+VERSION=v3.9.0
 ASSET=md2wechat-linux-amd64
 # macOS 请改成 md2wechat-darwin-amd64 或 md2wechat-darwin-arm64
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/${VERSION}/${ASSET}

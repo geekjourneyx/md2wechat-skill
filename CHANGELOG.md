@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.9.0] - 2026-11-27
+
+### Added
+- Volcengine Ark discovery now lists `doubao-seedream-5-5-261028` and `doubao-seedream-5-0-flash-260915`. Run `md2wechat providers show volcengine --json` to see them and choose either with `generate_image --model`. Existing configurations still default to Seedream 5.0 Pro at 2K. [#39](https://github.com/geekjourneyx/md2wechat-skill/pull/39)
+- Documented single-image PNG generation with either model at 1K, 1.5K, 2K or model-supported pixel dimensions. Subject references remain available only for MiniMax image-01. The CLI does not expose Seedream editing, layer separation, OCR or explicit transparent-background controls.
+
+### Changed
+- The README now directs users to the website for current API pricing, gives WeChat and email contact paths for keys and licensing, and explains what the free AI and paid API quick starts produce. [#32](https://github.com/geekjourneyx/md2wechat-skill/pull/32)
+- Added article, theme comparison and layout module previews to the README, then refreshed all three showcase images with losslessly compressed 4K assets. [#34](https://github.com/geekjourneyx/md2wechat-skill/pull/34) · [#35](https://github.com/geekjourneyx/md2wechat-skill/pull/35)
+
+### Verification
+- Local HTTP contract tests cover model overrides, request authentication, dimensions and PNG parameters. They verify one generation request and zero uploads on model activation errors, rate limits or empty results. Paid generation was not exercised.
+
 ## [3.8.0] - 2026-09-24
 
 ### Added

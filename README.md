@@ -26,7 +26,8 @@
 接入有疑问？关注公众号「**极客杰尼**」，发消息「**API咨询**」；也可以直接发邮件到 [skrphper@gmail.com](mailto:skrphper@gmail.com)。[查看联系方式与二维码](#联系我)
 
 > [!TIP]
-> **v3.8.0 高级排版升级：83 个推荐场景对应 59 个推荐语法；新增 `cover-reveal`、`expand`，`gallery` 进入推荐目录，并扩展 12 种品牌图形符号与动效。** 新互动模块默认完整静态展示；显式 `first-layer` 仅为点击候选，微信内效果仍待验证。[布局指南](docs/LAYOUT.md) · [版本化安装](docs/INSTALL.md)
+> **v3.9.0 新增火山方舟 Seedream 5.5 和 5.0 Flash。** 运行 `md2wechat providers show volcengine --json` 查看模型，用 `generate_image --model` 显式选择；默认仍为 5.0 Pro。[模型配置](docs/IMAGE_PROVISIONERS.md#volcengine-ark) · [版本化安装](docs/INSTALL.md)
+> 互动排版默认完整静态展示，显式启用的 `first-layer` 点击效果在微信内仍待验证。[布局指南](docs/LAYOUT.md)
 
 ---
 
@@ -80,7 +81,7 @@ md2wechat 把公众号发布流程拆成一组可验证的 CLI 命令：
 ## 快速开始
 
 ```bash
-npm install -g @geekjourneyx/md2wechat@3.8.0
+npm install -g @geekjourneyx/md2wechat@3.9.0
 md2wechat version --json
 md2wechat config init --json
 md2wechat config validate --json
@@ -141,7 +142,7 @@ API 模式适合需要稳定输出、多人协作、批量发布或 Agent 自动
 专业能力包括：
 
 - 48 个微信渲染精调主题：[主题画廊](https://www.md2wechat.cn/theme-gallery?utm_source=github&utm_medium=readme&utm_campaign=showcase)
-- 83 个主推高级排版场景条目，对应 59 个主推 `:::` 语法名；本次扩展含 12 种品牌图形符号及受位置约束的动效：[docs/LAYOUT.md](docs/LAYOUT.md)
+- 83 个主推高级排版场景条目，对应 59 个主推 `:::` 语法名，支持 12 种品牌图形符号及受位置约束的动效。[布局指南](docs/LAYOUT.md)
 - 2 个兼容模块只用于旧稿迁移；加上 4 个基础增强能力，共计 65 项渲染层语法能力
 - 多公众号账号：[docs/CONFIG.md](docs/CONFIG.md)
 - 微信接口固定出口：[docs/WECHAT-CREDENTIALS.md](docs/WECHAT-CREDENTIALS.md)

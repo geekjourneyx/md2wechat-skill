@@ -89,7 +89,7 @@ Skill metadata 使用 OpenClaw 官方 Node 安装资源声明 `@geekjourneyx/md2
 这是 macOS 和 Linux 的主安装路径：
 
 ```bash
-npm install -g @geekjourneyx/md2wechat@3.8.0
+npm install -g @geekjourneyx/md2wechat@3.9.0
 openclaw skills install @geekjourneyx/md2wechat
 ```
 
@@ -102,7 +102,7 @@ openclaw skills install @geekjourneyx/md2wechat
 Windows 用户也可以使用固定版本 PowerShell 安装器：
 
 ```powershell
-Invoke-WebRequest https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.8.0/install-openclaw.ps1 -OutFile install-openclaw.ps1
+Invoke-WebRequest https://github.com/geekjourneyx/md2wechat-skill/releases/download/v3.9.0/install-openclaw.ps1 -OutFile install-openclaw.ps1
 powershell -ExecutionPolicy Bypass -File .\install-openclaw.ps1
 ```
 
@@ -115,7 +115,7 @@ macOS 和 Linux 不再提供 OpenClaw 专用 shell 安装器，使用 npm + Claw
 ```text
 请帮我安装 OpenClaw 版 md2wechat，并验证 skill 和 CLI 都可用。
 按这个顺序执行：
-1. npm install -g @geekjourneyx/md2wechat@3.8.0
+1. npm install -g @geekjourneyx/md2wechat@3.9.0
 2. openclaw skills install @geekjourneyx/md2wechat
 3. openclaw skills info md2wechat
 4. md2wechat version --json
@@ -133,7 +133,7 @@ macOS 和 Linux 不再提供 OpenClaw 专用 shell 安装器，使用 npm + Claw
 
 ```bash
 # 1. 下载固定版本 release 资产
-VERSION=3.8.0
+VERSION=3.9.0
 # 按你的平台选择对应二进制，这里以 Linux amd64 为例
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-openclaw-skill.tar.gz
 curl -LO https://github.com/geekjourneyx/md2wechat-skill/releases/download/v${VERSION}/md2wechat-linux-amd64
@@ -278,7 +278,7 @@ openclaw skills info md2wechat
 md2wechat --help
 ```
 
-如果仍然找不到命令，请重新执行 `npm install -g @geekjourneyx/md2wechat@3.8.0`，并检查 npm 全局 bin 目录是否在 `PATH` 中。
+如果仍然找不到命令，请重新执行 `npm install -g @geekjourneyx/md2wechat@3.9.0`，并检查 npm 全局 bin 目录是否在 `PATH` 中。
 
 ### Q: 我不想看文档，能不能直接发一句话给大模型？
 
@@ -287,7 +287,7 @@ md2wechat --help
 ```text
 请帮我安装 OpenClaw 版 md2wechat，并验证 CLI、配置初始化和能力发现都正常。
 执行：
-1. npm install -g @geekjourneyx/md2wechat@3.8.0
+1. npm install -g @geekjourneyx/md2wechat@3.9.0
 2. openclaw skills install @geekjourneyx/md2wechat
 3. openclaw skills info md2wechat
 4. md2wechat version --json
@@ -304,7 +304,7 @@ md2wechat --help
 
 ```bash
 # 更新 CLI
-npm install -g @geekjourneyx/md2wechat@3.8.0
+npm install -g @geekjourneyx/md2wechat@3.9.0
 
 # 更新 workspace 内由 OpenClaw 追踪的安装（在原安装 workspace 执行）
 openclaw skills update @geekjourneyx/md2wechat

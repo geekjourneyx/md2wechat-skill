@@ -9,7 +9,7 @@
       "name": "md2wechat",
       "source": "./",
       "description": "Convert Markdown to WeChat HTML and drafts; use embedded host-agent guidance for directed product writing and Zhihu, CSDN, Toutiao, and Tencent Cloud Developer Community drafts.",
-      "version": "3.8.0",
+      "version": "3.9.0",
       "author": {
         "name": "geekjourneyx"
       },
