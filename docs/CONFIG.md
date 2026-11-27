@@ -387,6 +387,11 @@ image:
 
 `minimax` 的默认值为 `image_base_url=https://api.minimax.io`（国内站为 `https://api.minimaxi.com`）、`image_model=image-01`、`image_size=1:1`。它也是当前唯一支持 `--subject-reference` 主体参考的 provider，且只有 `image-01` 支持该参数。详见 [图片生成服务配置](IMAGE_PROVISIONERS.md)。
 
+For H3 generation, set `api.image_model` to `MiniMax-H3-Image` or
+`MiniMax-H3-Image-Highspeed`. Use `api.image_base_url: https://api.minimax.cn`
+with a China H3 key; the default base URL accepts global H3 keys.
+
+
 ### 图片处理配置
 
 | 配置项 | 必需 | 说明 | 默认值 |

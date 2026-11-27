@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/geekjourneyx/md2wechat-skill/internal/config"
 )
@@ -465,5 +466,18 @@ func TestUnknownProviderHintListsMiniMax(t *testing.T) {
 	}
 	if !strings.Contains(cfgErr.Hint, "minimax") {
 		t.Fatalf("unknown provider hint = %q, must list minimax", cfgErr.Hint)
+	}
+}
+
+func TestMiniMaxH3RequestPolicy(t *testing.T) {
+	provider, err := NewMiniMaxProvider(&config.Config{ImageAPIKey: "image-key", ImageModel: miniMaxH3Image})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if provider.client.Timeout < 10*time.Minute {
+		t.Fatalf("H3 client timeout = %v", provider.client.Timeout)
+	}
+	if provider.client.CheckRedirect == nil || !errors.Is(provider.client.CheckRedirect(nil, nil), http.ErrUseLastResponse) {
+		t.Fatal("H3 must not follow redirects that could replay the generation request")
 	}
 }

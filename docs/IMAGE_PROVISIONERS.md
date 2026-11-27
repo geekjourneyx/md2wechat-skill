@@ -78,6 +78,19 @@ export IMAGE_SIZE="1:1"
 |------|------|--------------|
 | `image-01` | MiniMax 图片模型（默认） | 是 |
 | `image-01-live` | MiniMax live 图片模型 | 否 |
+| `MiniMax-H3-Image` | H3 text-to-image generation | No |
+| `MiniMax-H3-Image-Highspeed` | High-speed H3 text-to-image generation | No |
+
+For H3, set `IMAGE_PROVIDER=minimax` and select a model with
+`md2wechat generate_image "A cat on a windowsill" --model MiniMax-H3-Image`.
+The provider sends one URL-format image request to `POST /v1/images/generations`.
+Use `IMAGE_API_BASE=https://api.minimax.io` for global keys, or
+`https://api.minimax.cn` for China keys. Pass an aspect ratio such as `16:9`
+or exact dimensions such as `2720x1536` with `--size`. H3 waits up to ten minutes
+and does not resend the request automatically. A disconnected request may still
+complete and incur a charge. See the [global API reference](https://platform.minimax.io/docs/api-reference/image-generation-h3-generations)
+or the [China API reference](https://platform.minimax.cn/docs/api-reference/image-generation-h3-generations).
+
 
 #### 支持的尺寸
 
