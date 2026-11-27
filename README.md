@@ -27,7 +27,6 @@
 
 > [!TIP]
 > **v3.9.0 新增火山方舟 Seedream 5.5 和 5.0 Flash。** 运行 `md2wechat providers show volcengine --json` 查看模型，用 `generate_image --model` 显式选择；默认仍为 5.0 Pro。[模型配置](docs/IMAGE_PROVISIONERS.md#volcengine-ark) · [版本化安装](docs/INSTALL.md)
-> 互动排版默认完整静态展示，显式启用的 `first-layer` 点击效果在微信内仍待验证。[布局指南](docs/LAYOUT.md)
 
 ---
 

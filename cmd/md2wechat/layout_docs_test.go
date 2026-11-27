@@ -118,7 +118,7 @@ func TestLayoutDocumentationReadmeCurrentReleaseTip(t *testing.T) {
 	if end := strings.Index(tip, "\n\n"); end >= 0 {
 		tip = tip[:end]
 	}
-	for _, required := range []string{"v" + version, "docs/LAYOUT.md", "docs/INSTALL.md", "微信内", "待验证"} {
+	for _, required := range []string{"v" + version, "docs/INSTALL.md"} {
 		if !strings.Contains(tip, required) {
 			t.Errorf("README top TIP missing %q", required)
 		}
