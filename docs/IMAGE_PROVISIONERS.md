@@ -219,9 +219,24 @@ export IMAGE_SIZE="2K"
 
 | 模型 | 说明 |
 |------|------|
-| `doubao-seedream-5-0-pro-260628` | 豆包 Seedream 5.0 Pro（默认，推荐） |
+| `doubao-seedream-5-0-pro-260628` | 豆包 Seedream 5.0 Pro（保持默认） |
+| `doubao-seedream-5-5-261028` | 豆包 Seedream 5.5（文生图） |
+| `doubao-seedream-5-0-flash-260915` | 豆包 Seedream 5.0 Flash（文生图） |
 | `doubao-seedream-5-0-260128` | 豆包 Seedream 5.0 |
 | `doubao-seedream-5-0-lite-260128` | 豆包 Seedream 5.0 Lite |
+
+默认模型保持 5.0 Pro，升级 CLI 不会自动切换模型。开通目标模型后，可显式选择：
+
+```bash
+md2wechat providers show volcengine --json
+# 使用上面的 volcengine 配置；生成后会下载并上传到微信素材库
+md2wechat generate_image "一张简洁的公众号封面" --model doubao-seedream-5-5-261028 --size 2K
+md2wechat generate_image "一张简洁的公众号封面" --model doubao-seedream-5-0-flash-260915 --size 2K
+```
+
+当前 CLI 接入单张文生图，输出 PNG；模型本身具备的图像编辑、图层拆分、富文本 OCR 和显式透明背景控制尚未通过 CLI 暴露。`--subject-reference` 仍只支持 MiniMax 的指定模型。
+
+模型 ID 与参数依据：[火山方舟图片生成教程](https://docs.volcengine.com/docs/ark/image-generation-tutorial?lang=zh)（核对日期：2026-11-24）。
 
 #### 开通入口
 
@@ -237,12 +252,13 @@ export IMAGE_SIZE="2K"
 
 #### 支持的尺寸
 
-当前项目对 Volcengine Ark 直接透传尺寸等级：
+当前项目对 Volcengine Ark 直接透传 `--size`；请按所选模型使用尺寸等级或官方允许的宽高像素值：
 
 | 尺寸等级 | 说明 |
 |----------|------|
-| `2K` | Volcengine Seedream 5.0 Pro / 5.0 / 5.0 Lite 通用默认值 |
-| `3K` | Seedream 5.0 Lite 支持的更高分辨率等级 |
+| `1K` / `1.5K` | Seedream 5.5 / 5.0 Pro / 5.0 Flash |
+| `2K` | 此处列出的所有模型均支持，CLI 默认值 |
+| `3K` / `4K` | Seedream 5.0 / 5.0 Lite；不要用于 5.5 / Pro / Flash |
 
 补充说明：
 

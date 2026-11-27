@@ -205,6 +205,8 @@ md2wechat providers show minimax --json
 
 其中只有 `minimax` 的 `supports_subject_reference` 为 `true`，对应模型为 `image-01`。
 
+`md2wechat providers show volcengine --json` 包含 Seedream 5.5、5.0 Flash 和原有 5.0 系列；默认仍为 5.0 Pro。目录列出的是当前 CLI 文生图可选模型，具体配置及能力边界见 [Volcengine Ark](IMAGE_PROVISIONERS.md#volcengine-ark)。
+
 ## 主题发现
 
 ```bash
